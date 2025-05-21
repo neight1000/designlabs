@@ -2,183 +2,108 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Plantasia App with Camera Interaction</title>
+  <title>Camera Motion Responsive App</title>
   <style>
-    /* --- Plantasia core styles --- */
+    #video, #canvas {
+      display: block;
+      margin: 10px auto;
+    }
+    #soundWave {
+      width: 300px; height: 50px; background: #eee; margin: 10px auto;
+    }
     body {
-      margin: 0;
-      padding: 0;
-      background: #000;
-      color: #fff;
-      overflow: hidden;
-      font-family: monospace;
-    }
-    #waveCanvas {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 0;
-    }
-    /* hidden capture canvas and video */
-    #cameraVideo,
-    #cameraCanvas {
-      display: none;
-    }
-    /* simple play/stop controls */
-    #controls {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1;
-    }
-    #controls button {
-      background: none;
-      border: 1px solid #fff;
-      color: #fff;
-      padding: 8px 12px;
-      margin: 0 4px;
-      cursor: pointer;
+      transition: background 0.3s;
     }
   </style>
 </head>
 <body>
-  <canvas id="waveCanvas"></canvas>
-  <video id="cameraVideo" autoplay playsinline></video>
-  <canvas id="cameraCanvas" width="320" height="240"></canvas>
-
-  <div id="controls">
-    <button id="playBtn">Play</button>
-    <button id="stopBtn">Stop</button>
-  </div>
-
+  <video id="video" autoplay playsinline width="320" height="240"></video>
+  <canvas id="canvas" width="320" height="240" style="display:none"></canvas>
+  <canvas id="soundWave"></canvas>
   <script>
-  // ——— AUDIO SETUP ———
-  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  const filter = audioCtx.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 800;          // start cutoff
-  filter.Q.value = 1;
-  const gainNode = audioCtx.createGain();
-  gainNode.gain.value = 0;               // start muted
-  const analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048;
-  
-  // connect filter → analyser → gain → output
-  filter.connect(analyser);
-  analyser.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const soundCanvas = document.getElementById('soundWave');
+    const soundCtx = soundCanvas.getContext('2d');
+    let prevImageData;
 
-  let osc = null;
+    // Web Audio setup
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    oscillator.type = 'sine';
+    oscillator.connect(gain);
+    gain.connect(audioCtx.destination);
+    oscillator.start();
 
-  function startTone() {
-    osc = audioCtx.createOscillator();
-    osc.type = 'square';
-    osc.frequency.value = 220;           // A3
-    osc.connect(filter);
-    osc.start();
-    // fade in
-    gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-    gainNode.gain.setTargetAtTime(0.3, audioCtx.currentTime, 0.05);
-  }
-
-  function stopTone() {
-    // fade out
-    gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
-    gainNode.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
-    if (osc) {
-      setTimeout(() => {
-        osc.stop();
-        osc.disconnect();
-        osc = null;
-      }, 200);
+    function getMotionLevel(imageData1, imageData2) {
+      if (!imageData1 || !imageData2) return 0;
+      let diff = 0;
+      for (let i = 0; i < imageData1.data.length; i += 4) {
+        let r = Math.abs(imageData1.data[i] - imageData2.data[i]);
+        let g = Math.abs(imageData1.data[i + 1] - imageData2.data[i + 1]);
+        let b = Math.abs(imageData1.data[i + 2] - imageData2.data[i + 2]);
+        if (r + g + b > 30) diff++;
+      }
+      return diff / (imageData1.data.length / 4);
     }
-  }
 
-  document.getElementById('playBtn').onclick = () => {
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    if (!osc) startTone();
-  };
-  document.getElementById('stopBtn').onclick = stopTone;
-
-  // ——— VISUAL SETUP ———
-  const waveCanvas = document.getElementById('waveCanvas');
-  const wCtx = waveCanvas.getContext('2d');
-  let W, H;
-  function resize() {
-    W = waveCanvas.width  = window.innerWidth;
-    H = waveCanvas.height = window.innerHeight;
-  }
-  window.addEventListener('resize', resize);
-  resize();
-
-  const dataArray = new Uint8Array(analyser.frequencyBinCount);
-  let hue = 120;  // updated by camera
-
-  function drawWave() {
-    requestAnimationFrame(drawWave);
-    analyser.getByteTimeDomainData(dataArray);
-
-    wCtx.clearRect(0, 0, W, H);
-    wCtx.lineWidth = 2;
-    wCtx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-    wCtx.beginPath();
-    const slice = W / dataArray.length;
-    let x = 0;
-    for (let i = 0; i < dataArray.length; i++) {
-      const v = dataArray[i] / 128;      // 0–2
-      const y = v * H / 2;              // center
-      if (i === 0) wCtx.moveTo(x, y);
-      else        wCtx.lineTo(x, y);
-      x += slice;
+    function renderSoundWave(level) {
+      soundCtx.clearRect(0, 0, soundCanvas.width, soundCanvas.height);
+      const mid = soundCanvas.height / 2;
+      soundCtx.beginPath();
+      for (let x = 0; x < soundCanvas.width; x++) {
+        let y = mid + Math.sin(x / 10) * level * 10;
+        if (x === 0) soundCtx.moveTo(x, y);
+        else soundCtx.lineTo(x, y);
+      }
+      soundCtx.strokeStyle = 'blue';
+      soundCtx.lineWidth = 2;
+      soundCtx.stroke();
     }
-    wCtx.lineTo(W, H/2);
-    wCtx.stroke();
-  }
-  drawWave();
 
-  // ——— CAMERA SETUP ———
-  const video = document.getElementById('cameraVideo');
-  const camCanvas = document.getElementById('cameraCanvas');
-  const cCtx      = camCanvas.getContext('2d');
+    function animate() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      let currImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      let motionLevel = getMotionLevel(currImageData, prevImageData);
+      prevImageData = currImageData;
 
-  async function startCamera() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = stream;
-      video.onloadedmetadata = () => {
-        video.play();
-        analyzeCamera();
-      };
-    } catch (err) {
-      console.error('Camera access denied:', err);
+      // Map motionLevel to sound and color
+      let clampedLevel = Math.min(motionLevel / 50, 1);
+      gain.gain.value = clampedLevel;
+      oscillator.frequency.value = 200 + clampedLevel * 800;
+
+      // Color feedback based on motion
+      let hue = 120 - clampedLevel * 120;
+      document.body.style.background = `hsl(${hue}, 80%, 60%)`;
+
+      renderSoundWave(clampedLevel * 20);
+
+      requestAnimationFrame(animate);
     }
-  }
 
-  function analyzeCamera() {
-    // draw camera frame to tiny canvas
-    cCtx.drawImage(video, 0, 0, camCanvas.width, camCanvas.height);
-    const frame = cCtx.getImageData(0, 0, camCanvas.width, camCanvas.height).data;
-    let total = 0;
-    // compute average brightness
-    for (let i = 0; i < frame.length; i += 4) {
-      total += 0.2126*frame[i] + 0.7152*frame[i+1] + 0.0722*frame[i+2];
-    }
-    const avg = total / (camCanvas.width * camCanvas.height);
-    const norm = Math.min(Math.max(avg / 255, 0), 1);
+    // Get user media
+    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+      .then(stream => {
+        video.srcObject = stream;
+        video.onloadedmetadata = () => {
+          video.play();
+          audioCtx.resume(); // In case browser blocks audio until user interaction
+          setTimeout(() => { // Allow video to initialize
+            animate();
+          }, 500);
+        };
+      })
+      .catch(err => {
+        alert('Camera access denied: ' + err.message);
+      });
 
-    // map brightness → filter cutoff (300Hz–3000Hz)
-    const cutoff = norm * 2700 + 300;
-    filter.frequency.setTargetAtTime(cutoff, audioCtx.currentTime, 0.1);
-
-    // map brightness → waveform hue (0–360)
-    hue = norm * 360;
-
-    requestAnimationFrame(analyzeCamera);
-  }
-
-  startCamera();
+    // Optional: Stop audio when navigating away
+    window.addEventListener('beforeunload', () => {
+      oscillator.stop();
+      audioCtx.close();
+    });
   </script>
 </body>
 </html>
