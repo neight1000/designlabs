@@ -44,9 +44,7 @@
   <div class="ui">
     <div><label>Delay</label><input type="range" id="delay" min="0.01" max="2.0" step="0.01" value="0.6"></div>
     <div><label>Echo</label><input type="range" id="echo" min="0" max="1.0" step="0.01" value="0.4"></div>
-    <div><label>Reverb</label>
-      <input type="range" id="reverb" min="0" max="0.5" step="0.01" value="0.4">
-    </div>
+    <!-- Reverb removed -->
     <div><label>Filter</label><input type="range" id="filter" min="100" max="8000" step="10" value="1200"></div>
     <div><label>Frequency</label><input type="range" id="freq" min="50" max="1000" step="1" value="174"></div>
     <div><label>Volume</label><input type="range" id="volume" min="0" max="100" value="60"></div>
@@ -60,7 +58,7 @@
   <script>
     const delay = document.getElementById('delay'),
           echo = document.getElementById('echo'),
-          reverb = document.getElementById('reverb'),
+          // reverb removed
           filter = document.getElementById('filter'),
           freq = document.getElementById('freq'),
           volume = document.getElementById('volume'),
@@ -238,8 +236,7 @@
       if (!stopped) scheduleNotes();
     });
 
-    // Reverb input remains, but does nothing
-    reverb.addEventListener("input", ()=>{});
+    // Reverb input listener removed
 
     toggleDisplayBtn.addEventListener("click", ()=>{
       infoDisplay.style.display = infoDisplay.style.display==="none"?"block":"none";
@@ -247,7 +244,7 @@
 
     function updateDisplay(){
       infoDisplay.textContent =
-        `PRESET: DMT\nDELAY: ${delay.value}\nECHO: ${echo.value}\nREVERB: ${reverb.value}\nFILTER: ${filter.value}\nFREQ: ${freq.value}\nVOLUME: ${volume.value}\nBPM: ${bpm}\nDENSITY: ${density.value}\nHEIGHT: ${height.value}`;
+        `PRESET: DMT\nDELAY: ${delay.value}\nECHO: ${echo.value}\nFILTER: ${filter.value}\nFREQ: ${freq.value}\nVOLUME: ${volume.value}\nBPM: ${bpm}\nDENSITY: ${density.value}\nHEIGHT: ${height.value}`;
     }
     setInterval(updateDisplay,250);
   </script>
