@@ -2,40 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Plantasia App v15 – Fractal Feedback + DMT Preset (Fixed)</title>
+  <title>Plantasia App v16 – Pentatonic Fibonacci Harmony</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      background: black; color: white;
-      font-family: monospace; overflow: hidden;
-    }
-    canvas {
-      position: absolute; top: 0; left: 0;
-      width: 100vw; height: 100vh; z-index: 0;
-    }
-    .ui {
-      position: absolute; bottom: 0; width: 100%;
-      background: rgba(0,0,0,0.85);
-      padding: 10px; display: flex; flex-wrap: wrap;
-      justify-content: center; gap: 10px; z-index: 2;
-    }
-    .ui label {
-      font-size: 10px; display: block; text-align: center;
-    }
-    .ui input[type="range"],
-    .ui select { width: 90px; }
-    .ui button {
-      font-size: 12px; padding: 4px 8px;
-      background: transparent; border: 1px solid white;
-      color: white; cursor: pointer;
-    }
-    #infoDisplay {
-      position: absolute; top: 10px; left: 10px;
-      z-index: 3; background: rgba(0,0,0,0.6);
-      color: white; font-size: 12px; padding: 10px;
-      display: none; white-space: pre;
-    }
+    html, body { margin: 0; padding: 0; background: black; color: white; font-family: monospace; overflow: hidden; }
+    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+    .ui { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.85); padding: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; z-index: 2; }
+    .ui label { font-size: 10px; display: block; text-align: center; }
+    .ui input[type="range"], .ui select { width: 120px; } /* Wider for more range */
+    .ui button { font-size: 12px; padding: 4px 8px; background: transparent; border: 1px solid white; color: white; cursor: pointer; }
+    #infoDisplay { position: absolute; top: 10px; left: 10px; z-index: 3; background: rgba(0,0,0,0.6); color: white; font-size: 12px; padding: 10px; display: none; white-space: pre; }
   </style>
 </head>
 <body>
@@ -53,15 +29,15 @@
         <option value="dmt">DMT (Slow & Drowny)</option>
       </select>
     </div>
-    <div><label>Delay</label><input type="range" id="delay" min="0.01" max="2.0" step="0.01" value="0.6"></div>
-    <div><label>Echo</label><input type="range" id="echo" min="0" max="1.0" step="0.01" value="0.4"></div>
-    <div><label>Reverb</label><input type="range" id="reverb" min="0" max="1.0" step="0.01" value="0.4"></div>
-    <div><label>Filter</label><input type="range" id="filter" min="100" max="8000" step="10" value="1200"></div>
-    <div><label>Frequency</label><input type="range" id="freq" min="50" max="1000" step="1" value="174"></div>
-    <div><label>Volume</label><input type="range" id="volume" min="0" max="100" value="60"></div>
-    <div><label>BPM</label><input type="range" id="bpm" min="10" max="180" value="90"></div>
-    <div><label>Density</label><input type="range" id="density" min="1" max="10" step="1" value="5"></div>
-    <div><label>Height</label><input type="range" id="height" min="0.5" max="2.0" step="0.1" value="1.0"></div>
+    <div><label>Delay</label><input type="range" id="delay" min="0.01" max="4.0" step="0.01" value="0.6"></div>
+    <div><label>Echo</label><input type="range" id="echo" min="0" max="2.0" step="0.01" value="0.2"></div>
+    <div><label>Reverb</label><input type="range" id="reverb" min="0" max="2.0" step="0.01" value="0.2"></div>
+    <div><label>Filter</label><input type="range" id="filter" min="100" max="16000" step="10" value="2500"></div>
+    <div><label>Frequency</label><input type="range" id="freq" min="30" max="4000" step="1" value="174"></div>
+    <div><label>Volume</label><input type="range" id="volume" min="0" max="150" value="60"></div>
+    <div><label>BPM</label><input type="range" id="bpm" min="10" max="300" value="90"></div>
+    <div><label>Density</label><input type="range" id="density" min="1" max="20" step="1" value="7"></div>
+    <div><label>Height</label><input type="range" id="height" min="0.2" max="3.0" step="0.1" value="1.0"></div>
     <button id="play">PLAY</button>
     <button id="stop">STOP</button>
     <button id="toggleDisplay">TOGGLE DATA</button>
@@ -93,24 +69,34 @@
     let canvas, ctx;
 
     // ==== SP-1200 STYLE NODES ====
-    let bitCrusherNode = null; // Added for SP-1200 emulation
-    let monoMerger = null;     // Mono output
-    let spFilter = null;       // Lowpass for analog flavor
+    let bitCrusherNode = null;
+    let monoMerger = null;
+    let spFilter = null;
 
-    // ==== PRESET SETTINGS ====
+    // ==== FIBONACCI-BASED PENTATONIC SCALES ====
+    // Fibonacci: 1, 2, 3, 5, 8, 13, 21, ...
+    // Pentatonic scale degrees (relative to root): [1, 2, 3, 5, 8]
+    // We'll use the ratios to build scales in Hz.
+    function makePentatonicFib(root) {
+      const fib = [1,2,3,5,8];
+      // Map ratios to frequencies in one or more octaves
+      return fib.map(n => root * n);
+    }
+
+    // ==== PRESET SETTINGS USING FIBONACCI PENTATONICS ====
     const presetSettings = {
-      plants:   { scale: [174,285,396,417,528], color:"#00FF7F", slow:1 },
-      mold:     { scale: [432,639,741],         color:"#8A2BE2", slow:1 },
-      bacteria: { scale: [528,554,585,728],      color:"#FF4500", slow:1 },
-      mushrooms:{ scale: [417,444,528,639],      color:"#FFD700", slow:1 },
-      harmony:  { scale: [432,528,639,741,852],  color:"#00FFFF", slow:1 },
-      dmt:      { scale: [100,140,200,250,310],  color:"#7F00FF", slow:4 }
+      plants:   { scale: makePentatonicFib(33),   color:"#00FF7F", slow:1 },
+      mold:     { scale: makePentatonicFib(55),   color:"#8A2BE2", slow:1 },
+      bacteria: { scale: makePentatonicFib(89),   color:"#FF4500", slow:1 },
+      mushrooms:{ scale: makePentatonicFib(144),  color:"#FFD700", slow:1 },
+      harmony:  { scale: makePentatonicFib(233),  color:"#00FFFF", slow:1 },
+      dmt:      { scale: makePentatonicFib(13),   color:"#7F00FF", slow:4 }
     };
     function getScale()   { return presetSettings[preset.value].scale; }
     function getColor()   { return presetSettings[preset.value].color; }
     function getSlow()    { return presetSettings[preset.value].slow; }
 
-    // ==== BITCRUSHER FUNCTION ====
+    // ==== BITCRUSHER FUNCTION (gentler settings) ====
     function createBitCrusher(context, bitDepth, reduction) {
       const node = context.createScriptProcessor(4096, 1, 1);
       let phaser = 0, last = 0;
@@ -142,32 +128,30 @@
       reverbNode = audioCtx.createDelay();
       reverbFeedback = audioCtx.createGain();
       reverbNode.delayTime = 0.4;
-      reverbFeedback.gain.value = Math.min(parseFloat(reverb.value), 0.35);
+      // Lower reverb feedback for less echo/distortion
+      reverbFeedback.gain.value = Math.min(parseFloat(reverb.value), 0.18);
       reverbNode.connect(reverbFeedback); reverbFeedback.connect(reverbNode);
       reverbNode.connect(masterGain);
 
       // === SP-1200-style nodes ===
-      // Lowpass filter for analog feel (~8kHz cutoff)
       spFilter = audioCtx.createBiquadFilter();
       spFilter.type = "lowpass";
-      spFilter.frequency.value = 8000; // You can tweak this for more/less warmth
+      spFilter.frequency.value = 14000; // Higher cutoff for clarity
 
-      // Bitcrusher: 12-bit, ~26kHz
-      const targetSampleRate = 26040;
+      // Gentler bitcrusher: 16-bit, ~32kHz
+      const targetSampleRate = 32000;
       const reduction = audioCtx.sampleRate / targetSampleRate;
-      bitCrusherNode = createBitCrusher(audioCtx, 12, reduction);
+      bitCrusherNode = createBitCrusher(audioCtx, 16, reduction);
 
-      // Merger for mono output
+      // Mono output
       monoMerger = audioCtx.createChannelMerger(1);
 
-      // Chain: masterGain -> analyser -> spFilter -> bitcrusher -> monoMerge -> audioCtx.destination
       masterGain.connect(analyser);
       analyser.connect(spFilter);
       spFilter.connect(bitCrusherNode);
       bitCrusherNode.connect(monoMerger, 0, 0);
       monoMerger.connect(audioCtx.destination);
 
-      // Visualizer canvas
       canvas = document.getElementById("waveCanvas");
       ctx = canvas.getContext("2d");
       canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -175,7 +159,7 @@
       animate();
     }
 
-    // ==== PLAYBACK CONTROLS (from 03-sp-1200) ====
+    // ==== PLAYBACK CONTROLS ====
     function startPlayback() {
       if (isPlaying) return;
       isPlaying = true;
@@ -190,7 +174,6 @@
       playBtn.disabled = false;
       stopBtn.disabled = true;
       clearInterval(bpmTimer);
-      // Optional: fade out masterGain
       if (masterGain) {
         masterGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
       }
@@ -211,11 +194,12 @@
       const delayNode = audioCtx.createDelay();
       delayNode.delayTime = parseFloat(delay.value);
       const feedbackNode = audioCtx.createGain();
-      feedbackNode.gain.value = Math.min(parseFloat(echo.value), 0.35);
+      // Lower feedback for less delay/echo buildup
+      feedbackNode.gain.value = Math.min(parseFloat(echo.value), 0.18);
 
       const gainNode = audioCtx.createGain();
       gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.18, now + 0.3*slow);
+      gainNode.gain.linearRampToValueAtTime(0.25, now + 0.3*slow); // Slightly louder attack
       gainNode.gain.linearRampToValueAtTime(0, now + 2.5*slow);
 
       gainNode.connect(masterGain);
@@ -224,14 +208,15 @@
       const panNode = audioCtx.createStereoPanner();
       panNode.pan.value = Math.random()*2-1;
 
+      // Use more harmonic waveform
       [-0.5,0,0.5].forEach(offset=>{
         const osc = audioCtx.createOscillator();
-        osc.type = "triangle";
+        osc.type = "sine"; // More harmonic and smooth than triangle
         osc.frequency.value = freqVal*(1+offset/100);
         const pitchLFO = audioCtx.createOscillator();
         const pitchLFOGain = audioCtx.createGain();
-        pitchLFO.frequency.value = 0.25;
-        pitchLFOGain.gain.value = 1.5;
+        pitchLFO.frequency.value = 0.22;
+        pitchLFOGain.gain.value = 0.8; // Lower LFO depth for less "wobble"
         pitchLFO.connect(pitchLFOGain).connect(osc.frequency);
         pitchLFO.start(now); pitchLFO.stop(now + 2.5*slow);
         osc.connect(gainNode);
@@ -249,7 +234,6 @@
       clearInterval(bpmTimer);
       const scale = getScale();
       const interval = 60000 / parseInt(bpmControl.value) * getSlow();
-      // Fire first note immediately
       playTone(scale[Math.floor(Math.random()*scale.length)]);
       bpmTimer = setInterval(()=>{
         if (isPlaying) playTone(scale[Math.floor(Math.random()*scale.length)]);
@@ -303,7 +287,7 @@
       if (isPlaying) scheduleNotes();
     });
     reverb.addEventListener("input", ()=>{
-      if (reverbFeedback) reverbFeedback.gain.value = Math.min(parseFloat(reverb.value), 0.35);
+      if (reverbFeedback) reverbFeedback.gain.value = Math.min(parseFloat(reverb.value), 0.18);
     });
     toggleDisplayBtn.addEventListener("click", ()=>{
       infoDisplay.style.display = infoDisplay.style.display==="none"?"block":"none";
