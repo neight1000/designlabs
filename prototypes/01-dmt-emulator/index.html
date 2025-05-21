@@ -55,7 +55,10 @@
     </div>
     <div><label>Delay</label><input type="range" id="delay" min="0.01" max="2.0" step="0.01" value="0.6"></div>
     <div><label>Echo</label><input type="range" id="echo" min="0" max="1.0" step="0.01" value="0.4"></div>
-    <div><label>Reverb</label><input type="range" id="reverb" min="0" max="1.0" step="0.01" value="0.4"></div>
+    <div><label>Reverb</label>
+      <!-- Max reduced to 0.5 to prevent feedback runaway -->
+      <input type="range" id="reverb" min="0" max="0.5" step="0.01" value="0.4">
+    </div>
     <div><label>Filter</label><input type="range" id="filter" min="100" max="8000" step="10" value="1200"></div>
     <div><label>Frequency</label><input type="range" id="freq" min="50" max="1000" step="1" value="174"></div>
     <div><label>Volume</label><input type="range" id="volume" min="0" max="100" value="60"></div>
@@ -114,7 +117,8 @@
       masterGain = audioCtx.createGain(); masterGain.gain.value = parseFloat(volume.value)/100;
       reverbNode = audioCtx.createDelay();
       reverbFeedback = audioCtx.createGain();
-      reverbNode.delayTime = 0.4; reverbFeedback.gain.value = parseFloat(reverb.value);
+      // Clamp reverb feedback gain to 0.5 max for safety
+      reverbNode.delayTime = 0.4; reverbFeedback.gain.value = Math.min(parseFloat(reverb.value), 0.5);
       reverbNode.connect(reverbFeedback); reverbFeedback.connect(reverbNode);
       reverbNode.connect(masterGain);
       masterGain.connect(audioCtx.destination);
@@ -249,7 +253,10 @@
     });
 
     reverb.addEventListener("input", ()=>{
-      if (reverbFeedback) reverbFeedback.gain.value = parseFloat(reverb.value);
+      if (reverbFeedback) {
+        // Clamp value to safe range
+        reverbFeedback.gain.value = Math.min(parseFloat(reverb.value), 0.5);
+      }
     });
 
     toggleDisplayBtn.addEventListener("click", ()=>{
@@ -258,10 +265,9 @@
 
     function updateDisplay(){
       infoDisplay.textContent =
-        `PRESET: ${preset.value}\nDELAY: ${delay.value}\nECHO: ${echo.value}\nREVERB: ${reverb.value}\nFILTER: ${filter.value}\nFREQ: ${freq.value}\nVOLUME: ${volume.value}\nBPM: ${bpm}\nDENSITY: ${density.value}\nHEIGHT: ${height.value}`;
+        `PRESET: ${preset.value}\nDELAY: ${delay.value}\nECHO: ${echo.value}\nREVERB: ${reverb.value}\nFILTER: ${filter.value}\nFREQ: ${freq.value}\nVOLUME: ${volume.value}\nBPM: ${bpm}\nDENSITY:[...]
     }
     setInterval(updateDisplay,250);
   </script>
 </body>
 </html>
-
