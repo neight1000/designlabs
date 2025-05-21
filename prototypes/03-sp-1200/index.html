@@ -42,10 +42,13 @@
   <button id="toggleSpec">WAVE/SPECTRO</button>
 </div>
 <script>
-let audioCtx, analyser, masterGain, bitcrusherNode, bitcrusherLoaded = false, tapeNode;
-let filterNode, canvas, ctx, bufferLength, dataArray, displaySpectro = false;
+let audioCtx = null, analyser = null, masterGain = null, bitcrusherNode = null, bitcrusherLoaded = false, tapeNode = null;
+let filterNode = null, canvas = null, ctx = null, bufferLength = 0, dataArray = null, displaySpectro = false;
 let bpm = 90, bpmTimer = null, stopped = true;
 let trailFrames = [], currentWaveColor = "#B5A642";
+let loadedSamples = {};
+let isAudioInitialized = false;
+
 const preset = document.getElementById('preset'),
       bitcrush = document.getElementById('bitcrush'),
       downsample = document.getElementById('downsample'),
@@ -57,8 +60,8 @@ const preset = document.getElementById('preset'),
       tapeSat = document.getElementById('tapeSat'),
       playBtn = document.getElementById('play'),
       stopBtn = document.getElementById('stop'),
-      toggleSpecBtn = document.getElementById('toggleSpec');
-const display = document.getElementById("infoDisplay");
+      toggleSpecBtn = document.getElementById('toggleSpec'),
+      display = document.getElementById("infoDisplay");
 
 const presetSettings = {
   plants:     { color: "#00FF7F", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav"] },
@@ -79,9 +82,9 @@ function getColorFromPreset(val) {
 function getSamplesFromPreset(val) {
   return presetSettings[val]?.samples || [];
 }
-let loadedSamples = {};
-async function loadSamplesForPreset(preset) {
-  const urls = getSamplesFromPreset(preset);
+
+async function loadSamplesForPreset(presetName) {
+  const urls = getSamplesFromPreset(presetName);
   loadedSamples = {};
   await Promise.all(urls.map(async (url) => {
     const response = await fetch(url);
@@ -131,7 +134,6 @@ async function loadBitcrusher() {
   }
 }
 
-// Tape Saturation Node (Waveshaper, gentle curve)
 function createTapeSaturationNode(ctx, amount) {
   const ws = ctx.createWaveShaper();
   ws.curve = makeSatCurve(amount);
@@ -149,7 +151,7 @@ function makeSatCurve(amount = 0.18) {
 }
 
 async function initAudio() {
-  if (audioCtx) return;
+  if (isAudioInitialized && audioCtx) return;
   canvas = document.getElementById("waveCanvas");
   ctx = canvas.getContext("2d");
   canvas.width = window.innerWidth;
@@ -182,6 +184,7 @@ async function initAudio() {
   tapeNode.connect(masterGain);
   masterGain.connect(analyser);
   analyser.connect(audioCtx.destination);
+  isAudioInitialized = true;
   animate();
 }
 
@@ -191,7 +194,6 @@ function updateTapeSatCurve() {
   }
 }
 
-// Play a random sample from the preset, through effects chain
 function playSample() {
   const urls = getSamplesFromPreset(preset.value);
   if (!urls.length) return;
@@ -207,8 +209,6 @@ function playSample() {
     let original = sampleSource.playbackRate.value;
     sampleSource.playbackRate.value = original + ((Math.random() - 0.5) * drift);
   }
-
-  // Effects: filter -> bitcrusher -> tapeSat -> gain -> analyser -> out
   sampleSource.connect(filterNode);
   sampleSource.start();
 }
@@ -258,7 +258,6 @@ function animate() {
       ctx.globalAlpha = 1.0;
     }
   } else {
-    // Spectrogram
     analyser.fftSize = 1024;
     let freqData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(freqData);
@@ -273,19 +272,23 @@ function animate() {
   }
 }
 
-// UI & Param Handling
+// --- UI & Parameter Handling ---
 playBtn.addEventListener('click', async () => {
+  stopped = false;
+  currentWaveColor = getColorFromPreset(preset.value);
+
   if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = null; // Reset so initAudio can create new context
+    isAudioInitialized = false;
   }
   await initAudio();
+
+  // Always resume the context, in case it was suspended by browser
   if (audioCtx.state === 'suspended') {
     await audioCtx.resume();
   }
-  stopped = false;
-  currentWaveColor = getColorFromPreset(preset.value);
+
   await loadSamplesForPreset(preset.value);
-  playSample(); // Play on click!
+  playSample();
   scheduleNotes();
 });
 stopBtn.addEventListener('click', () => {
