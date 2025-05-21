@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -18,7 +19,6 @@
   <canvas id="waveCanvas"></canvas>
   <div id="infoDisplay"></div>
   <div class="ui">
-    <!-- controls unchanged -->
     <div><label>Preset</label>
       <select id="preset">
         <option value="plants">Plants</option>
@@ -40,31 +40,35 @@
     <button id="play">PLAY</button>
     <button id="stop">STOP</button>
     <button id="toggleDisplay">TOGGLE DATA</button>
-    <button id="toggleSpec">WAVE/SPECTRO</button>
   </div>
   <script>
-    let audioCtx, analyser, masterGain, bitcrusherNode, tapeNode, filterNode;
+    // Element refs
+    const preset     = document.getElementById('preset');
+    const bitcrush   = document.getElementById('bitcrush');
+    const downsample = document.getElementById('downsample');
+    const filterCtrl = document.getElementById('filter');
+    const resonance  = document.getElementById('resonance');
+    const pitchDrift = document.getElementById('pitchDrift');
+    const volumeCtrl = document.getElementById('volume');
+    const bpmCtrl    = document.getElementById('bpm');
+    const tapeSat    = document.getElementById('tapeSat');
+    const playBtn    = document.getElementById('play');
+    const stopBtn    = document.getElementById('stop');
+    const toggleDisp = document.getElementById('toggleDisplay');
+    const infoDisp   = document.getElementById('infoDisplay');
+
+    // State
+    let audioCtx, analyser, masterGain, filterNode, bitcrusherNode, tapeNode;
     let convolver, compressor, lfo, lfoGain;
-    let canvas, ctx, bufferLength, dataArray, displaySpectro=false;
-    let bpm=90, bpmTimer, stopped=true, isAudioInitialized=false;
-    let trailFrames=[], currentWaveColor="#B5A642", loadedSamples={};
+    let isAudioInitialized = false;
+    let stopped = true;
+    let bpm = 90, bpmTimer;
+    const loadedSamples = {};
+    const trailFrames = [];
+    let canvas, ctx, bufferLength, dataArray;
+    let currentWaveColor = "#B5A642";
 
-    const preset       = document.getElementById('preset'),
-          bitcrush     = document.getElementById('bitcrush'),
-          downsample   = document.getElementById('downsample'),
-          filter       = document.getElementById('filter'),
-          resonance    = document.getElementById('resonance'),
-          pitchDrift   = document.getElementById('pitchDrift'),
-          volume       = document.getElementById('volume'),
-          bpmControl   = document.getElementById('bpm'),
-          tapeSat      = document.getElementById('tapeSat'),
-          playBtn      = document.getElementById('play'),
-          stopBtn      = document.getElementById('stop'),
-          toggleSpecBtn= document.getElementById('toggleSpec'),
-          display      = document.getElementById("infoDisplay");
-
-    stopBtn.disabled = true;
-
+    // Preset data
     const presetSettings = {
       plants:   { color:"#00FF7F", samples:["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav"] },
       mold:     { color:"#8A2BE2", samples:["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/snare.wav"] },
@@ -78,262 +82,273 @@
       ]}
     };
 
-    function getColorFromPreset(v){ return presetSettings[v]?.color||"#FFF"; }
-    function getSamplesFromPreset(v){ return presetSettings[v]?.samples||[]; }
+    function getColor(val)   { return presetSettings[val]?.color   || "#FFF"; }
+    function getSamples(val) { return presetSettings[val]?.samples || []; }
 
-    async function loadSamplesForPreset(name){
-      const urls = getSamplesFromPreset(name);
-      loadedSamples = {};
-      await Promise.all(urls.map(async url=>{
+    // Load samples for a given preset
+    async function loadSamples(name) {
+      const urls = getSamples(name);
+      loadedSamples[name] = {};
+      await Promise.all(urls.map(async url => {
         const resp = await fetch(url);
-        const buf = await resp.arrayBuffer();
-        loadedSamples[url] = await audioCtx.decodeAudioData(buf);
+        const buf  = await resp.arrayBuffer();
+        loadedSamples[name][url] = await audioCtx.decodeAudioData(buf);
       }));
     }
 
-    async function loadBitcrusher(){
-      if (!(audioCtx.audioWorklet)) return;
-      const js = `...bitcrusher processor code...`;
-      const blob = new Blob([js],{type:'application/javascript'});
-      await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
-      bitcrusherNode = new AudioWorkletNode(audioCtx,'bitcrusher');
+    // Bitcrusher via AudioWorklet or fallback to gain
+    async function loadBitcrusher() {
+      if (audioCtx.audioWorklet) {
+        const code = `
+          class BitCrusherProcessor extends AudioWorkletProcessor {
+            static get parameterDescriptors() {
+              return [
+                { name:'bitDepth', defaultValue:12, minValue:1, maxValue:16 },
+                { name:'frequency', defaultValue:26000, minValue:8000, maxValue:48000 }
+              ];
+            }
+            constructor(){ super(); this.phase=0; this.last=0; }
+            process(ins, outs, params){
+              const input = ins[0], output = outs[0];
+              const bits = params.bitDepth.length===1 ? params.bitDepth[0] : params.bitDepth;
+              const freq = params.frequency.length===1 ? params.frequency[0] : params.frequency;
+              const step = Math.pow(0.5, bits);
+              const rate = sampleRate / freq;
+              for(let ch=0; ch<input.length; ch++){
+                for(let i=0; i<input[ch].length; i++){
+                  this.phase++;
+                  if(this.phase >= rate){
+                    this.phase -= rate;
+                    this.last = Math.round(input[ch][i]/step)*step;
+                  }
+                  output[ch][i] = this.last;
+                }
+              }
+              return true;
+            }
+          }
+          registerProcessor('bitcrusher', BitCrusherProcessor);
+        `;
+        const blob = new Blob([code], { type:'application/javascript' });
+        await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+        bitcrusherNode = new AudioWorkletNode(audioCtx, 'bitcrusher');
+      } else {
+        bitcrusherNode = audioCtx.createGain();
+      }
     }
 
-    function makeSatCurve(a=0.18){
-      const n=44100, curve=new Float32Array(n);
-      for(let i=0;i<n;i++){
-        const x=(i*2)/n-1;
-        curve[i] = Math.tanh(x*(1+a*10));
+    // Tape saturation
+    function makeSatCurve(amount=0.18) {
+      const n = 44100, curve = new Float32Array(n);
+      for(let i=0; i<n; i++){
+        const x = (i*2)/n - 1;
+        curve[i] = Math.tanh(x * (1 + amount*10));
       }
       return curve;
     }
-
-    function createTapeNode(a){
+    function createTapeNode(amount) {
       const ws = audioCtx.createWaveShaper();
-      ws.curve = makeSatCurve(a);
+      ws.curve = makeSatCurve(amount);
       ws.oversample = '4x';
       return ws;
     }
 
-    async function initAudio(){
+    // Initialize everything
+    async function initAudio() {
       if (isAudioInitialized) return;
 
-      // setup canvas
-      canvas = document.getElementById('waveCanvas');
-      ctx = canvas.getContext('2d');
-      canvas.width = innerWidth; canvas.height = innerHeight;
-
-      // new context + immediate resume
+      // AudioContext + resume
       audioCtx = new (window.AudioContext||window.webkitAudioContext)();
       await audioCtx.resume();
 
+      // Analyzer
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
       bufferLength = analyser.frequencyBinCount;
       dataArray = new Uint8Array(bufferLength);
 
+      // Canvas
+      canvas = document.getElementById('waveCanvas');
+      ctx    = canvas.getContext('2d');
+      canvas.width = innerWidth;
+      canvas.height = innerHeight;
+
+      // Core nodes
       masterGain = audioCtx.createGain();
-      masterGain.gain.value = parseFloat(volume.value)/100;
+      masterGain.gain.value = parseFloat(volumeCtrl.value)/100;
 
       filterNode = audioCtx.createBiquadFilter();
       filterNode.type = 'lowpass';
-      filterNode.frequency.value = parseFloat(filter.value);
-      filterNode.Q.value = parseFloat(resonance.value);
+      filterNode.frequency.value = parseFloat(filterCtrl.value);
+      filterNode.Q.value         = parseFloat(resonance.value);
 
-      // try bitcrusher, else fallback to gain
       await loadBitcrusher();
-      if (!bitcrusherNode) bitcrusherNode = audioCtx.createGain();
-
-      // tape sat
       tapeNode = createTapeNode(parseFloat(tapeSat.value));
 
-      // routing: filter→bitcrusher→tape→master
+      // Main chain: filter → bitcrusher → tape → master
       filterNode.connect(bitcrusherNode);
       bitcrusherNode.connect(tapeNode);
       tapeNode.connect(masterGain);
 
-      // LFO on filter
-      lfo = audioCtx.createOscillator();
-      lfoGain = audioCtx.createGain();
-      lfo.type = 'sine'; lfo.frequency.value = 0.15;
-      lfoGain.gain.value = 600;
-      lfo.connect(lfoGain).connect(filterNode.frequency);
-      lfo.start();
+      // Tap for visuals & final output
+      masterGain.connect(analyser);
+      masterGain.connect(audioCtx.destination);
 
-      // convolver
+      // Convolver (reverb)
       convolver = audioCtx.createConvolver();
       fetch('https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/drum-room-ir.wav')
         .then(r=>r.arrayBuffer())
         .then(b=>audioCtx.decodeAudioData(b))
         .then(buf=>convolver.buffer = buf);
+      masterGain.connect(convolver);
+      convolver.connect(audioCtx.destination);
 
-      // compressor
+      // Parallel compressor
       compressor = audioCtx.createDynamicsCompressor();
       compressor.threshold.value = -24;
       compressor.knee.value      = 30;
       compressor.ratio.value     = 4;
       compressor.attack.value    = 0.001;
       compressor.release.value   = 0.2;
-
-      // final connections
-      masterGain.connect(analyser);
       masterGain.connect(compressor);
-      compressor.connect(analyser);
-      masterGain.connect(convolver);
-      convolver.connect(analyser);
-      analyser.connect(audioCtx.destination);
+      compressor.connect(audioCtx.destination);
+
+      // LFO → filter cutoff
+      lfo = audioCtx.createOscillator();
+      lfoGain = audioCtx.createGain();
+      lfo.type = 'sine';
+      lfo.frequency.value = 0.15;
+      lfoGain.gain.value  = 600;
+      lfo.connect(lfoGain).connect(filterNode.frequency);
+      lfo.start();
 
       isAudioInitialized = true;
       animate();
     }
 
-    function updateTapeSat(){
-      if (tapeNode) tapeNode.curve = makeSatCurve(parseFloat(tapeSat.value));
-    }
-
-    function playSample(){
-      const urls = getSamplesFromPreset(preset.value);
+    // Play one sample
+    function playSample() {
+      const urls = getSamples(preset.value);
       if (!urls.length) return;
       const url = urls[Math.floor(Math.random()*urls.length)];
-      const buf = loadedSamples[url];
-      if (!buf) return;
+      const buffer = loadedSamples[preset.value][url];
+      if (!buffer) return;
 
       const src = audioCtx.createBufferSource();
-      src.buffer = buf;
+      src.buffer = buffer;
       src.playbackRate.value = 1 + ((Math.random()-0.5)*0.04);
 
       const pan = audioCtx.createStereoPanner();
-      pan.pan.value = (Math.random()*2-1)*0.5;
-
+      pan.pan.value = (Math.random()*2 - 1) * 0.5;
       src.connect(pan).connect(filterNode);
 
-      // sub-kick under kick
-      if (url.includes('kick.wav')){
+      // Sub-kick under kicks
+      if (url.includes('kick.wav')) {
         const sub = audioCtx.createOscillator();
         const env = audioCtx.createGain();
-        sub.type='sine'; sub.frequency.value=60;
+        sub.type = 'sine';
+        sub.frequency.value = 60;
         sub.connect(env).connect(filterNode);
         const now = audioCtx.currentTime;
         env.gain.setValueAtTime(0, now);
-        env.gain.linearRampToValueAtTime(0.2, now+0.01);
-        env.gain.exponentialRampToValueAtTime(0.0001, now+0.3);
-        sub.start(now); sub.stop(now+0.3);
+        env.gain.linearRampToValueAtTime(0.2, now + 0.01);
+        env.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+        sub.start(now);
+        sub.stop(now + 0.3);
       }
 
-      const now = audioCtx.currentTime;
-      const jitter = (Math.random()-0.5)*0.02;
-      src.start(now + jitter);
+      const jitter = (Math.random() - 0.5) * 0.02;
+      src.start(audioCtx.currentTime + jitter);
     }
 
-    function scheduleNotes(){
+    // Schedule loop
+    function scheduleNotes() {
       clearInterval(bpmTimer);
-      bpmTimer = setInterval(()=>{
+      bpmTimer = setInterval(() => {
         if (!stopped) playSample();
-      }, 60000/bpm);
+      }, 60000 / bpm);
     }
 
-    function animate(){
+    // Draw waveform
+    function animate() {
       requestAnimationFrame(animate);
-      if (!analyser) return;
+      analyser.getByteTimeDomainData(dataArray);
+      ctx.fillStyle = 'rgba(0,0,0,0.08)';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
 
-      if (!displaySpectro){
-        analyser.getByteTimeDomainData(dataArray);
-        ctx.fillStyle = 'rgba(0,0,0,0.08)';
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+      if (trailFrames.length > 12) trailFrames.shift();
+      trailFrames.push([...dataArray]);
 
-        if (trailFrames.length > 12) trailFrames.shift();
-        trailFrames.push([...dataArray]);
+      const grad = ctx.createLinearGradient(0,0,canvas.width,0);
+      grad.addColorStop(0, currentWaveColor);
+      grad.addColorStop(1, '#000');
 
-        const grad = ctx.createLinearGradient(0,0,canvas.width,0);
-        grad.addColorStop(0, currentWaveColor);
-        grad.addColorStop(1, '#000');
-
-        trailFrames.forEach((data,t)=>{
-          const slice = canvas.width / data.length;
-          ctx.beginPath();
-          let x = 0;
-          data.forEach((v,i)=>{
-            const y = ((v-128)/128)*(canvas.height/2*0.9) + canvas.height/2;
-            ctx[i===0?'moveTo':'lineTo'](x,y);
-            x += slice;
-          });
-          ctx.globalAlpha = 0.05 + (t/trailFrames.length)*0.1;
-          ctx.strokeStyle = grad;
-          ctx.shadowBlur = 16;
-          ctx.shadowColor = currentWaveColor;
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-          ctx.globalAlpha = 1;
+      trailFrames.forEach((data, t) => {
+        const slice = canvas.width / data.length;
+        ctx.beginPath();
+        data.forEach((v,i) => {
+          const x = i * slice;
+          const y = ((v - 128) / 128) * (canvas.height/2 * 0.9) + canvas.height/2;
+          i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
         });
-      } else {
-        analyser.fftSize = 1024;
-        const freqData = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(freqData);
-        ctx.fillStyle='rgba(0,0,0,0.08)';
-        ctx.fillRect(0,0,canvas.width,canvas.height);
-        const barW = canvas.width / freqData.length;
-        freqData.forEach((v,i)=>{
-          const h = v/255 * canvas.height;
-          ctx.fillStyle = `hsl(${220+i/2},80%,${35+v/4}%)`;
-          ctx.fillRect(i*barW, canvas.height-h, barW, h);
-        });
-      }
+        ctx.globalAlpha = 0.05 + (t / trailFrames.length)*0.1;
+        ctx.strokeStyle = grad;
+        ctx.shadowBlur = 16;
+        ctx.shadowColor = currentWaveColor;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+      });
     }
 
-    // — UI EVENTS —
-    playBtn.addEventListener('click', async ()=>{
+    // UI Events
+    playBtn.addEventListener('click', async () => {
       playBtn.disabled = true;
       stopBtn.disabled = false;
       stopped = false;
-      currentWaveColor = getColorFromPreset(preset.value);
-
+      currentWaveColor = getColor(preset.value);
       await initAudio();
       if (audioCtx.state === 'suspended') await audioCtx.resume();
-
-      await loadSamplesForPreset(preset.value);
+      await loadSamples(preset.value);
+      bpm = parseInt(bpmCtrl.value);
       scheduleNotes();
       playSample();
     });
 
-    stopBtn.addEventListener('click', async ()=>{
+    stopBtn.addEventListener('click', async () => {
       stopped = true;
       clearInterval(bpmTimer);
-      if (audioCtx.state === 'running') await audioCtx.suspend();
-      stopBtn.disabled = true;
+      if (audioCtx) await audioCtx.suspend();
       playBtn.disabled = false;
+      stopBtn.disabled = true;
     });
 
-    bpmControl.addEventListener('input', e=>{
-      bpm = parseInt(e.target.value);
-      if (!stopped) scheduleNotes();
+    bpmCtrl.addEventListener('input', e => { bpm = parseInt(e.target.value); if (!stopped) scheduleNotes(); });
+    preset.addEventListener('change', async () => { currentWaveColor = getColor(preset.value); await loadSamples(preset.value); });
+    filterCtrl.addEventListener('input', e => filterNode.frequency.value = parseFloat(e.target.value));
+    resonance.addEventListener('input', e => filterNode.Q.value = parseFloat(e.target.value));
+    downsample.addEventListener('input', e => bitcrusherNode.parameters?.get('frequency').value = parseFloat(e.target.value));
+    bitcrush.addEventListener('change', e => bitcrusherNode.parameters?.get('bitDepth').value = e.target.checked?12:16);
+    volumeCtrl.addEventListener('input', e => masterGain.gain.value = parseFloat(e.target.value)/100);
+    tapeSat.addEventListener('input', () => tapeNode.curve = makeSatCurve(parseFloat(tapeSat.value)));
+    toggleDisp.addEventListener('click', () => {
+      infoDisp.style.display = infoDisp.style.display === 'none' ? 'block' : 'none';
     });
-    preset.addEventListener('change', async ()=>{
-      currentWaveColor = getColorFromPreset(preset.value);
-      await loadSamplesForPreset(preset.value);
-      if (!stopped) scheduleNotes();
-    });
-    filter.addEventListener('input', e=>filterNode.frequency.value = parseFloat(e.target.value));
-    resonance.addEventListener('input', e=>filterNode.Q.value = parseFloat(e.target.value));
-    downsample.addEventListener('input', e=>bitcrusherNode.parameters.get('frequency').value = parseFloat(e.target.value));
-    bitcrush.addEventListener('change', e=>bitcrusherNode.parameters.get('bitDepth').value = e.target.checked?12:16);
-    volume.addEventListener('input', e=>masterGain.gain.value = parseFloat(e.target.value)/100);
-    tapeSat.addEventListener('input', updateTapeSat);
-    document.getElementById('toggleDisplay').addEventListener('click', ()=> display.style.display = display.style.display==='none'?'block':'none');
-    toggleSpecBtn.addEventListener('click', ()=> displaySpectro = !displaySpectro);
 
-    function updateDisplay(){
-      display.textContent =
-        "PRESET      : " + preset.value + "\n" +
-        "BITCRUSH    : " + (bitcrush.checked?"12-bit":"16-bit") + "\n" +
-        "DOWNSAMPLE  : " + downsample.value + " Hz\n" +
-        "FILTER      : " + filter.value + "\n" +
-        "RESONANCE   : " + resonance.value + "\n" +
-        "SATURATION  : " + tapeSat.value + "\n" +
-        "PITCH DRIFT : " + pitchDrift.value + "\n" +
-        "VOLUME      : " + volume.value + "\n" +
-        "BPM         : " + bpmControl.value;
-    }
-    setInterval(updateDisplay,250);
+    // Display params
+    setInterval(() => {
+      infoDisp.textContent =
+        `PRESET      : ${preset.value}\n` +
+        `BITCRUSH    : ${bitcrush.checked?'12-bit':'16-bit'}\n` +
+        `DOWNSAMPLE  : ${downsample.value} Hz\n` +
+        `FILTER      : ${filterCtrl.value}\n` +
+        `RESONANCE   : ${resonance.value}\n` +
+        `TAPE SAT    : ${tapeSat.value}\n` +
+        `PITCH DRIFT : ${pitchDrift.value}\n` +
+        `VOLUME      : ${volumeCtrl.value}\n` +
+        `BPM         : ${bpmCtrl.value}`;
+    }, 250);
   </script>
 </body>
 </html>
+```
