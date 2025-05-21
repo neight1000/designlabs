@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Plantasia App v15 – Fractal Feedback + DMT Preset (Fixed)</title>
+  <title>Plantasia App v16 – DMT Preset + SP-1200</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
@@ -51,16 +51,19 @@
         <option value="mushrooms">Mushrooms</option>
         <option value="harmony">Lifeform Harmony</option>
         <option value="dmt">DMT (Slow & Drowny)</option>
+        <option value="sp1200">SP-1200</option>
       </select>
     </div>
     <div><label>Delay</label><input type="range" id="delay" min="0.01" max="2.0" step="0.01" value="0.6"></div>
-    <div><label>Echo</label><input type="range" id="echo" min="0" max="1.0" step="0.01" value="0.4"></div>
-    <div><label>Reverb</label><input type="range" id="reverb" min="0" max="1.0" step="0.01" value="0.4"></div>
-    <div><label>Filter</label><input type="range" id="filter" min="100" max="8000" step="10" value="1200"></div>
-    <div><label>Frequency</label><input type="range" id="freq" min="50" max="1000" step="1" value="174"></div>
-    <div><label>Volume</label><input type="range" id="volume" min="0" max="100" value="60"></div>
-    <div><label>BPM</label><input type="range" id="bpm" min="10" max="180" value="90"></div>
-    <div><label>Density</label><input type="range" id="density" min="1" max="10" step="1" value="5"></div>
+    <div><label>Echo</label><input type="range" id="echo" min="0" max="1.0" step="0.01" value="0.1"></div>
+    <div><label>Reverb</label><input type="range" id="reverb" min="0" max="1.0" step="0.01" value="0.2"></div>
+    <div><label>Bitcrush</label><input type="checkbox" id="bitcrush"></div>
+    <div><label>Downsample</label><input type="range" id="downsample" min="8000" max="32000" step="1000" value="12000"></div>
+    <div><label>Filter</label><input type="range" id="filter" min="100" max="5000" step="10" value="800"></div>
+    <div><label>Frequency</label><input type="range" id="freq" min="20" max="200" step="1" value="45"></div>
+    <div><label>Volume</label><input type="range" id="volume" min="0" max="100" value="38"></div>
+    <div><label>BPM</label><input type="range" id="bpm" min="20" max="120" value="36"></div>
+    <div><label>Density</label><input type="range" id="density" min="1" max="5" step="1" value="2"></div>
     <div><label>Height</label><input type="range" id="height" min="0.5" max="2.0" step="0.1" value="1.0"></div>
     <button id="play">PLAY</button>
     <button id="stop">STOP</button>
@@ -71,6 +74,8 @@
           delay = document.getElementById('delay'),
           echo = document.getElementById('echo'),
           reverb = document.getElementById('reverb'),
+          bitcrush = document.getElementById('bitcrush'),
+          downsample = document.getElementById('downsample'),
           filter = document.getElementById('filter'),
           freq = document.getElementById('freq'),
           volume = document.getElementById('volume'),
@@ -86,19 +91,36 @@
     let trailFrames = [], currentWaveColor = "#00FF7F";
     let canvas, ctx;
 
+    // --- PRESET SETTINGS, including SP-1200 ---
     const presetSettings = {
-      plants:   { scale: [174,285,396,417,528], color:"#00FF7F", slow:1 },
-      mold:     { scale: [432,639,741],         color:"#8A2BE2", slow:1 },
-      bacteria: { scale: [528,554,585,728],      color:"#FF4500", slow:1 },
-      mushrooms:{ scale: [417,444,528,639],      color:"#FFD700", slow:1 },
-      harmony:  { scale: [432,528,639,741,852],  color:"#00FFFF", slow:1 },
-      dmt:      { scale: [100,140,200,250,310],  color:"#7F00FF", slow:4 }
+      plants:   { scale: [174,285,396,417,528], color:"#00FF7F", slow:1, bitcrush: false, downsample: 12000, filter: 800 },
+      mold:     { scale: [432,639,741],         color:"#8A2BE2", slow:1, bitcrush: false, downsample: 12000, filter: 800 },
+      bacteria: { scale: [528,554,585,728],     color:"#FF4500", slow:1, bitcrush: false, downsample: 12000, filter: 800 },
+      mushrooms:{ scale: [417,444,528,639],     color:"#FFD700", slow:1, bitcrush: false, downsample: 12000, filter: 800 },
+      harmony:  { scale: [432,528,639,741,852], color:"#00FFFF", slow:1, bitcrush: false, downsample: 12000, filter: 800 },
+      dmt:      { scale: [100,140,200,250,310], color:"#7F00FF", slow:4, bitcrush: false, downsample: 12000, filter: 800 },
+      sp1200:   { 
+        scale: [55,110,220,440,880], 
+        color: "#B5A642",
+        slow: 1,
+        bitcrush: true,
+        downsample: 11000,
+        filter: 1200
+      }
     };
+
+    function applyPresetSettings() {
+      const s = presetSettings[preset.value];
+      bitcrush.checked = !!s.bitcrush;
+      downsample.value = s.downsample;
+      filter.value = s.filter;
+    }
 
     function getScale()   { return presetSettings[preset.value].scale; }
     function getColor()   { return presetSettings[preset.value].color; }
     function getSlow()    { return presetSettings[preset.value].slow; }
 
+    // --- AUDIO SETUP ---
     function initAudio(){
       if (audioCtx) return;
       canvas = document.getElementById("waveCanvas");
@@ -114,62 +136,125 @@
       masterGain = audioCtx.createGain(); masterGain.gain.value = parseFloat(volume.value)/100;
       reverbNode = audioCtx.createDelay();
       reverbFeedback = audioCtx.createGain();
-      reverbNode.delayTime = 0.4; reverbFeedback.gain.value = parseFloat(reverb.value);
+      reverbNode.delayTime.value = 0.4; reverbFeedback.gain.value = parseFloat(reverb.value);
       reverbNode.connect(reverbFeedback); reverbFeedback.connect(reverbNode);
       reverbNode.connect(masterGain);
       masterGain.connect(audioCtx.destination);
 
-      canvas = document.getElementById("waveCanvas");
-      ctx = canvas.getContext("2d");
       animate();
     }
 
-    function playTone(freqVal){
+    // --- BITCRUSHER ---
+    let bitcrusherNode = null;
+    async function loadBitcrusher() {
+      if (audioCtx.audioWorklet && !audioCtx.bitcrusherLoaded) {
+        const bitcrusherJs = `
+          class BitCrusherProcessor extends AudioWorkletProcessor {
+            static get parameterDescriptors() {
+              return [
+                { name: 'bitDepth', defaultValue: 8, minValue: 1, maxValue: 16 },
+                { name: 'frequency', defaultValue: 11025, minValue: 8000, maxValue: 32000 }
+              ];
+            }
+            constructor() { super(); this.phase = 0; this.lastSample = 0; }
+            process(inputs, outputs, parameters) {
+              const input = inputs[0]; const output = outputs[0];
+              const bitDepth = parameters.bitDepth.length === 1 ? parameters.bitDepth[0] : parameters.bitDepth;
+              const freq = parameters.frequency.length === 1 ? parameters.frequency[0] : parameters.frequency;
+              const step = Math.pow(0.5, bitDepth);
+              const rate = sampleRate / freq;
+              for (let channel = 0; channel < input.length; channel++) {
+                const inputChannel = input[channel];
+                const outputChannel = output[channel];
+                for (let i = 0; i < inputChannel.length; i++) {
+                  this.phase += 1;
+                  if (this.phase >= rate) {
+                    this.phase -= rate;
+                    this.lastSample = Math.round(inputChannel[i] / step) * step;
+                  }
+                  outputChannel[i] = this.lastSample;
+                }
+              }
+              return true;
+            }
+          }
+          registerProcessor('bitcrusher', BitCrusherProcessor);
+        `;
+        const blob = new Blob([bitcrusherJs], { type: 'application/javascript' });
+        await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+        audioCtx.bitcrusherLoaded = true;
+      }
+      if (!bitcrusherNode && audioCtx.bitcrusherLoaded) {
+        bitcrusherNode = new AudioWorkletNode(audioCtx, 'bitcrusher');
+      }
+    }
+
+    // --- SOUND SYNTHESIS ---
+    async function playTone(freqVal){
       if (!audioCtx) initAudio();
       const now = audioCtx.currentTime;
       const slow = getSlow();
 
+      // Filter
       const filterNode = audioCtx.createBiquadFilter();
       filterNode.type = "lowpass";
-      filterNode.frequency.value = parseFloat(filter.value);
+      filterNode.frequency.value = Math.min(parseFloat(filter.value), 2000);
 
+      // Delay/Echo
       const delayNode = audioCtx.createDelay();
-      delayNode.delayTime = parseFloat(delay.value);
+      delayNode.delayTime.value = parseFloat(delay.value);
       const feedbackNode = audioCtx.createGain();
-      feedbackNode.gain = parseFloat(echo.value);
+      feedbackNode.gain.value = Math.min(parseFloat(echo.value), 0.2);
 
+      // Gain Envelope
       const gainNode = audioCtx.createGain();
       gainNode.gain.setValueAtTime(0, now);
-      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.3*slow);
-      gainNode.gain.linearRampToValueAtTime(0, now + 3*slow);
+      gainNode.gain.linearRampToValueAtTime(0.3, now + 0.15*slow);
+      gainNode.gain.linearRampToValueAtTime(0, now + 1*slow);
 
-      // dry path
-      gainNode.connect(masterGain);
-      gainNode.connect(analyser);
-
+      // Stereo Panning
       const panNode = audioCtx.createStereoPanner();
       panNode.pan.value = Math.random()*2-1;
 
+      // Oscillator(s)
       [-0.5,0,0.5].forEach(offset=>{
         const osc = audioCtx.createOscillator();
-        osc.type = "square";
+        osc.type = "sine"; // Less ringing!
         osc.frequency.value = freqVal*(1+offset/100);
         const pitchLFO = audioCtx.createOscillator();
         const pitchLFOGain = audioCtx.createGain();
         pitchLFO.frequency.value = 0.25;
         pitchLFOGain.gain.value = 1.5;
         pitchLFO.connect(pitchLFOGain).connect(osc.frequency);
-        pitchLFO.start(now); pitchLFO.stop(now + 3*slow);
+        pitchLFO.start(now); pitchLFO.stop(now + 1*slow);
         osc.connect(gainNode);
-        osc.start(now); osc.stop(now + 3*slow);
+        osc.start(now); osc.stop(now + 1*slow);
       });
 
+      // Routing: GAIN > PAN > FILTER > (BITCRUSH) > DELAY > REVERB > MASTER
       gainNode.connect(panNode);
       panNode.connect(filterNode);
-      filterNode.connect(delayNode);
+
+      // Optional bitcrusher for SP-1200 preset
+      if (preset.value === 'sp1200' && bitcrush.checked) {
+        await loadBitcrusher();
+        if (bitcrusherNode) {
+          bitcrusherNode.parameters.get('bitDepth').value = 8;
+          bitcrusherNode.parameters.get('frequency').value = parseFloat(downsample.value);
+          filterNode.connect(bitcrusherNode);
+          bitcrusherNode.connect(delayNode);
+        } else {
+          filterNode.connect(delayNode);
+        }
+      } else {
+        filterNode.connect(delayNode);
+      }
+
       delayNode.connect(feedbackNode);
       feedbackNode.connect(delayNode);
       delayNode.connect(reverbNode);
+      gainNode.connect(masterGain); // dry
+      gainNode.connect(analyser);
     }
 
     function scheduleNotes(){
@@ -222,6 +307,7 @@
       ctx.restore();
     }
 
+    // --- UI HOOKUPS ---
     playBtn.addEventListener("click", ()=>{
       initAudio();
       stopped = false;
@@ -245,6 +331,7 @@
 
     preset.addEventListener("change", ()=>{
       currentWaveColor = getColor();
+      applyPresetSettings();
       if (!stopped) scheduleNotes();
     });
 
@@ -258,9 +345,23 @@
 
     function updateDisplay(){
       infoDisplay.textContent =
-        `PRESET: ${preset.value}\nDELAY: ${delay.value}\nECHO: ${echo.value}\nREVERB: ${reverb.value}\nFILTER: ${filter.value}\nFREQ: ${freq.value}\nVOLUME: ${volume.value}\nBPM: ${bpm}\nDENSITY: ${density.value}\nHEIGHT: ${height.value}`;
+        `PRESET: ${preset.value}
+DELAY: ${delay.value}
+ECHO: ${echo.value}
+REVERB: ${reverb.value}
+BITCRUSH: ${bitcrush.checked}
+DOWNSAMPLE: ${downsample.value}
+FILTER: ${filter.value}
+FREQ: ${freq.value}
+VOLUME: ${volume.value}
+BPM: ${bpmControl.value}
+DENSITY: ${density.value}
+HEIGHT: ${height.value}`;
     }
     setInterval(updateDisplay,250);
+
+    // Apply preset settings on load and when preset changes
+    window.addEventListener('DOMContentLoaded', applyPresetSettings);
   </script>
 </body>
 </html>
