@@ -5,333 +5,360 @@
   <title>Plantasia x SP-12 – 12-bit Drum Machine Emu</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    html, body { margin: 0; padding: 0; background: black; color: white; font-family: monospace; overflow: hidden; }
-    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
-    .ui { position: absolute; bottom: 0; width: 100%; background: rgba(0, 0, 0, 0.85); padding: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; z-index: 2; }
-    .ui label { font-size: 10px; display: block; text-align: center; }
-    .ui input[type="range"], .ui select { width: 90px; }
-    .ui button { font-size: 12px; padding: 4px 8px; background: transparent; border: 1px solid white; color: white; cursor: pointer; }
-    #infoDisplay { position: absolute; top: 10px; left: 10px; z-index: 3; background: rgba(0, 0, 0, 0.6); color: white; font-size: 12px; padding: 10px; display: none; white-space: pre; }
+    html, body { margin:0; padding:0; background:black; color:white; font-family:monospace; overflow:hidden; }
+    canvas { position:absolute; top:0; left:0; width:100vw; height:100vh; z-index:0; }
+    .ui { position:absolute; bottom:0; width:100%; background:rgba(0,0,0,0.85); padding:10px; display:flex; flex-wrap:wrap; justify-content:center; gap:10px; z-index:2; }
+    .ui label{ font-size:10px; text-align:center; display:block; }
+    .ui input[type=range], .ui select{ width:90px; }
+    .ui button{ font-size:12px; padding:4px 8px; background:transparent; border:1px solid white; color:white; cursor:pointer; }
+    #infoDisplay{ position:absolute; top:10px; left:10px; z-index:3; background:rgba(0,0,0,0.6); color:white; font-size:12px; padding:10px; display:none; white-space:pre; }
   </style>
 </head>
 <body>
-<canvas id="waveCanvas"></canvas>
-<div id="infoDisplay"></div>
-<div class="ui">
-  <!-- controls unchanged -->
-  <div><label>Preset</label>
-    <select id="preset">
-      <option value="plants">Plants</option>
-      <option value="mold">Mold</option>
-      <option value="bacteria">Bacteria</option>
-      <option value="mushrooms">Mushrooms</option>
-      <option value="harmony">Lifeform Harmony</option>
-      <option value="sp12" selected>SP-12 Drum</option>
-    </select>
+  <canvas id="waveCanvas"></canvas>
+  <div id="infoDisplay"></div>
+  <div class="ui">
+    <div><label>Preset</label>
+      <select id="preset">
+        <option value="plants">Plants</option>
+        <option value="mold">Mold</option>
+        <option value="bacteria">Bacteria</option>
+        <option value="mushrooms">Mushrooms</option>
+        <option value="harmony">Lifeform Harmony</option>
+        <option value="sp12" selected>SP-12 Drum</option>
+      </select>
+    </div>
+    <div><label>12-bit</label><input type="checkbox" id="bitcrush" checked/></div>
+    <div><label>Downsample</label><input type="range" id="downsample" min="8000" max="48000" step="1000" value="26000"/></div>
+    <div><label>Filter</label><input type="range" id="filter" min="100" max="8000" step="10" value="1500"/></div>
+    <div><label>Resonance</label><input type="range" id="resonance" min="0.1" max="20" step="0.1" value="6.0"/></div>
+    <div><label>Pitch Drift</label><input type="range" id="pitchDrift" min="0" max="0.1" step="0.001" value="0.07"/></div>
+    <div><label>Volume</label><input type="range" id="volume" min="0" max="100" value="65"/></div>
+    <div><label>BPM</label><input type="range" id="bpm" min="40" max="180" value="90"/></div>
+    <div><label>Tape Sat</label><input type="range" id="tapeSat" min="0" max="1" step="0.01" value="0.18"/></div>
+    <button id="play">PLAY</button>
+    <button id="stop">STOP</button>
+    <button id="toggleDisplay">TOGGLE DATA</button>
+    <button id="toggleSpec">WAVE/SPECTRO</button>
   </div>
-  <div><label>12-bit</label><input type="checkbox" id="bitcrush" checked /></div>
-  <div><label>Downsample</label><input type="range" id="downsample" min="8000" max="48000" step="1000" value="26000" /></div>
-  <div><label>Filter</label><input type="range" id="filter" min="100" max="8000" step="10" value="1500" /></div>
-  <div><label>Resonance</label><input type="range" id="resonance" min="0.1" max="20" step="0.1" value="6.0" /></div>
-  <div><label>Pitch Drift</label><input type="range" id="pitchDrift" min="0" max="0.1" step="0.001" value="0.07" /></div>
-  <div><label>Volume</label><input type="range" id="volume" min="0" max="100" value="65" /></div>
-  <div><label>BPM</label><input type="range" id="bpm" min="40" max="180" value="90" /></div>
-  <div><label>Tape Sat</label><input type="range" id="tapeSat" min="0" max="1" step="0.01" value="0.18" /></div>
-  <button id="play">PLAY</button>
-  <button id="stop">STOP</button>
-  <button id="toggleDisplay">TOGGLE DATA</button>
-  <button id="toggleSpec">WAVE/SPECTRO</button>
-</div>
-<script>
-let audioCtx = null, analyser = null, masterGain = null, bitcrusherNode = null, bitcrusherLoaded = false, tapeNode = null;
-let filterNode = null, canvas = null, ctx = null, bufferLength = 0, dataArray = null, displaySpectro = false;
-let bpm = 90, bpmTimer = null, stopped = true;
-let trailFrames = [], currentWaveColor = "#B5A642";
-let loadedSamples = {};
-let isAudioInitialized = false;
+  <script>
+    let audioCtx, analyser, masterGain, bitcrusherNode, tapeNode, filterNode;
+    let convolver, compressor, lfo, lfoGain;
+    let canvas, ctx, bufferLength, dataArray, displaySpectro=false;
+    let bpm=90, bpmTimer, stopped=true, isAudioInitialized=false;
+    let trailFrames=[], currentWaveColor="#B5A642", loadedSamples={};
 
-// element refs
-const preset       = document.getElementById('preset'),
-      bitcrush     = document.getElementById('bitcrush'),
-      downsample   = document.getElementById('downsample'),
-      filter       = document.getElementById('filter'),
-      resonance    = document.getElementById('resonance'),
-      pitchDrift   = document.getElementById('pitchDrift'),
-      volume       = document.getElementById('volume'),
-      bpmControl   = document.getElementById('bpm'),
-      tapeSat      = document.getElementById('tapeSat'),
-      playBtn      = document.getElementById('play'),
-      stopBtn      = document.getElementById('stop'),
-      toggleSpecBtn= document.getElementById('toggleSpec'),
-      display      = document.getElementById("infoDisplay");
+    const preset       = document.getElementById('preset'),
+          bitcrush     = document.getElementById('bitcrush'),
+          downsample   = document.getElementById('downsample'),
+          filter       = document.getElementById('filter'),
+          resonance    = document.getElementById('resonance'),
+          pitchDrift   = document.getElementById('pitchDrift'),
+          volume       = document.getElementById('volume'),
+          bpmControl   = document.getElementById('bpm'),
+          tapeSat      = document.getElementById('tapeSat'),
+          playBtn      = document.getElementById('play'),
+          stopBtn      = document.getElementById('stop'),
+          toggleSpecBtn= document.getElementById('toggleSpec'),
+          display      = document.getElementById("infoDisplay");
 
-// disable STOP until we’re playing
-stopBtn.disabled = true;
+    // disable STOP until we start
+    stopBtn.disabled = true;
 
-const presetSettings = {
-  plants:     { color: "#00FF7F", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav"] },
-  mold:       { color: "#8A2BE2", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/snare.wav"] },
-  bacteria:   { color: "#FF4500", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/hihat.wav"] },
-  mushrooms:  { color: "#FFD700", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/clap.wav"] },
-  harmony:    { color: "#00FFFF", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/tom.wav"] },
-  sp12:       { color: "#B5A642", samples: [
-    "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav",
-    "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/snare.wav",
-    "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/hihat.wav"
-  ]}
-};
+    const presetSettings = {
+      plants:   { color:"#00FF7F", samples:["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav"] },
+      mold:     { color:"#8A2BE2", samples:["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/snare.wav"] },
+      bacteria: { color:"#FF4500", samples:["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/hihat.wav"] },
+      mushrooms:{ color:"#FFD700", samples:["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/clap.wav"] },
+      harmony:  { color:"#00FFFF", samples:["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/tom.wav"] },
+      sp12:     { color:"#B5A642", samples:[
+        "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav",
+        "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/snare.wav",
+        "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/hihat.wav"
+      ]}
+    };
 
-function getColorFromPreset(val) { return presetSettings[val]?.color || "#FFFFFF"; }
-function getSamplesFromPreset(val){ return presetSettings[val]?.samples || []; }
+    function getColorFromPreset(v){ return presetSettings[v]?.color||"#FFF"; }
+    function getSamplesFromPreset(v){ return presetSettings[v]?.samples||[]; }
 
-async function loadSamplesForPreset(presetName) {
-  const urls = getSamplesFromPreset(presetName);
-  loadedSamples = {};
-  await Promise.all(urls.map(async (url) => {
-    const response = await fetch(url);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-    loadedSamples[url] = audioBuffer;
-  }));
-}
+    async function loadSamplesForPreset(name){
+      const urls = getSamplesFromPreset(name);
+      loadedSamples = {};
+      await Promise.all(urls.map(async url=>{
+        const resp = await fetch(url);
+        const buf = await resp.arrayBuffer();
+        loadedSamples[url] = await audioCtx.decodeAudioData(buf);
+      }));
+    }
 
-async function loadBitcrusher() {
-  if (!bitcrusherLoaded && audioCtx.audioWorklet) {
-    const bitcrusherJs = `
-      class BitCrusherProcessor extends AudioWorkletProcessor {
-        static get parameterDescriptors() {
-          return [
-            { name: 'bitDepth', defaultValue: 12, minValue: 1, maxValue: 16 },
-            { name: 'frequency', defaultValue: 26000, minValue: 8000, maxValue: 48000 }
-          ];
-        }
-        constructor(){ super(); this.phase = 0; this.lastSample = 0; }
-        process(inputs, outputs, parameters) {
-          const input = inputs[0], output = outputs[0];
-          const bitDepth = parameters.bitDepth.length===1 ? parameters.bitDepth[0] : parameters.bitDepth;
-          const freq = parameters.frequency.length===1 ? parameters.frequency[0] : parameters.frequency;
-          const step = Math.pow(0.5, bitDepth);
-          const rate = sampleRate / freq;
-          for(let ch=0; ch<input.length; ch++){
-            const inp=input[ch], out=output[ch];
-            for(let i=0; i<inp.length; i++){
-              this.phase++;
-              if(this.phase >= rate){
-                this.phase -= rate;
-                this.lastSample = Math.round(inp[i]/step)*step;
-              }
-              out[i] = this.lastSample;
-            }
+    async function loadBitcrusher(){
+      if (!audioCtx.audioWorklet || bitcrusherNode) return;
+      const js = `
+        class BitCrusherProcessor extends AudioWorkletProcessor {
+          static get parameterDescriptors(){
+            return [
+              {name:'bitDepth',defaultValue:12,minValue:1,maxValue:16},
+              {name:'frequency',defaultValue:26000,minValue:8000,maxValue:48000}
+            ];
           }
-          return true;
+          constructor(){ super(); this.phase=0; this.last=0; }
+          process(i,o,p){
+            const inp=i[0], out=o[0];
+            const bits = p.bitDepth.length===1?p.bitDepth[0]:p.bitDepth;
+            const freq = p.frequency.length===1?p.frequency[0]:p.frequency;
+            const step=2**(-bits), rate=sampleRate/freq;
+            for(let ch=0; ch<inp.length; ch++){
+              for(let i2=0;i2<inp[ch].length;i2++){
+                this.phase++;
+                if(this.phase>=rate){ this.phase-=rate; this.last=Math.round(inp[ch][i2]/step)*step; }
+                out[ch][i2] = this.last;
+              }
+            }
+            return true;
+          }
         }
+        registerProcessor('bitcrusher',BitCrusherProcessor);
+      `;
+      const blob = new Blob([js],{type:'application/javascript'});
+      await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
+      bitcrusherNode = new AudioWorkletNode(audioCtx,'bitcrusher');
+    }
+
+    function makeSatCurve(a=0.18){
+      const n=44100, curve=new Float32Array(n);
+      for(let i=0;i<n;i++){
+        const x=(i*2)/n-1;
+        curve[i] = Math.tanh(x*(1+a*10));
       }
-      registerProcessor('bitcrusher', BitCrusherProcessor);
-    `;
-    const blob = new Blob([bitcrusherJs], { type: 'application/javascript' });
-    await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
-    bitcrusherLoaded = true;
-  }
-}
+      return curve;
+    }
 
-function createTapeSaturationNode(ctx, amount){
-  const ws = ctx.createWaveShaper();
-  ws.curve = makeSatCurve(amount);
-  ws.oversample = "4x";
-  return ws;
-}
-function makeSatCurve(amount=0.18){
-  const n=44100, curve=new Float32Array(n);
-  for(let i=0; i<n; i++){
-    const x=(i*2)/n-1;
-    curve[i]=Math.tanh(x*(1+amount*10));
-  }
-  return curve;
-}
+    function createTapeNode(a){
+      const ws = audioCtx.createWaveShaper();
+      ws.curve = makeSatCurve(a);
+      ws.oversample = '4x';
+      return ws;
+    }
 
-async function initAudio(){
-  if(isAudioInitialized && audioCtx) return;
-  canvas = document.getElementById("waveCanvas");
-  ctx = canvas.getContext("2d");
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+    async function initAudio(){
+      if(isAudioInitialized) return;
+      // canvas
+      canvas = document.getElementById('waveCanvas');
+      ctx = canvas.getContext('2d');
+      canvas.width = innerWidth; canvas.height = innerHeight;
 
-  audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-  analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048;
-  bufferLength = analyser.frequencyBinCount;
-  dataArray = new Uint8Array(bufferLength);
+      // context + nodes
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
 
-  masterGain = audioCtx.createGain();
-  masterGain.gain.value = parseFloat(volume.value)/100;
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = parseFloat(volume.value)/100;
 
-  filterNode = audioCtx.createBiquadFilter();
-  filterNode.type = "lowpass";
-  filterNode.frequency.value = parseFloat(filter.value);
-  filterNode.Q.value = parseFloat(resonance.value);
+      filterNode = audioCtx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = parseFloat(filter.value);
+      filterNode.Q.value = parseFloat(resonance.value);
 
-  await loadBitcrusher();
-  bitcrusherNode = new AudioWorkletNode(audioCtx,'bitcrusher');
-  bitcrusherNode.parameters.get('bitDepth').value = bitcrush.checked?12:16;
-  bitcrusherNode.parameters.get('frequency').value = parseFloat(downsample.value);
+      await loadBitcrusher();
 
-  tapeNode = createTapeSaturationNode(audioCtx, parseFloat(tapeSat.value));
+      // chain: filter → bitcrusher → tape → master
+      tapeNode = createTapeNode(parseFloat(tapeSat.value));
+      filterNode.connect(bitcrusherNode);
+      bitcrusherNode.connect(tapeNode);
+      tapeNode.connect(masterGain);
 
-  // filter → bitcrusher → tape → gain → analyser → out
-  filterNode.connect(bitcrusherNode);
-  bitcrusherNode.connect(tapeNode);
-  tapeNode.connect(masterGain);
-  masterGain.connect(analyser);
-  analyser.connect(audioCtx.destination);
+      // LFO → filter cutoff
+      lfo = audioCtx.createOscillator();
+      lfoGain = audioCtx.createGain();
+      lfo.type = 'sine'; lfo.frequency.value = 0.15;
+      lfoGain.gain.value = 600;
+      lfo.connect(lfoGain).connect(filterNode.frequency);
+      lfo.start();
 
-  isAudioInitialized = true;
-  animate();
-}
+      // reverb
+      convolver = audioCtx.createConvolver();
+      fetch('https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/drum-room-ir.wav')
+        .then(r=>r.arrayBuffer())
+        .then(b=>audioCtx.decodeAudioData(b))
+        .then(buf=>convolver.buffer = buf);
 
-function updateTapeSatCurve(){
-  if(tapeNode) tapeNode.curve = makeSatCurve(parseFloat(tapeSat.value));
-}
+      // compressor
+      compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -24;
+      compressor.knee.value      = 30;
+      compressor.ratio.value     = 4;
+      compressor.attack.value    = 0.001;
+      compressor.release.value   = 0.2;
 
-function playSample(){
-  const urls = getSamplesFromPreset(preset.value);
-  if(!urls.length) return;
-  const url = urls[Math.floor(Math.random()*urls.length)];
-  const buffer = loadedSamples[url];
-  if(!buffer) return;
-  const src = audioCtx.createBufferSource();
-  src.buffer = buffer;
-  // pitch drift
-  const drift = parseFloat(pitchDrift.value);
-  if(drift>0){
-    src.playbackRate.value += (Math.random()-0.5)*drift;
-  }
-  src.connect(filterNode);
-  src.start();
-}
+      // final routing
+      masterGain.connect(analyser);
+      masterGain.connect(compressor);
+      compressor.connect(analyser);
+      masterGain.connect(convolver);
+      convolver.connect(analyser);
+      analyser.connect(audioCtx.destination);
 
-function scheduleNotes(){
-  clearInterval(bpmTimer);
-  bpmTimer = setInterval(()=>{
-    if(!stopped) playSample();
-  }, 60000/bpm);
-}
+      isAudioInitialized = true;
+      animate();
+    }
 
-function animate(){
-  if(!ctx||!analyser) return;
-  requestAnimationFrame(animate);
-  if(!displaySpectro){
-    analyser.getByteTimeDomainData(dataArray);
-    ctx.fillStyle = "rgba(0,0,0,0.08)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
+    function updateTapeSat(){ if(tapeNode) tapeNode.curve = makeSatCurve(parseFloat(tapeSat.value)); }
 
-    if(trailFrames.length>12) trailFrames.shift();
-    trailFrames.push([...dataArray]);
+    function playSample(){
+      const urls = getSamplesFromPreset(preset.value);
+      if(!urls.length) return;
+      const url = urls[Math.floor(Math.random()*urls.length)];
+      const buffer = loadedSamples[url];
+      if(!buffer) return;
 
-    const grad = ctx.createLinearGradient(0,0,canvas.width,0);
-    grad.addColorStop(0, currentWaveColor);
-    grad.addColorStop(1, "#000");
+      const src = audioCtx.createBufferSource();
+      src.buffer = buffer;
 
-    trailFrames.forEach((data, t)=>{
-      const slice = canvas.width/data.length;
-      ctx.beginPath();
-      let x=0;
-      data.forEach((v,i)=>{
-        const y=( (v-128)/128 * (canvas.height/2)*0.9 ) + (canvas.height/2);
-        ctx[i===0?'moveTo':'lineTo'](x,y);
-        x+=slice;
-      });
-      ctx.globalAlpha = 0.05 + (t/trailFrames.length)*0.1;
-      ctx.strokeStyle = grad;
-      ctx.shadowBlur = 16;
-      ctx.shadowColor = currentWaveColor;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.globalAlpha = 1;
+      // pitch jitter ±2%
+      src.playbackRate.value = 1 + ((Math.random()-0.5)*0.04);
+
+      // stereo panner ±0.5
+      const pan = audioCtx.createStereoPanner();
+      pan.pan.value = (Math.random()*2 - 1)*0.5;
+
+      // connect chain
+      src.connect(pan).connect(filterNode);
+
+      // sub-kick on kick hits
+      if(url.includes('kick.wav')){
+        const sub = audioCtx.createOscillator();
+        const env = audioCtx.createGain();
+        sub.type = 'sine';
+        sub.frequency.value = 60;
+        sub.connect(env).connect(filterNode);
+        const now = audioCtx.currentTime;
+        env.gain.setValueAtTime(0, now);
+        env.gain.linearRampToValueAtTime(0.2, now+0.01);
+        env.gain.exponentialRampToValueAtTime(0.0001, now+0.3);
+        sub.start(now);
+        sub.stop(now+0.3);
+      }
+
+      // timing jitter ±10ms
+      const now = audioCtx.currentTime;
+      const jitter = (Math.random()-0.5)*0.02;
+      src.start(now + jitter);
+    }
+
+    function scheduleNotes(){
+      clearInterval(bpmTimer);
+      bpmTimer = setInterval(()=>{
+        if(!stopped) playSample();
+      }, 60000/bpm);
+    }
+
+    function animate(){
+      requestAnimationFrame(animate);
+      if(!displaySpectro){
+        analyser.getByteTimeDomainData(dataArray);
+        ctx.fillStyle='rgba(0,0,0,0.08)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+
+        if(trailFrames.length>12) trailFrames.shift();
+        trailFrames.push([...dataArray]);
+
+        const grad = ctx.createLinearGradient(0,0,canvas.width,0);
+        grad.addColorStop(0, currentWaveColor);
+        grad.addColorStop(1, '#000');
+
+        trailFrames.forEach((data,t)=>{
+          const slice = canvas.width/data.length;
+          ctx.beginPath();
+          let x=0;
+          data.forEach((v,i)=>{
+            const y = ((v-128)/128)*(canvas.height/2*0.9) + canvas.height/2;
+            ctx[i===0?'moveTo':'lineTo'](x,y);
+            x += slice;
+          });
+          ctx.globalAlpha = 0.05 + (t/trailFrames.length)*0.1;
+          ctx.strokeStyle = grad;
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = currentWaveColor;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.globalAlpha = 1;
+        });
+      } else {
+        analyser.fftSize = 1024;
+        const freqData = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(freqData);
+        ctx.fillStyle='rgba(0,0,0,0.08)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+        const barW = canvas.width/freqData.length;
+        freqData.forEach((v,i)=>{
+          const h = v/255*canvas.height;
+          ctx.fillStyle = `hsl(${220+i/2},80%,${35+v/4}%)`;
+          ctx.fillRect(i*barW, canvas.height-h, barW, h);
+        });
+      }
+    }
+
+    // — UI EVENTS —
+
+    playBtn.addEventListener('click', async ()=>{
+      playBtn.disabled = true;
+      stopBtn.disabled = false;
+      stopped = false;
+      currentWaveColor = getColorFromPreset(preset.value);
+
+      if(!isAudioInitialized) await initAudio();
+      if(audioCtx.state==='suspended') await audioCtx.resume();
+
+      await loadSamplesForPreset(preset.value);
+      scheduleNotes();
+      playSample();
     });
-  } else {
-    analyser.fftSize = 1024;
-    const freqData = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(freqData);
-    ctx.fillStyle="rgba(0,0,0,0.08)";
-    ctx.fillRect(0,0,canvas.width,canvas.height);
-    const barW = canvas.width/freqData.length;
-    freqData.forEach((val,i)=>{
-      const h=val/255*canvas.height;
-      ctx.fillStyle = `hsl(${220+i/2},80%,${35+val/4}%)`;
-      ctx.fillRect(i*barW, canvas.height-h, barW, h);
+
+    stopBtn.addEventListener('click', async ()=>{
+      stopped = true;
+      clearInterval(bpmTimer);
+      if(audioCtx.state==='running') await audioCtx.suspend();
+      stopBtn.disabled = true;
+      playBtn.disabled = false;
     });
-  }
-}
 
-// — UI HANDLERS —
+    bpmControl.addEventListener('input', e=>{
+      bpm = parseInt(e.target.value);
+      if(!stopped) scheduleNotes();
+    });
+    preset.addEventListener('change', async ()=>{
+      currentWaveColor = getColorFromPreset(preset.value);
+      await loadSamplesForPreset(preset.value);
+      if(!stopped) scheduleNotes();
+    });
+    filter.addEventListener('input', e=>filterNode.frequency.value = parseFloat(e.target.value));
+    resonance.addEventListener('input', e=>filterNode.Q.value = parseFloat(e.target.value));
+    downsample.addEventListener('input', e=>bitcrusherNode.parameters.get('frequency').value = parseFloat(e.target.value));
+    bitcrush.addEventListener('change', e=>bitcrusherNode.parameters.get('bitDepth').value = e.target.checked?12:16);
+    volume.addEventListener('input', e=>masterGain.gain.value = parseFloat(e.target.value)/100);
+    tapeSat.addEventListener('input', updateTapeSat);
 
-// PLAY
-playBtn.addEventListener('click', async ()=>{
-  playBtn.disabled = true;
-  stopBtn.disabled = false;
-  stopped = false;
-  currentWaveColor = getColorFromPreset(preset.value);
+    document.getElementById('toggleDisplay').addEventListener('click', ()=>{
+      display.style.display = display.style.display==='none'?'block':'none';
+    });
+    toggleSpecBtn.addEventListener('click', ()=>displaySpectro = !displaySpectro);
 
-  // init or resume
-  if(!audioCtx || audioCtx.state==='closed') isAudioInitialized=false;
-  await initAudio();
-  if(audioCtx.state==='suspended') await audioCtx.resume();
-
-  await loadSamplesForPreset(preset.value);
-  scheduleNotes();
-  playSample();
-
-  playBtn.disabled = true; 
-});
-
-// STOP
-stopBtn.addEventListener('click', async ()=>{
-  stopped = true;
-  clearInterval(bpmTimer);
-  if(audioCtx && audioCtx.state === 'running') {
-    await audioCtx.suspend();
-  }
-  stopBtn.disabled = true;
-  playBtn.disabled = false;
-});
-
-// other controls
-bpmControl.addEventListener('input', e=>{
-  bpm = parseInt(e.target.value);
-  if(!stopped) scheduleNotes();
-});
-preset.addEventListener('change', async ()=>{
-  currentWaveColor = getColorFromPreset(preset.value);
-  await loadSamplesForPreset(preset.value);
-  if(!stopped) scheduleNotes();
-});
-filter.addEventListener('input', e=>{ if(filterNode) filterNode.frequency.value = parseFloat(e.target.value); });
-resonance.addEventListener('input', e=>{ if(filterNode) filterNode.Q.value = parseFloat(e.target.value); });
-downsample.addEventListener('input', e=>{ if(bitcrusherNode) bitcrusherNode.parameters.get('frequency').value = parseFloat(e.target.value); });
-bitcrush.addEventListener('change', e=>{ if(bitcrusherNode) bitcrusherNode.parameters.get('bitDepth').value = e.target.checked?12:16; });
-volume.addEventListener('input', e=>{ if(masterGain) masterGain.gain.value = parseFloat(e.target.value)/100; });
-tapeSat.addEventListener('input', e=>{ updateTapeSatCurve(); });
-
-document.getElementById("toggleDisplay").addEventListener("click", ()=>{
-  display.style.display = display.style.display === "none" ? "block" : "none";
-});
-toggleSpecBtn.addEventListener("click", ()=>{
-  displaySpectro = !displaySpectro;
-});
-
-function updateDisplay(){
-  display.textContent =
-    "PRESET      : " + preset.value + "\n" +
-    "BITCRUSH    : " + (bitcrush.checked ? "12-bit" : "16-bit") + "\n" +
-    "DOWNSAMPLE  : " + downsample.value + " Hz\n" +
-    "FILTER      : " + filter.value + "\n" +
-    "RESONANCE   : " + resonance.value + "\n" +
-    "SATURATION  : " + tapeSat.value + "\n" +
-    "PITCH DRIFT : " + pitchDrift.value + "\n" +
-    "VOLUME      : " + volume.value + "\n" +
-    "BPM         : " + bpmControl.value;
-}
-setInterval(updateDisplay, 250);
-</script>
+    function updateDisplay(){
+      display.textContent =
+        "PRESET      : " + preset.value + "\n" +
+        "BITCRUSH    : " + (bitcrush.checked?"12-bit":"16-bit") + "\n" +
+        "DOWNSAMPLE  : " + downsample.value + " Hz\n" +
+        "FILTER      : " + filter.value + "\n" +
+        "RESONANCE   : " + resonance.value + "\n" +
+        "SATURATION  : " + tapeSat.value + "\n" +
+        "PITCH DRIFT : " + pitchDrift.value + "\n" +
+        "VOLUME      : " + volume.value + "\n" +
+        "BPM         : " + bpmControl.value;
+    }
+    setInterval(updateDisplay,250);
+  </script>
 </body>
 </html>
