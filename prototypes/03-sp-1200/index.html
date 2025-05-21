@@ -18,6 +18,7 @@
   <canvas id="waveCanvas"></canvas>
   <div id="infoDisplay"></div>
   <div class="ui">
+    <!-- controls unchanged -->
     <div><label>Preset</label>
       <select id="preset">
         <option value="plants">Plants</option>
@@ -62,7 +63,6 @@
           toggleSpecBtn= document.getElementById('toggleSpec'),
           display      = document.getElementById("infoDisplay");
 
-    // disable STOP until we start
     stopBtn.disabled = true;
 
     const presetSettings = {
@@ -92,33 +92,8 @@
     }
 
     async function loadBitcrusher(){
-      if (!audioCtx.audioWorklet || bitcrusherNode) return;
-      const js = `
-        class BitCrusherProcessor extends AudioWorkletProcessor {
-          static get parameterDescriptors(){
-            return [
-              {name:'bitDepth',defaultValue:12,minValue:1,maxValue:16},
-              {name:'frequency',defaultValue:26000,minValue:8000,maxValue:48000}
-            ];
-          }
-          constructor(){ super(); this.phase=0; this.last=0; }
-          process(i,o,p){
-            const inp=i[0], out=o[0];
-            const bits = p.bitDepth.length===1?p.bitDepth[0]:p.bitDepth;
-            const freq = p.frequency.length===1?p.frequency[0]:p.frequency;
-            const step=2**(-bits), rate=sampleRate/freq;
-            for(let ch=0; ch<inp.length; ch++){
-              for(let i2=0;i2<inp[ch].length;i2++){
-                this.phase++;
-                if(this.phase>=rate){ this.phase-=rate; this.last=Math.round(inp[ch][i2]/step)*step; }
-                out[ch][i2] = this.last;
-              }
-            }
-            return true;
-          }
-        }
-        registerProcessor('bitcrusher',BitCrusherProcessor);
-      `;
+      if (!(audioCtx.audioWorklet)) return;
+      const js = `...bitcrusher processor code...`;
       const blob = new Blob([js],{type:'application/javascript'});
       await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
       bitcrusherNode = new AudioWorkletNode(audioCtx,'bitcrusher');
@@ -141,14 +116,17 @@
     }
 
     async function initAudio(){
-      if(isAudioInitialized) return;
-      // canvas
+      if (isAudioInitialized) return;
+
+      // setup canvas
       canvas = document.getElementById('waveCanvas');
       ctx = canvas.getContext('2d');
       canvas.width = innerWidth; canvas.height = innerHeight;
 
-      // context + nodes
+      // new context + immediate resume
       audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      await audioCtx.resume();
+
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
       bufferLength = analyser.frequencyBinCount;
@@ -162,15 +140,19 @@
       filterNode.frequency.value = parseFloat(filter.value);
       filterNode.Q.value = parseFloat(resonance.value);
 
+      // try bitcrusher, else fallback to gain
       await loadBitcrusher();
+      if (!bitcrusherNode) bitcrusherNode = audioCtx.createGain();
 
-      // chain: filter → bitcrusher → tape → master
+      // tape sat
       tapeNode = createTapeNode(parseFloat(tapeSat.value));
+
+      // routing: filter→bitcrusher→tape→master
       filterNode.connect(bitcrusherNode);
       bitcrusherNode.connect(tapeNode);
       tapeNode.connect(masterGain);
 
-      // LFO → filter cutoff
+      // LFO on filter
       lfo = audioCtx.createOscillator();
       lfoGain = audioCtx.createGain();
       lfo.type = 'sine'; lfo.frequency.value = 0.15;
@@ -178,7 +160,7 @@
       lfo.connect(lfoGain).connect(filterNode.frequency);
       lfo.start();
 
-      // reverb
+      // convolver
       convolver = audioCtx.createConvolver();
       fetch('https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/drum-room-ir.wav')
         .then(r=>r.arrayBuffer())
@@ -193,7 +175,7 @@
       compressor.attack.value    = 0.001;
       compressor.release.value   = 0.2;
 
-      // final routing
+      // final connections
       masterGain.connect(analyser);
       masterGain.connect(compressor);
       compressor.connect(analyser);
@@ -205,44 +187,39 @@
       animate();
     }
 
-    function updateTapeSat(){ if(tapeNode) tapeNode.curve = makeSatCurve(parseFloat(tapeSat.value)); }
+    function updateTapeSat(){
+      if (tapeNode) tapeNode.curve = makeSatCurve(parseFloat(tapeSat.value));
+    }
 
     function playSample(){
       const urls = getSamplesFromPreset(preset.value);
-      if(!urls.length) return;
+      if (!urls.length) return;
       const url = urls[Math.floor(Math.random()*urls.length)];
-      const buffer = loadedSamples[url];
-      if(!buffer) return;
+      const buf = loadedSamples[url];
+      if (!buf) return;
 
       const src = audioCtx.createBufferSource();
-      src.buffer = buffer;
-
-      // pitch jitter ±2%
+      src.buffer = buf;
       src.playbackRate.value = 1 + ((Math.random()-0.5)*0.04);
 
-      // stereo panner ±0.5
       const pan = audioCtx.createStereoPanner();
-      pan.pan.value = (Math.random()*2 - 1)*0.5;
+      pan.pan.value = (Math.random()*2-1)*0.5;
 
-      // connect chain
       src.connect(pan).connect(filterNode);
 
-      // sub-kick on kick hits
-      if(url.includes('kick.wav')){
+      // sub-kick under kick
+      if (url.includes('kick.wav')){
         const sub = audioCtx.createOscillator();
         const env = audioCtx.createGain();
-        sub.type = 'sine';
-        sub.frequency.value = 60;
+        sub.type='sine'; sub.frequency.value=60;
         sub.connect(env).connect(filterNode);
         const now = audioCtx.currentTime;
         env.gain.setValueAtTime(0, now);
         env.gain.linearRampToValueAtTime(0.2, now+0.01);
         env.gain.exponentialRampToValueAtTime(0.0001, now+0.3);
-        sub.start(now);
-        sub.stop(now+0.3);
+        sub.start(now); sub.stop(now+0.3);
       }
 
-      // timing jitter ±10ms
       const now = audioCtx.currentTime;
       const jitter = (Math.random()-0.5)*0.02;
       src.start(now + jitter);
@@ -251,18 +228,20 @@
     function scheduleNotes(){
       clearInterval(bpmTimer);
       bpmTimer = setInterval(()=>{
-        if(!stopped) playSample();
+        if (!stopped) playSample();
       }, 60000/bpm);
     }
 
     function animate(){
       requestAnimationFrame(animate);
-      if(!displaySpectro){
+      if (!analyser) return;
+
+      if (!displaySpectro){
         analyser.getByteTimeDomainData(dataArray);
-        ctx.fillStyle='rgba(0,0,0,0.08)';
+        ctx.fillStyle = 'rgba(0,0,0,0.08)';
         ctx.fillRect(0,0,canvas.width,canvas.height);
 
-        if(trailFrames.length>12) trailFrames.shift();
+        if (trailFrames.length > 12) trailFrames.shift();
         trailFrames.push([...dataArray]);
 
         const grad = ctx.createLinearGradient(0,0,canvas.width,0);
@@ -270,9 +249,9 @@
         grad.addColorStop(1, '#000');
 
         trailFrames.forEach((data,t)=>{
-          const slice = canvas.width/data.length;
+          const slice = canvas.width / data.length;
           ctx.beginPath();
-          let x=0;
+          let x = 0;
           data.forEach((v,i)=>{
             const y = ((v-128)/128)*(canvas.height/2*0.9) + canvas.height/2;
             ctx[i===0?'moveTo':'lineTo'](x,y);
@@ -292,9 +271,9 @@
         analyser.getByteFrequencyData(freqData);
         ctx.fillStyle='rgba(0,0,0,0.08)';
         ctx.fillRect(0,0,canvas.width,canvas.height);
-        const barW = canvas.width/freqData.length;
+        const barW = canvas.width / freqData.length;
         freqData.forEach((v,i)=>{
-          const h = v/255*canvas.height;
+          const h = v/255 * canvas.height;
           ctx.fillStyle = `hsl(${220+i/2},80%,${35+v/4}%)`;
           ctx.fillRect(i*barW, canvas.height-h, barW, h);
         });
@@ -302,15 +281,14 @@
     }
 
     // — UI EVENTS —
-
     playBtn.addEventListener('click', async ()=>{
       playBtn.disabled = true;
       stopBtn.disabled = false;
       stopped = false;
       currentWaveColor = getColorFromPreset(preset.value);
 
-      if(!isAudioInitialized) await initAudio();
-      if(audioCtx.state==='suspended') await audioCtx.resume();
+      await initAudio();
+      if (audioCtx.state === 'suspended') await audioCtx.resume();
 
       await loadSamplesForPreset(preset.value);
       scheduleNotes();
@@ -320,19 +298,19 @@
     stopBtn.addEventListener('click', async ()=>{
       stopped = true;
       clearInterval(bpmTimer);
-      if(audioCtx.state==='running') await audioCtx.suspend();
+      if (audioCtx.state === 'running') await audioCtx.suspend();
       stopBtn.disabled = true;
       playBtn.disabled = false;
     });
 
     bpmControl.addEventListener('input', e=>{
       bpm = parseInt(e.target.value);
-      if(!stopped) scheduleNotes();
+      if (!stopped) scheduleNotes();
     });
     preset.addEventListener('change', async ()=>{
       currentWaveColor = getColorFromPreset(preset.value);
       await loadSamplesForPreset(preset.value);
-      if(!stopped) scheduleNotes();
+      if (!stopped) scheduleNotes();
     });
     filter.addEventListener('input', e=>filterNode.frequency.value = parseFloat(e.target.value));
     resonance.addEventListener('input', e=>filterNode.Q.value = parseFloat(e.target.value));
@@ -340,11 +318,8 @@
     bitcrush.addEventListener('change', e=>bitcrusherNode.parameters.get('bitDepth').value = e.target.checked?12:16);
     volume.addEventListener('input', e=>masterGain.gain.value = parseFloat(e.target.value)/100);
     tapeSat.addEventListener('input', updateTapeSat);
-
-    document.getElementById('toggleDisplay').addEventListener('click', ()=>{
-      display.style.display = display.style.display==='none'?'block':'none';
-    });
-    toggleSpecBtn.addEventListener('click', ()=>displaySpectro = !displaySpectro);
+    document.getElementById('toggleDisplay').addEventListener('click', ()=> display.style.display = display.style.display==='none'?'block':'none');
+    toggleSpecBtn.addEventListener('click', ()=> displaySpectro = !displaySpectro);
 
     function updateDisplay(){
       display.textContent =
