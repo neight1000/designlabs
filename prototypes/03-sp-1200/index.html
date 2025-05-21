@@ -92,6 +92,11 @@
     let trailFrames = [], currentWaveColor = "#00FF7F";
     let canvas, ctx;
 
+    // ==== SP-1200 STYLE NODES ====
+    let bitCrusherNode = null; // Added for SP-1200 emulation
+    let monoMerger = null;     // Mono output
+    let spFilter = null;       // Lowpass for analog flavor
+
     // ==== PRESET SETTINGS ====
     const presetSettings = {
       plants:   { scale: [174,285,396,417,528], color:"#00FF7F", slow:1 },
@@ -104,6 +109,26 @@
     function getScale()   { return presetSettings[preset.value].scale; }
     function getColor()   { return presetSettings[preset.value].color; }
     function getSlow()    { return presetSettings[preset.value].slow; }
+
+    // ==== BITCRUSHER FUNCTION ====
+    function createBitCrusher(context, bitDepth, reduction) {
+      const node = context.createScriptProcessor(4096, 1, 1);
+      let phaser = 0, last = 0;
+      node.onaudioprocess = function(e) {
+        const input = e.inputBuffer.getChannelData(0);
+        const output = e.outputBuffer.getChannelData(0);
+        const step = Math.pow(0.5, bitDepth);
+        for (let i = 0; i < input.length; i++) {
+          phaser += reduction;
+          if (phaser >= 1.0) {
+            phaser -= 1.0;
+            last = step * Math.floor(input[i] / step + 0.5);
+          }
+          output[i] = last;
+        }
+      };
+      return node;
+    }
 
     // ==== AUDIO INIT ====
     function initAudio() {
@@ -120,8 +145,29 @@
       reverbFeedback.gain.value = Math.min(parseFloat(reverb.value), 0.35);
       reverbNode.connect(reverbFeedback); reverbFeedback.connect(reverbNode);
       reverbNode.connect(masterGain);
-      masterGain.connect(audioCtx.destination);
 
+      // === SP-1200-style nodes ===
+      // Lowpass filter for analog feel (~8kHz cutoff)
+      spFilter = audioCtx.createBiquadFilter();
+      spFilter.type = "lowpass";
+      spFilter.frequency.value = 8000; // You can tweak this for more/less warmth
+
+      // Bitcrusher: 12-bit, ~26kHz
+      const targetSampleRate = 26040;
+      const reduction = audioCtx.sampleRate / targetSampleRate;
+      bitCrusherNode = createBitCrusher(audioCtx, 12, reduction);
+
+      // Merger for mono output
+      monoMerger = audioCtx.createChannelMerger(1);
+
+      // Chain: masterGain -> analyser -> spFilter -> bitcrusher -> monoMerge -> audioCtx.destination
+      masterGain.connect(analyser);
+      analyser.connect(spFilter);
+      spFilter.connect(bitCrusherNode);
+      bitCrusherNode.connect(monoMerger, 0, 0);
+      monoMerger.connect(audioCtx.destination);
+
+      // Visualizer canvas
       canvas = document.getElementById("waveCanvas");
       ctx = canvas.getContext("2d");
       canvas.width = window.innerWidth; canvas.height = window.innerHeight;
@@ -266,7 +312,7 @@
     // ==== INFO DISPLAY ====
     function updateDisplay(){
       infoDisplay.textContent =
-        `PRESET: ${preset.value}\nDELAY: ${delay.value}\nECHO: ${echo.value}\nREVERB: ${reverb.value}\nFILTER: ${filter.value}\nFREQ: ${freq.value}\nVOLUME: ${volume.value}\nBPM: ${bpmControl.value}\nDENSITY:${density.value}\nHEIGHT:${height.value}`;
+        `PRESET: ${preset.value}\nDELAY: ${delay.value}\nECHO: ${echo.value}\nREVERB: ${reverb.value}\nFILTER: ${filter.value}\nFREQ: ${freq.value}\nVOLUME: ${volume.value}\nBPM: ${bpmControl.value}\nDENSITY: ${density.value}\nHEIGHT: ${height.value}`;
     }
     setInterval(updateDisplay,250);
 
