@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,62 +5,13 @@
   <title>Plantasia x SP-12 – 12-bit Drum Machine Emu</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: black;
-      color: white;
-      font-family: monospace;
-      overflow: hidden;
-    }
-    canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: 0;
-    }
-    .ui {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      padding: 10px;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      z-index: 2;
-    }
-    .ui label {
-      font-size: 10px;
-      display: block;
-      text-align: center;
-    }
-    .ui input[type="range"], .ui select {
-      width: 90px;
-    }
-    .ui button {
-      font-size: 12px;
-      padding: 4px 8px;
-      background: transparent;
-      border: 1px solid white;
-      color: white;
-      cursor: pointer;
-    }
-    #infoDisplay {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 3;
-      background: rgba(0, 0, 0, 0.6);
-      color: white;
-      font-size: 12px;
-      padding: 10px;
-      display: none;
-      white-space: pre;
-    }
+    html, body { margin: 0; padding: 0; background: black; color: white; font-family: monospace; overflow: hidden; }
+    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; }
+    .ui { position: absolute; bottom: 0; width: 100%; background: rgba(0, 0, 0, 0.85); padding: 10px; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; z-index: 2; }
+    .ui label { font-size: 10px; display: block; text-align: center; }
+    .ui input[type="range"], .ui select { width: 90px; }
+    .ui button { font-size: 12px; padding: 4px 8px; background: transparent; border: 1px solid white; color: white; cursor: pointer; }
+    #infoDisplay { position: absolute; top: 10px; left: 10px; z-index: 3; background: rgba(0, 0, 0, 0.6); color: white; font-size: 12px; padding: 10px; display: none; white-space: pre; }
   </style>
 </head>
 <body>
@@ -90,71 +40,45 @@
   <button id="toggleDisplay">TOGGLE DATA</button>
 </div>
 <script>
-// --- Bitcrusher Node (inline worklet polyfill for demo) ---
-class BitCrusherProcessor extends AudioWorkletProcessor {
-  static get parameterDescriptors() {
-    return [
-      { name: 'bitDepth', defaultValue: 12, minValue: 1, maxValue: 16 },
-      { name: 'frequency', defaultValue: 26000, minValue: 8000, maxValue: 48000 }
-    ];
-  }
-  constructor() {
-    super();
-    this.phase = 0;
-    this.lastSample = 0;
-  }
-  process(inputs, outputs, parameters) {
-    const input = inputs[0];
-    const output = outputs[0];
-    const bitDepth = parameters.bitDepth.length === 1 ? parameters.bitDepth[0] : parameters.bitDepth;
-    const freq = parameters.frequency.length === 1 ? parameters.frequency[0] : parameters.frequency;
-    const step = Math.pow(0.5, bitDepth);
-    const rate = sampleRate / freq;
-
-    for (let channel = 0; channel < input.length; channel++) {
-      const inputChannel = input[channel];
-      const outputChannel = output[channel];
-      for (let i = 0; i < inputChannel.length; i++) {
-        this.phase += 1;
-        if (this.phase >= rate) {
-          this.phase -= rate;
-          this.lastSample = Math.round(inputChannel[i] / step) * step;
-        }
-        outputChannel[i] = this.lastSample;
-      }
-    }
-    return true;
-  }
-}
-
-if (typeof AudioWorkletGlobalScope !== "undefined") {
-  registerProcessor('bitcrusher', BitCrusherProcessor);
-}
-
-// --- Core Setup ---
 let audioCtx, analyser, masterGain, bitcrusherNode, bitcrusherLoaded = false;
 let filterNode, canvas, ctx, bufferLength, dataArray;
 let bpm = 90, bpmTimer = null, stopped = true;
 let trailFrames = [], currentWaveColor = "#B5A642";
 const presetSettings = {
-  plants:     { scale: [174, 285, 396, 417, 528], color: "#00FF7F" },
-  mold:       { scale: [432, 639, 741],           color: "#8A2BE2" },
-  bacteria:   { scale: [528, 554, 585, 728],      color: "#FF4500" },
-  mushrooms:  { scale: [417, 444, 528, 639],      color: "#FFD700" },
-  harmony:    { scale: [432, 528, 639, 741, 852], color: "#00FFFF" },
-  sp12:       { scale: [55, 110, 220, 440, 880],  color: "#B5A642" }
+  plants:     { color: "#00FF7F", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav"] },
+  mold:       { color: "#8A2BE2", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/snare.wav"] },
+  bacteria:   { color: "#FF4500", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/hihat.wav"] },
+  mushrooms:  { color: "#FFD700", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/clap.wav"] },
+  harmony:    { color: "#00FFFF", samples: ["https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/tom.wav"] },
+  sp12:       { color: "#B5A642", samples: [
+    "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/kick.wav",
+    "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/snare.wav",
+    "https://cdn.jsdelivr.net/gh/joshwcomeau/beatmaker-assets/hihat.wav"
+  ]}
 };
 
-function getScaleFromPreset(val) {
-  return presetSettings[val]?.scale || [174, 220, 261];
-}
 function getColorFromPreset(val) {
   return presetSettings[val]?.color || "#FFFFFF";
 }
 
+function getSamplesFromPreset(val) {
+  return presetSettings[val]?.samples || [];
+}
+
+let loadedSamples = {};
+async function loadSamplesForPreset(preset) {
+  const urls = getSamplesFromPreset(preset);
+  loadedSamples = {};
+  await Promise.all(urls.map(async (url) => {
+    const response = await fetch(url);
+    const arrayBuffer = await response.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    loadedSamples[url] = audioBuffer;
+  }));
+}
+
 async function loadBitcrusher() {
   if (!bitcrusherLoaded && audioCtx.audioWorklet) {
-    // Inline registration of the worklet processor
     const bitcrusherJs = `
       class BitCrusherProcessor extends AudioWorkletProcessor {
         static get parameterDescriptors() {
@@ -163,14 +87,9 @@ async function loadBitcrusher() {
             { name: 'frequency', defaultValue: 26000, minValue: 8000, maxValue: 48000 }
           ];
         }
-        constructor() {
-          super();
-          this.phase = 0;
-          this.lastSample = 0;
-        }
+        constructor() { super(); this.phase = 0; this.lastSample = 0; }
         process(inputs, outputs, parameters) {
-          const input = inputs[0];
-          const output = outputs[0];
+          const input = inputs[0], output = outputs[0];
           const bitDepth = parameters.bitDepth.length === 1 ? parameters.bitDepth[0] : parameters.bitDepth;
           const freq = parameters.frequency.length === 1 ? parameters.frequency[0] : parameters.frequency;
           const step = Math.pow(0.5, bitDepth);
@@ -214,19 +133,16 @@ async function initAudio() {
   masterGain = audioCtx.createGain();
   masterGain.gain.value = parseFloat(volume.value) / 100;
 
-  // Filter (SSM2044 emulation: lowpass w/ resonance)
   filterNode = audioCtx.createBiquadFilter();
   filterNode.type = "lowpass";
   filterNode.frequency.value = parseFloat(filter.value);
   filterNode.Q.value = parseFloat(resonance.value);
 
-  // Bitcrusher (for 12-bit, downsample)
   await loadBitcrusher();
   bitcrusherNode = new AudioWorkletNode(audioCtx, 'bitcrusher');
   bitcrusherNode.parameters.get('bitDepth').value = document.getElementById('bitcrush').checked ? 12 : 16;
   bitcrusherNode.parameters.get('frequency').value = parseFloat(downsample.value);
 
-  // Connect chain: (osc -> filter -> bitcrush -> gain -> analyser -> out)
   filterNode.connect(bitcrusherNode);
   bitcrusherNode.connect(masterGain);
   masterGain.connect(analyser);
@@ -234,44 +150,26 @@ async function initAudio() {
   animate();
 }
 
-function playTone(freq) {
-  const now = audioCtx.currentTime;
-  // Pitch drift for drop-sample emulation
-  let drift = parseFloat(pitchDrift.value);
-  let drifted = freq * (1 + (Math.random() * drift - drift/2));
+// Play a random sample from the preset, through effects chain
+function playSample() {
+  const urls = getSamplesFromPreset(document.getElementById('preset').value);
+  if (!urls.length) return;
+  const url = urls[Math.floor(Math.random() * urls.length)];
+  const buffer = loadedSamples[url];
+  if (!buffer) return;
+  const sampleSource = audioCtx.createBufferSource();
+  sampleSource.buffer = buffer;
 
-  const osc = audioCtx.createOscillator();
-  osc.type = "square";
-  osc.frequency.value = drifted;
-
-  const gainNode = audioCtx.createGain();
-  gainNode.gain.setValueAtTime(0.7, now);
-  gainNode.gain.linearRampToValueAtTime(0.0, now + 0.18 + Math.random()*0.07); // Drum-like decay
-
-  // Some channels are raw (SP-12 unfiltered)
-  let rawChance = Math.random() > 0.7 && preset.value === "sp12";
-  if (rawChance) {
-    osc.connect(bitcrusherNode);
-    bitcrusherNode.connect(gainNode);
-    gainNode.connect(analyser);
-  } else {
-    osc.connect(filterNode);
-    filterNode.connect(gainNode);
-    gainNode.connect(bitcrusherNode);
-    // bitcrusherNode already chained to master/analyser
-  }
-
-  osc.start(now);
-  osc.stop(now + 0.2 + Math.random()*0.08);
+  // Effects: filter -> bitcrusher -> gain -> analyser -> out
+  sampleSource.connect(filterNode);
+  // the rest is already chained
+  sampleSource.start();
 }
 
-function scheduleNotes(scale) {
+function scheduleNotes() {
   clearInterval(bpmTimer);
   bpmTimer = setInterval(() => {
-    if (!stopped) {
-      const freq = scale[Math.floor(Math.random() * scale.length)];
-      playTone(freq);
-    }
+    if (!stopped) playSample();
   }, 60000 / bpm);
 }
 
@@ -316,9 +214,10 @@ function animate() {
 document.getElementById('play').addEventListener('click', async () => {
   await initAudio();
   stopped = false;
-  const scale = getScaleFromPreset(preset.value);
-  currentWaveColor = getColorFromPreset(preset.value);
-  scheduleNotes(scale);
+  const presetValue = preset.value;
+  currentWaveColor = getColorFromPreset(presetValue);
+  await loadSamplesForPreset(presetValue);
+  scheduleNotes();
 });
 
 document.getElementById('stop').addEventListener('click', () => {
@@ -328,17 +227,14 @@ document.getElementById('stop').addEventListener('click', () => {
 
 document.getElementById('bpm').addEventListener('input', e => {
   bpm = parseInt(e.target.value);
-  if (!stopped) {
-    scheduleNotes(getScaleFromPreset(preset.value));
-  }
+  if (!stopped) scheduleNotes();
 });
 
-document.getElementById('preset').addEventListener('change', () => {
+document.getElementById('preset').addEventListener('change', async () => {
   const selected = preset.value;
   currentWaveColor = getColorFromPreset(selected);
-  if (!stopped) {
-    scheduleNotes(getScaleFromPreset(selected));
-  }
+  await loadSamplesForPreset(selected);
+  if (!stopped) scheduleNotes();
 });
 
 document.getElementById('filter').addEventListener('input', e => {
@@ -359,7 +255,7 @@ document.getElementById('bitcrush').addEventListener('change', e => {
 });
 
 document.getElementById('pitchDrift').addEventListener('input', e => {
-  // No-op, handled in playTone
+  // No-op for samples
 });
 
 document.getElementById('volume').addEventListener('input', e => {
