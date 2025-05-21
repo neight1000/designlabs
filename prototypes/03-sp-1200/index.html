@@ -273,7 +273,9 @@ function animate() {
 }
 
 // --- UI & Parameter Handling ---
+// FIX: Fully await sample loading before scheduling notes or playing samples
 playBtn.addEventListener('click', async () => {
+  playBtn.disabled = true;
   stopped = false;
   currentWaveColor = getColorFromPreset(preset.value);
 
@@ -288,8 +290,12 @@ playBtn.addEventListener('click', async () => {
   }
 
   await loadSamplesForPreset(preset.value);
-  playSample();
-  scheduleNotes();
+
+  if (!stopped) {
+    scheduleNotes();
+    playSample();
+  }
+  playBtn.disabled = false;
 });
 stopBtn.addEventListener('click', () => {
   stopped = true;
