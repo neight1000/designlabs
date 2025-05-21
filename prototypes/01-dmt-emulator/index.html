@@ -83,6 +83,9 @@
     let trailFrames = [], currentWaveColor = "#00FF7F";
     let canvas, ctx;
 
+    // Track all active oscillators for STOP
+    let activeOscillators = [];
+
     // Only "dmt" preset is kept
     const presetSettings = {
       dmt: { scale: [100,140,200,250,310], color:"#7F00FF", slow:4 }
@@ -119,6 +122,7 @@
 
     function playTone(freqVal){
       if (!audioCtx) initAudio();
+      if (audioCtx.state === "suspended") audioCtx.resume();
       const now = audioCtx.currentTime;
       const slow = getSlow();
 
@@ -155,6 +159,9 @@
         pitchLFO.start(now); pitchLFO.stop(now + 3*slow);
         osc.connect(gainNode);
         osc.start(now); osc.stop(now + 3*slow);
+        // TRACK OSCILLATORS
+        activeOscillators.push(osc);
+        osc.onended = () => { activeOscillators = activeOscillators.filter(o => o !== osc); };
       });
 
       gainNode.connect(panNode);
@@ -216,6 +223,9 @@
     }
 
     playBtn.addEventListener("click", ()=>{
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
       initAudio();
       stopped = false;
       bpm = parseInt(bpmControl.value);
@@ -229,6 +239,17 @@
     stopBtn.addEventListener("click", ()=>{
       stopped = true;
       clearInterval(bpmTimer);
+      // Immediately stop all oscillators
+      activeOscillators.forEach(osc => {
+        try { osc.stop(); } catch(e) {}
+      });
+      activeOscillators = [];
+      // Silence master gain to kill feedback/ringing
+      if (masterGain) masterGain.gain.value = 0;
+      // Suspend audio context for a full stop
+      if (audioCtx && audioCtx.state === "running") {
+        audioCtx.suspend();
+      }
     });
 
     bpmControl.addEventListener("input", ()=>{
