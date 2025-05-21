@@ -42,12 +42,7 @@
   <canvas id="waveCanvas"></canvas>
   <div id="infoDisplay"></div>
   <div class="ui">
-    <div>
-      <label>Preset</label>
-      <select id="preset" disabled>
-        <option value="dmt" selected>DMT (Slow & Drowny)</option>
-      </select>
-    </div>
+    <!-- Preset selector removed -->
     <div><label>Delay</label><input type="range" id="delay" min="0.01" max="2.0" step="0.01" value="0.6"></div>
     <div><label>Echo</label><input type="range" id="echo" min="0" max="1.0" step="0.01" value="0.4"></div>
     <div><label>Reverb</label>
@@ -64,8 +59,8 @@
     <button id="toggleDisplay">TOGGLE DATA</button>
   </div>
   <script>
-    const preset = document.getElementById('preset'),
-          delay = document.getElementById('delay'),
+    // Removed: const preset = document.getElementById('preset'),
+    const delay = document.getElementById('delay'),
           echo = document.getElementById('echo'),
           reverb = document.getElementById('reverb'),
           filter = document.getElementById('filter'),
@@ -86,7 +81,7 @@
     // Track all active oscillators for STOP
     let activeOscillators = [];
 
-    // Only "dmt" preset is kept
+    // Only "dmt" preset is kept internally
     const presetSettings = {
       dmt: { scale: [100,140,200,250,310], color:"#7F00FF", slow:4 }
     };
@@ -256,8 +251,6 @@
       bpm = parseInt(bpmControl.value);
       if (!stopped) scheduleNotes();
     });
-
-    // Removed preset selection logic since only one preset exists
 
     reverb.addEventListener("input", ()=>{
       if (reverbFeedback) {
