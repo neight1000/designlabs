@@ -56,6 +56,10 @@
     const toggleDisp = document.getElementById('toggleDisplay');
     const infoDisp   = document.getElementById('infoDisplay');
 
+    // UI state on load
+    playBtn.disabled = false;
+    stopBtn.disabled = true;
+
     // State
     let audioCtx, analyser, masterGain, filterNode, bitcrusherNode, tapeNode;
     let convolver, compressor, lfo, lfoGain;
@@ -84,9 +88,18 @@
     function getColor(val)   { return presetSettings[val]?.color   || "#FFF"; }
     function getSamples(val) { return presetSettings[val]?.samples || []; }
 
-    // Load samples for a given preset
+    // Canvas resize
+    function resizeCanvas() {
+      if (!canvas) return;
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    // Load samples with caching
     async function loadSamples(name) {
       const urls = getSamples(name);
+      if (loadedSamples[name]) return;
       loadedSamples[name] = {};
       await Promise.all(urls.map(async url => {
         const resp = await fetch(url);
@@ -95,7 +108,7 @@
       }));
     }
 
-    // Bitcrusher via AudioWorklet or fallback to gain
+    // Bitcrusher via AudioWorklet or fallback to gain (with UI disable)
     async function loadBitcrusher() {
       if (audioCtx.audioWorklet) {
         const code = `
@@ -131,8 +144,13 @@
         const blob = new Blob([code], { type:'application/javascript' });
         await audioCtx.audioWorklet.addModule(URL.createObjectURL(blob));
         bitcrusherNode = new AudioWorkletNode(audioCtx, 'bitcrusher');
+        bitcrush.disabled = false;
+        downsample.disabled = false;
       } else {
+        // Fallback is just a gain node, disables the UI for these
         bitcrusherNode = audioCtx.createGain();
+        bitcrush.disabled = true;
+        downsample.disabled = true;
       }
     }
 
@@ -152,7 +170,7 @@
       return ws;
     }
 
-    // Initialize everything
+    // Initialize everything (only once)
     async function initAudio() {
       if (isAudioInitialized) return;
 
@@ -169,8 +187,7 @@
       // Canvas
       canvas = document.getElementById('waveCanvas');
       ctx    = canvas.getContext('2d');
-      canvas.width = innerWidth;
-      canvas.height = innerHeight;
+      resizeCanvas();
 
       // Core nodes
       masterGain = audioCtx.createGain();
@@ -241,7 +258,7 @@
       pan.pan.value = (Math.random()*2 - 1) * 0.5;
       src.connect(pan).connect(filterNode);
 
-      // Sub-kick under kicks
+      // Sub-kick under kicks, disconnect after done
       if (url.includes('kick.wav')) {
         const sub = audioCtx.createOscillator();
         const env = audioCtx.createGain();
@@ -252,6 +269,10 @@
         env.gain.setValueAtTime(0, now);
         env.gain.linearRampToValueAtTime(0.2, now + 0.01);
         env.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+        sub.onended = () => {
+          sub.disconnect();
+          env.disconnect();
+        };
         sub.start(now);
         sub.stop(now + 0.3);
       }
@@ -302,6 +323,7 @@
 
     // UI Events
     playBtn.addEventListener('click', async () => {
+      if (!stopped) return;
       playBtn.disabled = true;
       stopBtn.disabled = false;
       stopped = false;
@@ -326,8 +348,8 @@
     preset.addEventListener('change', async () => { currentWaveColor = getColor(preset.value); await loadSamples(preset.value); });
     filterCtrl.addEventListener('input', e => filterNode.frequency.value = parseFloat(e.target.value));
     resonance.addEventListener('input', e => filterNode.Q.value = parseFloat(e.target.value));
-    downsample.addEventListener('input', e => bitcrusherNode.parameters?.get('frequency').value = parseFloat(e.target.value));
-    bitcrush.addEventListener('change', e => bitcrusherNode.parameters?.get('bitDepth').value = e.target.checked?12:16);
+    downsample.addEventListener('input', e => bitcrusherNode.parameters?.get('frequency') && (bitcrusherNode.parameters.get('frequency').value = parseFloat(e.target.value)));
+    bitcrush.addEventListener('change', e => bitcrusherNode.parameters?.get('bitDepth') && (bitcrusherNode.parameters.get('bitDepth').value = e.target.checked?12:16));
     volumeCtrl.addEventListener('input', e => masterGain.gain.value = parseFloat(e.target.value)/100);
     tapeSat.addEventListener('input', () => tapeNode.curve = makeSatCurve(parseFloat(tapeSat.value)));
     toggleDisp.addEventListener('click', () => {
@@ -350,4 +372,3 @@
   </script>
 </body>
 </html>
-```
