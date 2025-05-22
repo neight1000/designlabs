@@ -141,28 +141,31 @@
     let canvas, ctx;
 
     // Visual constants
-    const VISUAL_FRAMES = 6;
-    const VISUAL_ALPHA_BASE = 0.02;
-    const VISUAL_ALPHA_MAX = 0.05;
+    const VISUAL_FRAMES     = 12;
+    const VISUAL_ALPHA_BASE = 0.05;
+    const VISUAL_ALPHA_MAX  = 0.2;
 
-    // Advanced Preset Settings
+    // Pentatonic scale for all presets
+    const plantPentatonic = [174, 220, 261, 329, 392];
+
+    // Advanced Preset Settings on pentatonic
     const presetSettings = {
-      "Root Phonotropism":         { scale: [200],         color: "#00FF7F" },
-      "Germination Kickstart":     { scale: [125],         color: "#A0522D" },
-      "Biomass Builder":           { scale: [500],         color: "#228B22" },
-      "Hormonal Harmony":          { scale: [500],         color: "#FFD700" },
-      "Leaf Resonance":            { scale: [3500],        color: "#008000" },
-      "Algal Bloom":               { scale: [2200],        color: "#00FA9A" },
-      "Leaf Growth Accelerator":   { scale: [250],         color: "#7CFC00" },
-      "Nectar Boost":              { scale: [200],         color: "#FF69B4" },
-      "Cereal Sprout":             { scale: [5000],        color: "#F4A460" },
-      "Fruiting Uplift":           { scale: [12000],       color: "#FF4500" },
-      "Buzz Pollination":          { scale: [200,250,300], color: "#FFFF00" },
-      "Alyssum Sprouter Surround": { scale: [5000,13300],  color: "#EE82EE" }
+      "Root Phonotropism":         { scale: plantPentatonic, color: "#00FF7F" },
+      "Germination Kickstart":     { scale: plantPentatonic, color: "#A0522D" },
+      "Biomass Builder":           { scale: plantPentatonic, color: "#228B22" },
+      "Hormonal Harmony":          { scale: plantPentatonic, color: "#FFD700" },
+      "Leaf Resonance":            { scale: plantPentatonic, color: "#008000" },
+      "Algal Bloom":               { scale: plantPentatonic, color: "#00FA9A" },
+      "Leaf Growth Accelerator":   { scale: plantPentatonic, color: "#7CFC00" },
+      "Nectar Boost":              { scale: plantPentatonic, color: "#FF69B4" },
+      "Cereal Sprout":             { scale: plantPentatonic, color: "#F4A460" },
+      "Fruiting Uplift":           { scale: plantPentatonic, color: "#FF4500" },
+      "Buzz Pollination":          { scale: plantPentatonic, color: "#FFFF00" },
+      "Alyssum Sprouter Surround": { scale: plantPentatonic, color: "#EE82EE" }
     };
 
     function getScaleFromPreset(val) {
-      return presetSettings[val]?.scale || [174];
+      return presetSettings[val]?.scale || plantPentatonic;
     }
     function getColorFromPreset(val) {
       return presetSettings[val]?.color || "#FFFFFF";
@@ -184,11 +187,11 @@
       masterGain = audioCtx.createGain();
       masterGain.gain.value = parseFloat(volume.value)/100;
 
-      // Longer, ringing reverb tail
+      // Short, warm reverb tail
       reverbNode = audioCtx.createDelay();
       const reverbFeedback = audioCtx.createGain();
-      reverbNode.delayTime.value = 1.2;
-      reverbFeedback.gain.value = 0.7;
+      reverbNode.delayTime.value = 0.3;
+      reverbFeedback.gain.value  = 0.3;
       reverbNode.connect(reverbFeedback);
       reverbFeedback.connect(reverbNode);
       reverbNode.connect(masterGain);
@@ -199,7 +202,6 @@
 
     function playTone(freq) {
       const now = audioCtx.currentTime;
-      // filter, delay & feedback for per-note echo
       const filterNode = audioCtx.createBiquadFilter();
       filterNode.type = "lowpass";
       filterNode.frequency.value = parseFloat(filter.value);
@@ -209,7 +211,6 @@
       const feedbackNode = audioCtx.createGain();
       feedbackNode.gain.value = parseFloat(echo.value);
 
-      // Long ambient ADSR
       const gainNode = audioCtx.createGain();
       gainNode.gain.setValueAtTime(0, now);
       gainNode.gain.linearRampToValueAtTime(0.2, now + 1.0);
@@ -249,7 +250,6 @@
       saw.start(now);
       saw.stop(now + 8.0);
 
-      // Chain
       gainNode.connect(panNode);
       panNode.connect(filterNode);
       filterNode.connect(delayNode);
@@ -263,10 +263,10 @@
       clearInterval(bpmTimer);
       bpmTimer = setInterval(() => {
         if (!stopped) {
-          const freq = scale[Math.floor(Math.random()*scale.length)];
+          const freq = scale[Math.floor(Math.random() * scale.length)];
           playTone(freq);
         }
-      }, 60000/bpm);
+      }, 60000 / bpm);
     }
 
     function animate() {
@@ -275,7 +275,6 @@
       if (trailFrames.length > VISUAL_FRAMES) trailFrames.shift();
       trailFrames.push([...dataArray]);
 
-      // Darker background fade
       ctx.fillStyle = "rgba(0,0,0,0.1)";
       ctx.fillRect(0,0,canvas.width,canvas.height);
 
@@ -285,14 +284,14 @@
 
       trailFrames.forEach((data,t) => {
         ctx.beginPath();
-        let x=0, slice=canvas.width/data.length;
+        let x = 0, slice = canvas.width / data.length;
         data.forEach((v,i) => {
           const y = ((v-128)/128)*(canvas.height/2*0.9)+canvas.height/2;
-          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-          x+=slice;
+          i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+          x += slice;
         });
         ctx.strokeStyle = grad;
-        ctx.globalAlpha = VISUAL_ALPHA_BASE + (t/trailFrames.length)*VISUAL_ALPHA_MAX;
+        ctx.globalAlpha = VISUAL_ALPHA_BASE + (t / trailFrames.length) * VISUAL_ALPHA_MAX;
         ctx.shadowBlur = 8;
         ctx.shadowColor = currentWaveColor;
         ctx.stroke();
@@ -306,9 +305,8 @@
     document.getElementById('play').addEventListener('click', () => {
       initAudio();
       stopped = false;
-      const sel = preset.value;
-      currentWaveColor = getColorFromPreset(sel);
-      scheduleNotes(getScaleFromPreset(sel));
+      currentWaveColor = getColorFromPreset(preset.value);
+      scheduleNotes(getScaleFromPreset(preset.value));
     });
     document.getElementById('stop').addEventListener('click', () => {
       stopped = true;
@@ -326,19 +324,19 @@
     // Display Toggle & Update
     const display = document.getElementById("infoDisplay");
     document.getElementById("toggleDisplay").addEventListener("click", () => {
-      display.style.display = display.style.display==="none"?"block":"none";
+      display.style.display = display.style.display === "none" ? "block" : "none";
     });
     function updateDisplay() {
       display.textContent =
-        "PRESET : "+preset.value+"\n"+
-        "DELAY  : "+delay.value+"\n"+
-        "ECHO   : "+echo.value+"\n"+
-        "FILTER : "+filter.value+"\n"+
-        "FREQ   : "+freq.value+"\n"+
-        "VOL    : "+volume.value+"\n"+
-        "BPM    : "+bpm;
+        "PRESET : " + preset.value + "\n" +
+        "DELAY  : " + delay.value + "\n" +
+        "ECHO   : " + echo.value + "\n" +
+        "FILTER : " + filter.value + "\n" +
+        "FREQ   : " + freq.value + "\n" +
+        "VOL    : " + volume.value + "\n" +
+        "BPM    : " + bpm;
     }
-    setInterval(updateDisplay,250);
+    setInterval(updateDisplay, 250);
   </script>
 </body>
 </html>
