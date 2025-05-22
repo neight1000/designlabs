@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Plantasia App v3 – Human-Tuned Ambient Build</title>
+  <title>Plantasia App v3 – Sub-Oscillator Control</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     html, body {
@@ -45,40 +45,6 @@
       color: white;
       border: 1px solid white;
       font-size: 10px;
-    }
-    .ui select option {
-      background: black;
-      color: white;
-    }
-    .ui input[type="range"] {
-      -webkit-appearance: none;
-      appearance: none;
-      height: 4px;
-      margin: 4px 0;
-    }
-    .ui input[type="range"]::-webkit-slider-runnable-track {
-      height: 4px;
-      background: white;
-    }
-    .ui input[type="range"]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 12px;
-      height: 12px;
-      background: white;
-      border-radius: 50%;
-      margin-top: -4px;
-      cursor: pointer;
-    }
-    .ui input[type="range"]::-moz-range-track {
-      height: 4px;
-      background: white;
-    }
-    .ui input[type="range"]::-moz-range-thumb {
-      width: 12px;
-      height: 12px;
-      background: white;
-      border-radius: 50%;
-      cursor: pointer;
     }
     .ui button {
       font-size: 12px;
@@ -125,7 +91,7 @@
     <div><label>Delay</label><input type="range" id="delay" min="0.01" max="2.0" step="0.01" value="0.6" /></div>
     <div><label>Echo</label><input type="range" id="echo" min="0" max="1.0" step="0.01" value="0.4" /></div>
     <div><label>Filter</label><input type="range" id="filter" min="100" max="8000" step="10" value="1200" /></div>
-    <div><label>Freq</label><input type="range" id="freq" min="50" max="1000" step="1" value="174" /></div>
+    <div><label>Sub Level</label><input type="range" id="subLevel" min="0" max="0.2" step="0.01" value="0.08" /></div>
     <div><label>Vol</label><input type="range" id="volume" min="0" max="100" value="60" /></div>
     <div><label>BPM</label><input type="range" id="bpm" min="40" max="180" value="90" /></div>
     <button id="play">PLAY</button>
@@ -145,7 +111,7 @@
     const VISUAL_ALPHA_BASE = 0.05;
     const VISUAL_ALPHA_MAX  = 0.2;
 
-    // Human-friendly A-minor pentatonic
+    // Human A-minor pentatonic
     const humanPentatonic = [220.00, 261.63, 293.66, 329.63, 392.00];
 
     // Preset Settings
@@ -178,20 +144,20 @@
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
       analyser = audioCtx.createAnalyser();
       analyser.fftSize = 2048;
       bufferLength = analyser.frequencyBinCount;
       dataArray = new Uint8Array(bufferLength);
 
       masterGain = audioCtx.createGain();
-      masterGain.gain.value = parseFloat(volume.value) / 100;
+      masterGain.gain.value = parseFloat(volume.value)/100;
 
       // Short, warm reverb tail
       reverbNode = audioCtx.createDelay();
       const reverbFeedback = audioCtx.createGain();
       reverbNode.delayTime.value = 0.3;
-      reverbFeedback.gain.value = 0.3;
+      reverbFeedback.gain.value  = 0.3;
       reverbNode.connect(reverbFeedback);
       reverbFeedback.connect(reverbNode);
       reverbNode.connect(masterGain);
@@ -214,7 +180,7 @@
     function playTone(freq) {
       const now = audioCtx.currentTime;
 
-      // Filter (clamp to 5kHz)
+      // Filter
       const filterNode = audioCtx.createBiquadFilter();
       filterNode.type = "lowpass";
       filterNode.frequency.value = Math.min(parseFloat(filter.value), 5000);
@@ -225,48 +191,48 @@
       const feedbackNode = audioCtx.createGain();
       feedbackNode.gain.value = parseFloat(echo.value);
 
-      // Snappier, warm ADSR
+      // ADSR
       const gainNode = audioCtx.createGain();
       gainNode.gain.setValueAtTime(0, now);
       gainNode.gain.linearRampToValueAtTime(0.18, now + 0.2);
       gainNode.gain.setValueAtTime(0.18, now + 1.5);
       gainNode.gain.linearRampToValueAtTime(0, now + 4.0);
 
-      // Centered pan
+      // Pan
       const panNode = audioCtx.createStereoPanner();
       panNode.pan.value = 0;
 
       // 3-voice sine detune
-      [-0.2, 0, 0.2].forEach(offset => {
+      [-0.2,0,0.2].forEach(offset=>{
         const o = audioCtx.createOscillator();
-        o.type = "sine";
-        o.frequency.value = freq * (1 + offset / 100);
+        o.type="sine";
+        o.frequency.value = freq*(1+offset/100);
         o.connect(gainNode);
         o.start(now);
-        o.stop(now + 4.0);
+        o.stop(now+4.0);
       });
 
-      // Sub-octave layer
+      // Sub-oscillator level control
       const subGain = audioCtx.createGain();
-      subGain.gain.setValueAtTime(0.04, now);
+      subGain.gain.setValueAtTime(parseFloat(subLevel.value), now);
       const subOsc = audioCtx.createOscillator();
-      subOsc.type = "sine";
-      subOsc.frequency.value = freq / 2;
+      subOsc.type="sine";
+      subOsc.frequency.value = freq/2;
       subOsc.connect(subGain).connect(gainNode);
       subOsc.start(now);
-      subOsc.stop(now + 4.0);
+      subOsc.stop(now+4.0);
 
       // Gentle triangle for warmth
       const triGain = audioCtx.createGain();
       triGain.gain.setValueAtTime(0.04, now);
       const tri = audioCtx.createOscillator();
-      tri.type = "triangle";
+      tri.type="triangle";
       tri.frequency.value = freq;
       tri.connect(triGain).connect(gainNode);
       tri.start(now);
-      tri.stop(now + 4.0);
+      tri.stop(now+4.0);
 
-      // Chain into effects
+      // Chain
       gainNode.connect(panNode);
       panNode.connect(filterNode);
       filterNode.connect(delayNode);
@@ -278,82 +244,82 @@
 
     function scheduleNotes(scale) {
       clearInterval(bpmTimer);
-      bpmTimer = setInterval(() => {
-        if (!stopped) {
-          const freq = scale[Math.floor(Math.random() * scale.length)];
+      bpmTimer = setInterval(()=>{
+        if(!stopped){
+          const freq = scale[Math.floor(Math.random()*scale.length)];
           playTone(freq);
         }
-      }, 60000 / bpm);
+      },60000/bpm);
     }
 
-    function animate() {
+    function animate(){
       requestAnimationFrame(animate);
       analyser.getByteTimeDomainData(dataArray);
-      if (trailFrames.length > VISUAL_FRAMES) trailFrames.shift();
+      if(trailFrames.length>VISUAL_FRAMES) trailFrames.shift();
       trailFrames.push([...dataArray]);
 
-      ctx.fillStyle = "rgba(0,0,0,0.1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle="rgba(0,0,0,0.1)";
+      ctx.fillRect(0,0,canvas.width,canvas.height);
 
-      const grad = ctx.createLinearGradient(0, 0, canvas.width, 0);
+      const grad = ctx.createLinearGradient(0,0,canvas.width,0);
       grad.addColorStop(0, currentWaveColor);
       grad.addColorStop(1, "#000000");
 
-      trailFrames.forEach((data, t) => {
+      trailFrames.forEach((data,t)=>{
         ctx.beginPath();
-        let x = 0, slice = canvas.width / data.length;
-        data.forEach((v, i) => {
-          const y = ((v - 128) / 128) * (canvas.height/2 * 0.9) + canvas.height/2;
-          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-          x += slice;
+        let x=0, slice=canvas.width/data.length;
+        data.forEach((v,i)=>{
+          const y = ((v-128)/128)*(canvas.height/2*0.9)+canvas.height/2;
+          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+          x+=slice;
         });
-        ctx.strokeStyle = grad;
-        ctx.globalAlpha = VISUAL_ALPHA_BASE + (t / trailFrames.length) * VISUAL_ALPHA_MAX;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = currentWaveColor;
+        ctx.strokeStyle=grad;
+        ctx.globalAlpha=VISUAL_ALPHA_BASE+(t/trailFrames.length)*VISUAL_ALPHA_MAX;
+        ctx.shadowBlur=8;
+        ctx.shadowColor=currentWaveColor;
         ctx.stroke();
       });
 
-      ctx.globalAlpha = 1.0;
-      ctx.shadowBlur = 0;
+      ctx.globalAlpha=1;
+      ctx.shadowBlur=0;
     }
 
     // Event Listeners
-    document.getElementById('play').addEventListener('click', () => {
+    document.getElementById('play').addEventListener('click', ()=>{
       initAudio();
-      stopped = false;
-      currentWaveColor = getColorFromPreset(preset.value);
+      stopped=false;
+      currentWaveColor=getColorFromPreset(preset.value);
       scheduleNotes(getScaleFromPreset(preset.value));
     });
-    document.getElementById('stop').addEventListener('click', () => {
-      stopped = true;
+    document.getElementById('stop').addEventListener('click', ()=>{
+      stopped=true;
       clearInterval(bpmTimer);
     });
-    document.getElementById('bpm').addEventListener('input', e => {
-      bpm = parseInt(e.target.value);
-      if (!stopped) scheduleNotes(getScaleFromPreset(preset.value));
+    document.getElementById('bpm').addEventListener('input',e=>{
+      bpm=parseInt(e.target.value);
+      if(!stopped) scheduleNotes(getScaleFromPreset(preset.value));
     });
-    document.getElementById('preset').addEventListener('change', () => {
-      currentWaveColor = getColorFromPreset(preset.value);
-      if (!stopped) scheduleNotes(getScaleFromPreset(preset.value));
+    document.getElementById('preset').addEventListener('change',()=>{
+      currentWaveColor=getColorFromPreset(preset.value);
+      if(!stopped) scheduleNotes(getScaleFromPreset(preset.value));
     });
 
     // Display Toggle & Update
     const display = document.getElementById("infoDisplay");
-    document.getElementById("toggleDisplay").addEventListener("click", () => {
-      display.style.display = display.style.display === "none" ? "block" : "none";
+    document.getElementById("toggleDisplay").addEventListener("click",()=>{
+      display.style.display = display.style.display==="none"?"block":"none";
     });
-    function updateDisplay() {
+    function updateDisplay(){
       display.textContent =
-        "PRESET : " + preset.value + "\n" +
-        "DELAY  : " + delay.value + "\n" +
-        "ECHO   : " + echo.value + "\n" +
-        "FILTER : " + filter.value + "\n" +
-        "FREQ   : " + freq.value + "\n" +
-        "VOL    : " + volume.value + "\n" +
-        "BPM    : " + bpm;
+        "PRESET : "+preset.value+"\n"+
+        "DELAY  : "+delay.value+"\n"+
+        "ECHO   : "+echo.value+"\n"+
+        "FILTER : "+filter.value+"\n"+
+        "SUB    : "+subLevel.value+"\n"+
+        "VOL    : "+volume.value+"\n"+
+        "BPM    : "+bpm;
     }
-    setInterval(updateDisplay, 250);
+    setInterval(updateDisplay,250);
   </script>
 </body>
 </html>
