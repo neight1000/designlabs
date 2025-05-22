@@ -13,22 +13,19 @@
     <select id="preset"></select>
     <button id="play">Play</button>
     <button id="stop">Stop</button>
-    <!-- other UI controls here -->
+    <!-- other UI controls unchanged -->
   </div>
 
   <script>
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContext();
-    let oscillator, gainNode, stereoPanner;
+    let oscillator, gainNode, pannerNode;
 
     function createOscillator() {
       oscillator = audioCtx.createOscillator();
       gainNode   = audioCtx.createGain();
-      stereoPanner = audioCtx.createStereoPanner();
-      oscillator
-        .connect(gainNode)
-        .connect(stereoPanner)
-        .connect(audioCtx.destination);
+      pannerNode = audioCtx.createStereoPanner();
+      oscillator.connect(gainNode).connect(pannerNode).connect(audioCtx.destination);
     }
 
     function startOscillator() {
@@ -42,7 +39,7 @@
       if (oscillator) oscillator.stop();
     }
 
-    // Plantasia Advanced Presets – each embodies a botanical concept via sound design
+    // ─── New Plantasia Presets ───
     const plantasiaPresets = [
       {
         name: 'Root Phonotropism',
@@ -82,7 +79,7 @@
       },
       {
         name: 'Algal Bloom',
-        description: '2.2 kHz sine granulated into 50 ms grains with pitch randomness',
+        description: '2.2 kHz sine granulated into 50 ms grains with slight pitch randomness',
         waveform: 'sine',
         frequency: 2200,
         granular: { grainSize: 0.05, overlap: 0.5, pitchRandom: 0.02 }
@@ -133,7 +130,7 @@
         description: '5 kHz fundamental front-center & 13.3 kHz harmony in rear surrounds',
         waveform: 'sine',
         spatialZones: [
-          { frequency: 5000, output: 'frontCenter' },
+          { frequency: 5000,  output: 'frontCenter' },
           { frequency: 13300, output: 'rearSurround' }
         ]
       }
@@ -148,17 +145,20 @@
       presetSelect.appendChild(opt);
     });
 
-    // Apply preset (core parameters only; advanced modules handle the rest)
+    // Apply preset core settings
     function applyPreset(name) {
       const p = plantasiaPresets.find(x => x.name === name);
       oscillator.type = p.waveform;
       if (p.frequency) oscillator.frequency.value = p.frequency;
-      // advanced parameters (panning, envelopes, etc.) are applied by your existing modules
+      // advanced parameters handled by your existing effect modules
     }
 
     // Event listeners
     document.getElementById('play').addEventListener('click', startOscillator);
     document.getElementById('stop').addEventListener('click', stopOscillator);
+    presetSelect.addEventListener('change', () => {
+      if (oscillator) applyPreset(presetSelect.value);
+    });
   </script>
 </body>
 </html>
