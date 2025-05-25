@@ -1,1 +1,68 @@
-template
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rare Gem Finder</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { background: black; color: white; font-family: monospace; padding: 20px; }
+    .card { background: #111; border: 1px solid #333; margin: 10px; padding: 15px; width: 300px; float: left; }
+    canvas { width: 100%; height: 120px; }
+  </style>
+</head>
+<body>
+
+  <h1>Rare Gem Finder</h1>
+  <input type="text" id="searchInput" value="boogie 1983">
+  <button onclick="search()">Search</button>
+  <div id="results"></div>
+
+  <script>
+    async function search() {
+      const query = document.getElementById('searchInput').value;
+      const res = await fetch(`/gems?query=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      const results = document.getElementById('results');
+      results.innerHTML = '';
+
+      data.forEach((item, index) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+
+        const isDeal = item.deal_score !== null && item.deal_score >= 30;
+        const barColors = ['#555', isDeal ? 'lime' : (item.price > item.sales_stats.median_price ? 'red' : 'yellow'), '#999', '#999'];
+
+        card.innerHTML = `
+          <img src="${item.thumb}" width="100%">
+          <strong>${item.title}</strong><br>
+          ${item.label} | ${item.year}<br>
+          Price: $${item.price} | Median: $${item.sales_stats.median_price}<br>
+          <span style="color:${isDeal ? 'lime' : 'gray'}">${item.deal_score !== null ? item.deal_score + '% below median' : ''}</span><br>
+          Match: ${item.match_score}%<br>
+          <canvas id="chart${index}"></canvas>
+          <a href="${item.link}" target="_blank">View</a>
+        `;
+
+        results.appendChild(card);
+
+        new Chart(document.getElementById(`chart${index}`), {
+          type: 'bar',
+          data: {
+            labels: ['Low', 'Current', 'Median', 'High'],
+            datasets: [{
+              data: [item.sales_stats.lowest_price, item.price, item.sales_stats.median_price, item.sales_stats.highest_price],
+              backgroundColor: barColors
+            }]
+          },
+          options: {
+            plugins: { legend: { display: false } },
+            scales: { y: { display: false } }
+          }
+        });
+      });
+    }
+
+    search(); // auto-run default
+  </script>
+
+</body>
+</html>
