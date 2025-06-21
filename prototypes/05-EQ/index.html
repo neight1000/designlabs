@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ v1.12</title>
+  <title>Visual EQ v1.13</title>
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden;
@@ -15,7 +15,7 @@
       position: absolute; top: 10px; left: 50%;
       transform: translateX(-50%);
       display: flex; gap: 8px; align-items: center;
-      z-index: 10; transition: opacity 0.5s;
+      z-index: 10; transition: opacity .5s;
       background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
     }
     select, button, label, input[type=range] {
@@ -144,9 +144,9 @@
       rightAnalyser.getByteFrequencyData(dataRight);
 
       const t = (performance.now() - startTime)*0.001;
-      const hueOffset = (t*5)%360;
-      const lfo = (Math.sin(2*Math.PI*0.1*t)+1)/2;       // 0.1Hz
-      const noiseAmp = 0.02 * (0.5 + 0.5*lfo);           // rhythmic modulation
+      const hueOffset = (t*5) % 360;
+      const lfo = (Math.sin(Math.PI*0.2*t)+1)/2; // 0.1Hz LFO
+      const noiseAmp = 0.02 * (0.5 + 0.5*lfo);
 
       // crossfade
       if(crossfadeToggle.checked){
@@ -157,7 +157,7 @@
           secondaryPreset = all.filter(p=>p!==mainPreset)[Math.floor(Math.random()*7)];
         }
       } else xfadeActive = false;
-      let w2 = 0;
+      let w2=0;
       if(xfadeActive){
         w2 = Math.min((t - xfadeStart)/xfadeDur,1);
         if(w2>=1){
@@ -170,7 +170,7 @@
       }
       const w1 = 1 - w2;
 
-      // beat-moments color shift
+      // moments
       const bassAvg = ((dataLeft[2]+dataRight[2])/2)/255;
       if(momentsToggle.checked && bassAvg>0.7 && t - lastBeatTime>0.3){
         lastBeatTime = t;
@@ -200,16 +200,16 @@
         ctx.fillText(f+'Hz', x+2,14);
       });
 
-      // draw main & crossfade presets
-      drawPreset(mainPreset, w1, hueOffset, t, noiseAmp, lfo);
-      if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmp, lfo);
+      // draw presets
+      drawPreset(mainPreset, w1, hueOffset, t, noiseAmp);
+      if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmp);
     }
 
-    function drawPreset(preset, alpha, hueOffset, t, noiseAmp, lfo){
+    function drawPreset(preset, alpha, hueOffset, t, noiseAmp){
       const sens = parseFloat(sensSlider.value);
       const bins  = leftAnalyser.frequencyBinCount;
       const slice = canvas.width/bins;
-      const jitter = 1 + (Math.random()-0.5)*0.1*lfo;
+      const jitter = 1 + (Math.random()-0.5)*0.1* ((Math.sin(Math.PI*0.2*t)+1)/2);
       ctx.globalAlpha = alpha;
 
       const midVal  = i => (dataLeft[i]+dataRight[i])/2/255;
@@ -234,64 +234,82 @@
 
       switch(preset){
         case 'vhs':
-          drawCurve(i=>midVal(i),
-            `hsla(${dynHue(0)},0%,80%,${alpha})`);
-          drawCurve(i=>sideVal(i),
-            `hsla(${dynHue(0)},0%,50%,${alpha})`, true);
+          // scanlines
+          ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
+          for(let y=0;y<canvas.height;y+=4){
+            const off = 2*Math.sin(y/50 + t*3);
+            ctx.beginPath(); ctx.moveTo(off,y);
+            ctx.lineTo(canvas.width+off,y); ctx.stroke();
+          }
+          // mid & side both white
+          drawCurve(i=>midVal(i), 'hsl(0,0%,80%)');
+          drawCurve(i=>sideVal(i), 'hsl(0,0%,80%)', true);
           break;
+
         case 'tape':
-          ctx.shadowBlur=30; ctx.shadowColor=`hsla(${dynHue(200)},100%,80%,${alpha})`;
-          drawCurve(i=>midVal(i),
-            `hsla(${dynHue(200)},100%,80%,${alpha*0.7})`);
+          ctx.shadowBlur=30; ctx.shadowColor='#fff';
+          ctx.globalAlpha=alpha*0.7;
+          drawCurve(i=>midVal(i), 'hsl(200,100%,80%)');
           ctx.shadowBlur=0; ctx.globalAlpha=alpha;
-          drawCurve(i=>sideVal(i),
-            `hsla(${dynHue(200)},100%,50%,${alpha})`, true);
+          drawCurve(i=>sideVal(i), 'hsl(200,100%,80%)', true);
           break;
+
         case 'neon':
-          drawCurve(i=>midVal(i),
-            `hsla(${dynHue(180)},100%,60%,${alpha})`);
-          drawCurve(i=>sideVal(i),
-            `hsla(${dynHue(180)},100%,30%,${alpha})`, true);
+          // grid
+          ctx.strokeStyle='hsl(180,100%,60%)'; ctx.lineWidth=1;
+          for(let x=0;x<canvas.width;x+=50){
+            ctx.beginPath(); ctx.moveTo(x,0);
+            ctx.lineTo(x,canvas.height); ctx.stroke();
+          }
+          for(let y=0;y<canvas.height;y+=50){
+            ctx.beginPath(); ctx.moveTo(0,y);
+            ctx.lineTo(canvas.width,y); ctx.stroke();
+          }
+          // mid & side neon
+          ctx.shadowBlur=20; ctx.shadowColor='hsl(180,100%,80%)';
+          drawCurve(i=>midVal(i), 'hsl(180,100%,60%)');
+          ctx.shadowBlur=0;
+          drawCurve(i=>sideVal(i), 'hsl(180,100%,60%)', true);
           break;
+
         case 'aurora':
-          const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+          // gradient under mid
+          const grad=ctx.createLinearGradient(0,0,0,canvas.height);
           grad.addColorStop(0,'#081d71');
           grad.addColorStop(0.5,'#20ff90');
           grad.addColorStop(1,'#081d71');
           ctx.globalAlpha=alpha*0.5;
           drawCurve(i=>midVal(i), grad);
           ctx.globalAlpha=alpha;
-          drawCurve(i=>sideVal(i),
-            `hsla(${dynHue(120)},100%,50%,${alpha})`, true);
+          drawCurve(i=>sideVal(i), 'hsl(120,100%,50%)', true);
           break;
+
         case 'spectrum':
           for(let i=0;i<bins;i++){
             let f = Math.min(midVal(i)*sens,1);
-            let x=i*slice;
-            let h=(i/bins*360 + hueOffset)%360;
-            let barH=f*canvas.height;
+            let x=i*slice, h=(i/bins*360)%360, barH=f*canvas.height;
             ctx.fillStyle=`hsl(${h},100%,60%)`;
             ctx.fillRect(x, canvas.height-barH, slice, barH);
           }
           break;
+
         case 'pultec':
-          drawCurve(i=>midVal(i),
-            `hsla(${dynHue(30)},100%,60%,${alpha})`);
+          drawCurve(i=>midVal(i), 'hsl(30,100%,60%)');
           break;
+
         case 'neve':
-          drawCurve(i=>midVal(i),
-            `hsla(${dynHue(15)},100%,55%,${alpha})`);
+          drawCurve(i=>midVal(i), 'hsl(15,100%,55%)');
           break;
+
         case 'ssl':
-          drawCurve(i=>midVal(i),
-            `hsla(${dynHue(200)},100%,60%,${alpha})`);
+          drawCurve(i=>midVal(i), 'hsl(200,100%,60%)');
           break;
       }
 
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha=1;
     }
 
-    // full-screen & auto-hide
+    // fullscreen & auto-hide
     fsBtn.onclick = ()=>{
       document.fullscreenElement
         ? document.exitFullscreen()
