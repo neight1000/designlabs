@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX WEB APP - PHASE 3</title>
+  <title>DUB FX WEB APP - PHASE 3.4 (EQ Visualizer)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; text-align: center; margin: 0; padding: 0; }
@@ -12,30 +12,26 @@
     .control-block { margin: 15px 0; width: 90%; max-width: 400px; }
     label { font-size: 1.1em; display: block; margin-bottom: 8px; }
     input[type=range] { width: 100%; height: 40px; }
-    canvas { background: #000; display: block; margin: 20px auto; border: 1px solid #333; width: 95%; max-width: 900px; height: 200px; }
+    .heads { margin: 15px; }
+    .head-button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; font-size: 1.1em; }
+    .active { background: #0a0; color: #fff; }
+    .inactive { background: #333; color: #aaa; }
+    canvas { background: #000; display: block; margin: 20px auto; border: 1px solid #333; width: 95%; max-width: 900px; height: 300px; }
   </style>
 </head>
 <body>
 
-  <h1>DUB FX WEB APP - PHASE 3</h1>
+  <h1>DUB FX WEB APP - PHASE 3.4</h1>
 
   <button id="startBtn">Start Audio</button>
 
-  <div>
-    <select id="presetSelect">
-      <option value="">-- Select Preset --</option>
-      <option value="dryYard">Dry Yard Classic</option>
-      <option value="spaceSpiral">Space Tape Spiral</option>
-      <option value="soundSystem">Sound System Burial</option>
-    </select>
-    <button id="applyPresetBtn">Apply Preset</button>
+  <div class="heads">
+    <button id="head1" class="head-button active">Head 1</button>
+    <button id="head2" class="head-button active">Head 2</button>
+    <button id="head3" class="head-button active">Head 3</button>
   </div>
 
   <div class="controls">
-    <div class="control-block">
-      <label>Delay Time (ms)</label>
-      <input type="range" id="delayTime" min="0" max="1000" value="400">
-    </div>
     <div class="control-block">
       <label>Feedback</label>
       <input type="range" id="feedback" min="0" max="0.95" step="0.01" value="0.4">
@@ -50,19 +46,19 @@
     </div>
   </div>
 
+  <div>
+    <button id="throwBtn" style="font-size:2em; padding:20px 40px; background:#f00;">THROW!</button>
+  </div>
+
   <canvas id="visualizer"></canvas>
 
   <script>
-    let audioContext, input, analyser, dataArray;
-    let delayNode, feedbackGain, filterNode, reverbNode, dryGain;
+    let audioContext, input, analyser, freqAnalyser, dataArray, freqData;
+    let delay1, delay2, delay3, feedbackGain, filterNode, reverbNode, dryGain;
     let reverbBuffer = null;
     const particles = [];
-
-    const presets = {
-      dryYard:  { delayTime: 200, feedback: 0.3, highpass: 50,  reverb: 0.2 },
-      spaceSpiral: { delayTime: 700, feedback: 0.7, highpass: 80, reverb: 0.5 },
-      soundSystem: { delayTime: 900, feedback: 0.85, highpass: 150, reverb: 0.8 }
-    };
+    const headsState = { head1: true, head2: true, head3: true };
+    let normalFeedback = 0.4;
 
     document.getElementById('startBtn').addEventListener('click', async () => {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -75,22 +71,38 @@
       analyser.fftSize = 2048;
       dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-      delayNode = audioContext.createDelay(5.0);
+      freqAnalyser = audioContext.createAnalyser();
+      freqAnalyser.fftSize = 256;
+      freqData = new Uint8Array(freqAnalyser.frequencyBinCount);
+
+      delay1 = audioContext.createDelay(5.0);
+      delay2 = audioContext.createDelay(5.0);
+      delay3 = audioContext.createDelay(5.0);
+      delay1.delayTime.value = 0.08;
+      delay2.delayTime.value = 0.2;
+      delay3.delayTime.value = 0.4;
+
       feedbackGain = audioContext.createGain();
       filterNode = audioContext.createBiquadFilter();
       filterNode.type = "highpass";
       reverbNode = audioContext.createConvolver();
       dryGain = audioContext.createGain();
-
       reverbNode.buffer = reverbBuffer;
 
       input.connect(dryGain);
       dryGain.connect(analyser);
+      dryGain.connect(freqAnalyser);
       dryGain.connect(audioContext.destination);
-      dryGain.connect(delayNode);
-      delayNode.connect(feedbackGain);
+      dryGain.connect(delay1);
+      dryGain.connect(delay2);
+      dryGain.connect(delay3);
+      delay1.connect(feedbackGain);
+      delay2.connect(feedbackGain);
+      delay3.connect(feedbackGain);
       feedbackGain.connect(filterNode);
-      filterNode.connect(delayNode);
+      filterNode.connect(delay1);
+      filterNode.connect(delay2);
+      filterNode.connect(delay3);
       filterNode.connect(reverbNode);
       reverbNode.connect(audioContext.destination);
       filterNode.connect(audioContext.destination);
@@ -106,18 +118,12 @@
     }
 
     function updateControls() {
-      const delayTime = document.getElementById('delayTime').value / 1000;
-      const feedback = document.getElementById('feedback').value;
-      const highpass = document.getElementById('highpass').value;
-      const reverbLevel = document.getElementById('reverb').value;
-
-      delayNode.delayTime.value = delayTime;
-      feedbackGain.gain.value = feedback;
-      filterNode.frequency.value = highpass;
-
+      normalFeedback = parseFloat(document.getElementById('feedback').value);
+      feedbackGain.gain.value = normalFeedback;
+      filterNode.frequency.value = parseFloat(document.getElementById('highpass').value);
       reverbNode.disconnect();
       const reverbGain = audioContext.createGain();
-      reverbGain.gain.value = reverbLevel;
+      reverbGain.gain.value = parseFloat(document.getElementById('reverb').value);
       filterNode.connect(reverbGain);
       reverbGain.connect(reverbNode);
       reverbNode.connect(audioContext.destination);
@@ -127,15 +133,34 @@
       slider.addEventListener('input', updateControls);
     });
 
-    document.getElementById('applyPresetBtn').addEventListener('click', () => {
-      const selected = document.getElementById('presetSelect').value;
-      if (presets[selected]) {
-        document.getElementById('delayTime').value = presets[selected].delayTime;
-        document.getElementById('feedback').value = presets[selected].feedback;
-        document.getElementById('highpass').value = presets[selected].highpass;
-        document.getElementById('reverb').value = presets[selected].reverb;
-        updateControls();
-      }
+    ['head1', 'head2', 'head3'].forEach(head => {
+      document.getElementById(head).addEventListener('click', () => {
+        headsState[head] = !headsState[head];
+        document.getElementById(head).className = headsState[head] ? 'head-button active' : 'head-button inactive';
+        updateHeads();
+      });
+    });
+
+    function updateHeads() {
+      dryGain.disconnect();
+      if (headsState.head1) dryGain.connect(delay1);
+      if (headsState.head2) dryGain.connect(delay2);
+      if (headsState.head3) dryGain.connect(delay3);
+    }
+
+    document.getElementById('throwBtn').addEventListener('mousedown', () => {
+      feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
+    });
+    document.getElementById('throwBtn').addEventListener('mouseup', () => {
+      feedbackGain.gain.value = normalFeedback;
+    });
+    document.getElementById('throwBtn').addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
+    });
+    document.getElementById('throwBtn').addEventListener('touchend', (e) => {
+      e.preventDefault();
+      feedbackGain.gain.value = normalFeedback;
     });
 
     function drawVisualizer() {
@@ -143,12 +168,11 @@
       const ctx = canvas.getContext('2d');
       requestAnimationFrame(drawVisualizer);
       analyser.getByteTimeDomainData(dataArray);
+      freqAnalyser.getByteFrequencyData(freqData);
 
-      // Fade previous frame for trailing effect
-      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillStyle = "rgba(0,0,0,0.25)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Draw waveform
       ctx.lineWidth = 2;
       ctx.strokeStyle = "#0f0";
       ctx.beginPath();
@@ -164,13 +188,20 @@
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
 
-      // Particle system trigger (feedback visual)
-      const feedbackValue = parseFloat(document.getElementById('feedback').value);
+      // Draw EQ bars
+      const barWidth = (canvas.width / freqData.length);
+      for (let i = 0; i < freqData.length; i++) {
+        const barHeight = freqData[i];
+        const hue = 120 - (barHeight / 256) * 120;
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1, barHeight);
+      }
+
+      // Particle system
+      const feedbackValue = feedbackGain.gain.value;
       if (Math.random() < feedbackValue * 0.1) {
         particles.push({ x: Math.random() * canvas.width, y: canvas.height / 2, alpha: 1 });
       }
-      
-      // Draw particles
       ctx.fillStyle = "#f00";
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
