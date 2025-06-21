@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX v5.0 - Performance Build</title>
+  <title>DUB FX v5.2 - Live Rig with Device Selector</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
     button { font-size: 1.5em; padding: 20px 40px; margin: 10px; border: 1px solid #fff; border-radius: 5px; background: #000; color: #fff; }
     button:active { background: #fff; color: #000; }
+    select { font-size: 1.2em; padding: 10px; margin: 20px; }
     .controls { margin: 20px auto; width: 80%; max-width: 400px; }
     label { display: block; margin: 20px 0 10px 0; }
     input[type=range] { width: 100%; }
@@ -16,9 +17,13 @@
 </head>
 <body>
 
-  <h1>DUB FX v5.0 — PERFORMANCE BUILD</h1>
+  <h1>DUB FX v5.2 — LIVE RIG</h1>
 
-  <button id="startBtn">START AUDIO</button>
+  <div id="deviceSection">
+    <label>Select Audio Input Device:</label>
+    <select id="deviceSelect"></select>
+    <button id="startBtn">START AUDIO</button>
+  </div>
 
   <div class="controls" style="display:none;" id="controlPanel">
     <label>Feedback</label>
@@ -28,7 +33,8 @@
     <input type="range" id="highpass" min="20" max="1000" step="1" value="200">
 
     <button id="throwBtn">THROW</button>
-    <button id="killBtn">KILL SWITCH</button>
+    <button id="fxToggleBtn">FX: ON</button>
+    <button id="eqModeBtn">EQ MODE</button>
   </div>
 
   <canvas id="visualizer"></canvas>
@@ -37,20 +43,40 @@
     let audioContext, input, feedbackGain, filterNode, dryGain, analyser, dataArray;
     let delay1, delay2, delay3;
     let normalFeedback = 0.4;
-    let killState = false;
+    let fxEnabled = true;
+    let eqMode = false;
+
+    async function listAudioDevices() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputDevices = devices.filter(device => device.kind === 'audioinput');
+      const select = document.getElementById('deviceSelect');
+      inputDevices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Input ${device.deviceId}`;
+        select.appendChild(option);
+      });
+    }
+
+    listAudioDevices();
 
     document.getElementById('startBtn').addEventListener('click', async () => {
       try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const deviceId = document.getElementById('deviceSelect').value;
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: deviceId ? { exact: deviceId } : undefined }
+        });
+
         input = audioContext.createMediaStreamSource(stream);
 
         setupAudioGraph();
         updateControls();
 
         document.getElementById('controlPanel').style.display = 'block';
-        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('deviceSection').style.display = 'none';
         drawVisualizer();
 
       } catch (err) {
@@ -64,7 +90,6 @@
       delay2 = audioContext.createDelay(5.0);
       delay3 = audioContext.createDelay(5.0);
 
-      // Tuned Roland-style delay head times:
       delay1.delayTime.value = 0.06;
       delay2.delayTime.value = 0.18;
       delay3.delayTime.value = 0.38;
@@ -81,41 +106,52 @@
       input.connect(dryGain);
       dryGain.connect(analyser);
       dryGain.connect(audioContext.destination);
-      dryGain.connect(delay1);
-      dryGain.connect(delay2);
-      dryGain.connect(delay3);
 
-      delay1.connect(feedbackGain);
-      delay2.connect(feedbackGain);
-      delay3.connect(feedbackGain);
-      feedbackGain.connect(filterNode);
-      filterNode.connect(delay1);
-      filterNode.connect(delay2);
-      filterNode.connect(delay3);
-      filterNode.connect(audioContext.destination);
+      connectEffects();
 
       document.getElementById('feedback').addEventListener('input', updateControls);
       document.getElementById('highpass').addEventListener('input', updateControls);
 
       document.getElementById('throwBtn').addEventListener('mousedown', () => {
-        feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
+        if (fxEnabled) feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
       });
       document.getElementById('throwBtn').addEventListener('mouseup', () => {
-        feedbackGain.gain.value = normalFeedback;
+        if (fxEnabled) feedbackGain.gain.value = normalFeedback;
       });
 
       document.getElementById('throwBtn').addEventListener('touchstart', (e) => {
         e.preventDefault();
-        feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
+        if (fxEnabled) feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
       });
       document.getElementById('throwBtn').addEventListener('touchend', (e) => {
         e.preventDefault();
-        feedbackGain.gain.value = normalFeedback;
+        if (fxEnabled) feedbackGain.gain.value = normalFeedback;
       });
 
-      document.getElementById('killBtn').addEventListener('click', toggleKill);
+      document.getElementById('fxToggleBtn').addEventListener('click', toggleFX);
+      document.getElementById('eqModeBtn').addEventListener('click', toggleEQMode);
 
       modulateDelays();
+    }
+
+    function connectEffects() {
+      dryGain.disconnect(delay1);
+      dryGain.disconnect(delay2);
+      dryGain.disconnect(delay3);
+      if (fxEnabled) {
+        dryGain.connect(delay1);
+        dryGain.connect(delay2);
+        dryGain.connect(delay3);
+
+        delay1.connect(feedbackGain);
+        delay2.connect(feedbackGain);
+        delay3.connect(feedbackGain);
+        feedbackGain.connect(filterNode);
+        filterNode.connect(delay1);
+        filterNode.connect(delay2);
+        filterNode.connect(delay3);
+        filterNode.connect(audioContext.destination);
+      }
     }
 
     function updateControls() {
@@ -124,15 +160,21 @@
       filterNode.frequency.value = parseFloat(document.getElementById('highpass').value);
     }
 
-    function toggleKill() {
-      killState = !killState;
-      dryGain.gain.value = killState ? 1 : 1;
-      feedbackGain.gain.value = killState ? 0 : normalFeedback;
+    function toggleFX() {
+      fxEnabled = !fxEnabled;
+      connectEffects();
+      document.getElementById('fxToggleBtn').textContent = fxEnabled ? "FX: ON" : "FX: OFF";
+    }
+
+    function toggleEQMode() {
+      eqMode = !eqMode;
+      document.getElementById('eqModeBtn').textContent = eqMode ? "EQ MODE: ON" : "EQ MODE";
     }
 
     let wowPhase = 0, flutterPhase = 0;
     function modulateDelays() {
       requestAnimationFrame(modulateDelays);
+      if (!fxEnabled) return;
       wowPhase += 0.002;
       flutterPhase += 0.05;
       const wowDepth = 0.002;
@@ -163,8 +205,14 @@
         x += barWidth;
       }
       ctx.stroke();
+
+      if (eqMode) {
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
     }
   </script>
 
 </body>
 </html>
+
