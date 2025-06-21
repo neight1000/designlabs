@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX v4.0 - Fully Stabilized</title>
+  <title>DUB FX v4.1 - OFFLINE STABLE CORE</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
@@ -15,7 +15,7 @@
 </head>
 <body>
 
-  <h1>DUB FX v4.0 — PRODUCTION CORE</h1>
+  <h1>DUB FX v4.1 — OFFLINE CORE</h1>
 
   <button id="startBtn">START AUDIO</button>
 
@@ -26,24 +26,18 @@
     <label>Highpass Filter</label>
     <input type="range" id="highpass" min="20" max="1000" step="1" value="20">
 
-    <label>Reverb</label>
-    <input type="range" id="reverb" min="0" max="1" step="0.01" value="0.3">
-
     <label>Throw Button (Hold)</label>
     <button id="throwBtn">THROW</button>
   </div>
 
   <script>
-    let audioContext, input, feedbackGain, filterNode, reverbNode, dryGain;
+    let audioContext, input, feedbackGain, filterNode, dryGain;
     let delay1, delay2, delay3;
     let normalFeedback = 0.4;
-    let reverbBuffer = null;
 
     document.getElementById('startBtn').addEventListener('click', async () => {
       try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-        await loadReverb();
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         input = audioContext.createMediaStreamSource(stream);
@@ -60,12 +54,6 @@
       }
     });
 
-    async function loadReverb() {
-      const response = await fetch("https://cdn.jsdelivr.net/gh/mdn/webaudio-examples/audio-basics/impulse-responses/impulse-resonant-chamber.wav");
-      const arrayBuffer = await response.arrayBuffer();
-      reverbBuffer = await (new (window.AudioContext || window.webkitAudioContext)()).decodeAudioData(arrayBuffer);
-    }
-
     function setupAudioGraph() {
       delay1 = audioContext.createDelay(5.0);
       delay2 = audioContext.createDelay(5.0);
@@ -77,8 +65,6 @@
       feedbackGain = audioContext.createGain();
       filterNode = audioContext.createBiquadFilter();
       filterNode.type = "highpass";
-      reverbNode = audioContext.createConvolver();
-      reverbNode.buffer = reverbBuffer;
       dryGain = audioContext.createGain();
 
       input.connect(dryGain);
@@ -94,14 +80,10 @@
       filterNode.connect(delay1);
       filterNode.connect(delay2);
       filterNode.connect(delay3);
-      filterNode.connect(reverbNode);
-      reverbNode.connect(audioContext.destination);
       filterNode.connect(audioContext.destination);
 
-      // Hook up UI controls after graph is ready
       document.getElementById('feedback').addEventListener('input', updateControls);
       document.getElementById('highpass').addEventListener('input', updateControls);
-      document.getElementById('reverb').addEventListener('input', updateControls);
 
       document.getElementById('throwBtn').addEventListener('mousedown', () => {
         feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
@@ -126,16 +108,8 @@
       normalFeedback = parseFloat(document.getElementById('feedback').value);
       feedbackGain.gain.value = normalFeedback;
       filterNode.frequency.value = parseFloat(document.getElementById('highpass').value);
-
-      reverbNode.disconnect();
-      const reverbGain = audioContext.createGain();
-      reverbGain.gain.value = parseFloat(document.getElementById('reverb').value);
-      filterNode.connect(reverbGain);
-      reverbGain.connect(reverbNode);
-      reverbNode.connect(audioContext.destination);
     }
 
-    // Keep Wow & Flutter modulation
     let wowPhase = 0, flutterPhase = 0;
     function modulateDelays() {
       requestAnimationFrame(modulateDelays);
@@ -152,4 +126,3 @@
 
 </body>
 </html>
-
