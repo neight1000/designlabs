@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX CORE DEBUG BUILD</title>
+  <title>DUB FX v4.0 - Fully Stabilized</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
@@ -15,11 +15,11 @@
 </head>
 <body>
 
-  <h1>DUB FX — STABILIZED CORE</h1>
+  <h1>DUB FX v4.0 — PRODUCTION CORE</h1>
 
   <button id="startBtn">START AUDIO</button>
 
-  <div class="controls">
+  <div class="controls" style="display:none;" id="controlPanel">
     <label>Feedback</label>
     <input type="range" id="feedback" min="0" max="0.95" step="0.01" value="0.4">
 
@@ -37,18 +37,39 @@
     let audioContext, input, feedbackGain, filterNode, reverbNode, dryGain;
     let delay1, delay2, delay3;
     let normalFeedback = 0.4;
+    let reverbBuffer = null;
 
-    async function startAudio() {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      await loadReverb();
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      input = audioContext.createMediaStreamSource(stream);
+        await loadReverb();
 
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        input = audioContext.createMediaStreamSource(stream);
+
+        setupAudioGraph();
+        updateControls();
+
+        document.getElementById('controlPanel').style.display = 'block';
+        document.getElementById('startBtn').style.display = 'none';
+
+      } catch (err) {
+        alert("Error initializing audio: " + err.message);
+        console.error(err);
+      }
+    });
+
+    async function loadReverb() {
+      const response = await fetch("https://cdn.jsdelivr.net/gh/mdn/webaudio-examples/audio-basics/impulse-responses/impulse-resonant-chamber.wav");
+      const arrayBuffer = await response.arrayBuffer();
+      reverbBuffer = await (new (window.AudioContext || window.webkitAudioContext)()).decodeAudioData(arrayBuffer);
+    }
+
+    function setupAudioGraph() {
       delay1 = audioContext.createDelay(5.0);
       delay2 = audioContext.createDelay(5.0);
       delay3 = audioContext.createDelay(5.0);
-
       delay1.delayTime.value = 0.08;
       delay2.delayTime.value = 0.2;
       delay3.delayTime.value = 0.4;
@@ -57,8 +78,8 @@
       filterNode = audioContext.createBiquadFilter();
       filterNode.type = "highpass";
       reverbNode = audioContext.createConvolver();
-      dryGain = audioContext.createGain();
       reverbNode.buffer = reverbBuffer;
+      dryGain = audioContext.createGain();
 
       input.connect(dryGain);
       dryGain.connect(audioContext.destination);
@@ -77,21 +98,35 @@
       reverbNode.connect(audioContext.destination);
       filterNode.connect(audioContext.destination);
 
-      updateControls();
-      modulateDelays();
-    }
+      // Hook up UI controls after graph is ready
+      document.getElementById('feedback').addEventListener('input', updateControls);
+      document.getElementById('highpass').addEventListener('input', updateControls);
+      document.getElementById('reverb').addEventListener('input', updateControls);
 
-    async function loadReverb() {
-      const response = await fetch("https://cdn.jsdelivr.net/gh/mdn/webaudio-examples/audio-basics/impulse-responses/impulse-resonant-chamber.wav");
-      const arrayBuffer = await response.arrayBuffer();
-      reverbBuffer = await (new AudioContext()).decodeAudioData(arrayBuffer);
+      document.getElementById('throwBtn').addEventListener('mousedown', () => {
+        feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
+      });
+      document.getElementById('throwBtn').addEventListener('mouseup', () => {
+        feedbackGain.gain.value = normalFeedback;
+      });
+
+      document.getElementById('throwBtn').addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
+      });
+      document.getElementById('throwBtn').addEventListener('touchend', (e) => {
+        e.preventDefault();
+        feedbackGain.gain.value = normalFeedback;
+      });
+
+      modulateDelays();
     }
 
     function updateControls() {
       normalFeedback = parseFloat(document.getElementById('feedback').value);
       feedbackGain.gain.value = normalFeedback;
       filterNode.frequency.value = parseFloat(document.getElementById('highpass').value);
-      
+
       reverbNode.disconnect();
       const reverbGain = audioContext.createGain();
       reverbGain.gain.value = parseFloat(document.getElementById('reverb').value);
@@ -100,27 +135,7 @@
       reverbNode.connect(audioContext.destination);
     }
 
-    document.getElementById('feedback').addEventListener('input', updateControls);
-    document.getElementById('highpass').addEventListener('input', updateControls);
-    document.getElementById('reverb').addEventListener('input', updateControls);
-
-    document.getElementById('throwBtn').addEventListener('mousedown', () => {
-      feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
-    });
-    document.getElementById('throwBtn').addEventListener('mouseup', () => {
-      feedbackGain.gain.value = normalFeedback;
-    });
-
-    document.getElementById('throwBtn').addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      feedbackGain.gain.value = Math.min(normalFeedback + 0.3, 0.95);
-    });
-    document.getElementById('throwBtn').addEventListener('touchend', (e) => {
-      e.preventDefault();
-      feedbackGain.gain.value = normalFeedback;
-    });
-
-    // Minimal Wow & Flutter retained
+    // Keep Wow & Flutter modulation
     let wowPhase = 0, flutterPhase = 0;
     function modulateDelays() {
       requestAnimationFrame(modulateDelays);
@@ -130,12 +145,11 @@
       const flutterDepth = 0.0005;
 
       delay1.delayTime.value = 0.08 + Math.sin(wowPhase) * wowDepth + Math.sin(flutterPhase) * flutterDepth;
-      delay2.delayTime.value = 0.20 + Math.sin(wowPhase*0.9) * wowDepth + Math.sin(flutterPhase*0.9) * flutterDepth;
-      delay3.delayTime.value = 0.40 + Math.sin(wowPhase*0.8) * wowDepth + Math.sin(flutterPhase*0.8) * flutterDepth;
+      delay2.delayTime.value = 0.20 + Math.sin(wowPhase * 0.9) * wowDepth + Math.sin(flutterPhase * 0.9) * flutterDepth;
+      delay3.delayTime.value = 0.40 + Math.sin(wowPhase * 0.8) * wowDepth + Math.sin(flutterPhase * 0.8) * flutterDepth;
     }
-
-    document.getElementById('startBtn').addEventListener('click', startAudio);
   </script>
 
 </body>
 </html>
+
