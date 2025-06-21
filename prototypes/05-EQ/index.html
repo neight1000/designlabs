@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,7 +38,6 @@
       touch-action: none;
       background: #000;
     }
-    /* When fullscreen, make canvas fill everything */
     :fullscreen canvas {
       width: 100vw !important;
       height: 100vh !important;
@@ -48,6 +48,13 @@
   <div id="controls">
     <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
+    <select id="presetSelect">
+      <option value="red">Red</option>
+      <option value="yellow">Yellow</option>
+      <option value="green">Green</option>
+      <option value="blue">Blue</option>
+      <option value="purple">Purple</option>
+    </select>
     <button id="fsBtn">Fullscreen</button>
   </div>
   <canvas id="vis"></canvas>
@@ -55,18 +62,17 @@
   <script>
     const deviceSelect = document.getElementById('deviceSelect');
     const startBtn     = document.getElementById('startBtn');
+    const presetSelect = document.getElementById('presetSelect');
     const fsBtn        = document.getElementById('fsBtn');
     const canvas       = document.getElementById('vis');
     const ctx          = canvas.getContext('2d');
     let audioContext, analyser, dataArray;
 
     function resizeCanvas() {
-      // match CSS dimensions
       const style = getComputedStyle(canvas);
       canvas.width  = parseFloat(style.width);
       canvas.height = parseFloat(style.height);
     }
-
     window.addEventListener('resize', resizeCanvas);
     document.addEventListener('fullscreenchange', resizeCanvas);
     resizeCanvas();
@@ -74,7 +80,7 @@
     async function populateDevices() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       devices.filter(d => d.kind === 'audioinput')
-             .forEach((d,i) => {
+             .forEach((d, i) => {
         const opt = document.createElement('option');
         opt.value = d.deviceId;
         opt.textContent = d.label || `Mic ${i+1}`;
@@ -101,35 +107,86 @@
       analyser.getByteFrequencyData(dataArray);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      ctx.beginPath();
       const slice = canvas.width / dataArray.length;
-      let x = 0;
-      for (let i = 0; i < dataArray.length; i++) {
-        const v = dataArray[i] / 255;
-        const y = canvas.height - (v * canvas.height);
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
+      const preset = presetSelect.value;
+
+      if (preset === 'purple') {
+        // dotted circles
+        ctx.setLineDash([]);
+        dataArray.forEach((v, i) => {
+          const x = i * slice;
+          const y = canvas.height - (v / 255) * canvas.height;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.fillStyle = 'purple';
+          ctx.fill();
+        });
+        return;
+      }
+
+      // for line-based presets:
+      ctx.beginPath();
+      let x0 = 0;
+      let y0 = canvas.height - (dataArray[0] / 255) * canvas.height;
+
+      if (preset === 'yellow') {
+        // smooth quadratic curve
+        for (let i = 1; i < dataArray.length; i++) {
+          const x1 = i * slice;
+          const y1 = canvas.height - (dataArray[i] / 255) * canvas.height;
+          const mx = (x0 + x1) / 2;
+          const my = (y0 + y1) / 2;
+          if (i === 1) ctx.moveTo(x0, y0);
+          ctx.quadraticCurveTo(x0, y0, mx, my);
+          x0 = x1; y0 = y1;
+        }
+      } else {
+        // straight line or filled
+        ctx.moveTo(x0, y0);
+        for (let i = 1; i < dataArray.length; i++) {
+          const x = i * slice;
+          const y = canvas.height - (dataArray[i] / 255) * canvas.height;
           ctx.lineTo(x, y);
         }
-        x += slice;
       }
+
+      // preset styles
       ctx.lineWidth = 2;
-      ctx.strokeStyle = '#fff';
+      ctx.setLineDash(preset === 'blue' ? [4, 2] : []);
+      ctx.strokeStyle = preset;
+
+      if (preset === 'green') {
+        // fill under curve
+        ctx.save();
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(0,255,0,0.2)';
+        ctx.fill();
+        ctx.restore();
+        // redraw line on top
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - (dataArray[0] / 255) * canvas.height);
+        for (let i = 1; i < dataArray.length; i++) {
+          const x = i * slice;
+          const y = canvas.height - (dataArray[i] / 255) * canvas.height;
+          ctx.lineTo(x, y);
+        }
+      }
+
       ctx.stroke();
+      ctx.setLineDash([]);
     }
 
     startBtn.addEventListener('click', startEQ);
-
     fsBtn.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-      } else {
-        document.exitFullscreen();
-      }
+      document.fullscreenElement
+        ? document.exitFullscreen()
+        : document.documentElement.requestFullscreen();
     });
 
     populateDevices();
   </script>
 </body>
 </html>
+```
