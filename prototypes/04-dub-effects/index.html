@@ -2,76 +2,56 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX v4.2 - Hardware Selector</title>
+  <title>DUB FX v5.0 - Performance Build</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
-    button { font-size: 1.5em; padding: 20px 40px; margin: 20px; border: 1px solid #fff; border-radius: 5px; background: #000; color: #fff; }
+    button { font-size: 1.5em; padding: 20px 40px; margin: 10px; border: 1px solid #fff; border-radius: 5px; background: #000; color: #fff; }
     button:active { background: #fff; color: #000; }
-    select { font-size: 1.2em; padding: 10px; margin: 20px; }
     .controls { margin: 20px auto; width: 80%; max-width: 400px; }
     label { display: block; margin: 20px 0 10px 0; }
     input[type=range] { width: 100%; }
+    canvas { border: 1px solid #fff; margin-top: 20px; width: 90%; max-width: 600px; height: 200px; }
   </style>
 </head>
 <body>
 
-  <h1>DUB FX v4.2 — DEVICE SELECTOR</h1>
+  <h1>DUB FX v5.0 — PERFORMANCE BUILD</h1>
 
-  <div id="deviceSection">
-    <label>Select Audio Input Device:</label>
-    <select id="deviceSelect"></select>
-    <button id="startBtn">START AUDIO</button>
-  </div>
+  <button id="startBtn">START AUDIO</button>
 
   <div class="controls" style="display:none;" id="controlPanel">
     <label>Feedback</label>
-    <input type="range" id="feedback" min="0" max="0.95" step="0.01" value="0.4">
+    <input type="range" id="feedback" min="0" max="0.9" step="0.01" value="0.4">
 
     <label>Highpass Filter</label>
-    <input type="range" id="highpass" min="20" max="1000" step="1" value="20">
+    <input type="range" id="highpass" min="20" max="1000" step="1" value="200">
 
-    <label>Throw Button (Hold)</label>
     <button id="throwBtn">THROW</button>
+    <button id="killBtn">KILL SWITCH</button>
   </div>
 
+  <canvas id="visualizer"></canvas>
+
   <script>
-    let audioContext, input, feedbackGain, filterNode, dryGain;
+    let audioContext, input, feedbackGain, filterNode, dryGain, analyser, dataArray;
     let delay1, delay2, delay3;
     let normalFeedback = 0.4;
-
-    // Device enumeration on page load
-    async function listAudioDevices() {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const inputDevices = devices.filter(device => device.kind === 'audioinput');
-      const select = document.getElementById('deviceSelect');
-      inputDevices.forEach(device => {
-        const option = document.createElement('option');
-        option.value = device.deviceId;
-        option.text = device.label || `Input ${device.deviceId}`;
-        select.appendChild(option);
-      });
-    }
-
-    listAudioDevices();
+    let killState = false;
 
     document.getElementById('startBtn').addEventListener('click', async () => {
       try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-        const deviceId = document.getElementById('deviceSelect').value;
-
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: deviceId ? { exact: deviceId } : undefined }
-        });
-
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         input = audioContext.createMediaStreamSource(stream);
 
         setupAudioGraph();
         updateControls();
 
         document.getElementById('controlPanel').style.display = 'block';
-        document.getElementById('deviceSection').style.display = 'none';
+        document.getElementById('startBtn').style.display = 'none';
+        drawVisualizer();
 
       } catch (err) {
         alert("Error initializing audio: " + err.message);
@@ -83,16 +63,23 @@
       delay1 = audioContext.createDelay(5.0);
       delay2 = audioContext.createDelay(5.0);
       delay3 = audioContext.createDelay(5.0);
-      delay1.delayTime.value = 0.08;
-      delay2.delayTime.value = 0.2;
-      delay3.delayTime.value = 0.4;
+
+      // Tuned Roland-style delay head times:
+      delay1.delayTime.value = 0.06;
+      delay2.delayTime.value = 0.18;
+      delay3.delayTime.value = 0.38;
 
       feedbackGain = audioContext.createGain();
       filterNode = audioContext.createBiquadFilter();
       filterNode.type = "highpass";
       dryGain = audioContext.createGain();
 
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+
       input.connect(dryGain);
+      dryGain.connect(analyser);
       dryGain.connect(audioContext.destination);
       dryGain.connect(delay1);
       dryGain.connect(delay2);
@@ -126,6 +113,8 @@
         feedbackGain.gain.value = normalFeedback;
       });
 
+      document.getElementById('killBtn').addEventListener('click', toggleKill);
+
       modulateDelays();
     }
 
@@ -133,6 +122,12 @@
       normalFeedback = parseFloat(document.getElementById('feedback').value);
       feedbackGain.gain.value = normalFeedback;
       filterNode.frequency.value = parseFloat(document.getElementById('highpass').value);
+    }
+
+    function toggleKill() {
+      killState = !killState;
+      dryGain.gain.value = killState ? 1 : 1;
+      feedbackGain.gain.value = killState ? 0 : normalFeedback;
     }
 
     let wowPhase = 0, flutterPhase = 0;
@@ -143,9 +138,31 @@
       const wowDepth = 0.002;
       const flutterDepth = 0.0005;
 
-      delay1.delayTime.value = 0.08 + Math.sin(wowPhase) * wowDepth + Math.sin(flutterPhase) * flutterDepth;
-      delay2.delayTime.value = 0.20 + Math.sin(wowPhase * 0.9) * wowDepth + Math.sin(flutterPhase * 0.9) * flutterDepth;
-      delay3.delayTime.value = 0.40 + Math.sin(wowPhase * 0.8) * wowDepth + Math.sin(flutterPhase * 0.8) * flutterDepth;
+      delay1.delayTime.value = 0.06 + Math.sin(wowPhase) * wowDepth + Math.sin(flutterPhase) * flutterDepth;
+      delay2.delayTime.value = 0.18 + Math.sin(wowPhase * 0.9) * wowDepth + Math.sin(flutterPhase * 0.9) * flutterDepth;
+      delay3.delayTime.value = 0.38 + Math.sin(wowPhase * 0.8) * wowDepth + Math.sin(flutterPhase * 0.8) * flutterDepth;
+    }
+
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+      analyser.getByteFrequencyData(dataArray);
+      const canvas = document.getElementById('visualizer');
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#fff";
+      ctx.beginPath();
+      const barWidth = canvas.width / dataArray.length;
+      let x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const v = dataArray[i] / 255;
+        const y = canvas.height - (v * canvas.height);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        x += barWidth;
+      }
+      ctx.stroke();
     }
   </script>
 
