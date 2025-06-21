@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ v1.7</title>
+  <title>Visual EQ v1.8</title>
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden;
@@ -72,7 +72,15 @@
           canvas         = document.getElementById('vis'),
           ctx            = canvas.getContext('2d');
 
-    let audioContext, analyser, dataArray;
+    let audioContext, analyser, dataArray, startTime;
+
+    // Simple 1D value-noise (Perlin-like)
+    function fract(x){ return x - Math.floor(x); }
+    function rand(n){ return fract(Math.sin(n) * 43758.5453123); }
+    function noise1D(x){
+      const i = Math.floor(x), f = fract(x);
+      return rand(i) * (1 - f) + rand(i + 1) * f;
+    }
 
     function resizeCanvas() {
       canvas.width  = window.innerWidth;
@@ -104,6 +112,7 @@
       analyser.fftSize = parseInt(fftSelect.value);
       dataArray = new Uint8Array(analyser.frequencyBinCount);
       audioContext.createMediaStreamSource(stream).connect(analyser);
+      startTime = performance.now();
       draw();
     }
 
@@ -117,6 +126,10 @@
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
+      // time in seconds
+      const t = (performance.now() - startTime) * 0.001;
+      const hueOffset = (t * 10) % 360; // 10° per second
+
       // tracer effect: fade previous
       if (tracerToggle.checked) {
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
@@ -125,7 +138,7 @@
         ctx.clearRect(0,0,canvas.width,canvas.height);
       }
 
-      // frequency-band markers
+      // band markers
       const freqs = [60,250,1000,4000,16000];
       const binCount = analyser.frequencyBinCount;
       const nyquist = audioContext.sampleRate / 2;
@@ -141,80 +154,86 @@
         ctx.moveTo(x,0);
         ctx.lineTo(x,canvas.height);
         ctx.stroke();
-        ctx.fillText(f + 'Hz', x+2, 14);
+        ctx.fillText(f+'Hz', x+2, 14);
       });
 
       const preset = presetSelect.value;
       const sens = parseFloat(sensSlider.value);
+      const noiseScale = 0.05, noiseSpeed = 0.5, noiseAmp = 0.02;
 
       if (preset === 'vhs') {
-        // horizontal scanlines
-        ctx.strokeStyle = 'rgba(200,200,200,0.1)';
+        // scanlines + drifting hue
+        const baseHue = (0 + hueOffset) % 360;
+        ctx.strokeStyle = `hsla(${baseHue},0%,80%,0.1)`;
         for (let y=0; y<canvas.height; y+=4) {
-          const offset = 2 * Math.sin((y/50) + Date.now()*0.005);
+          const offset = 2 * Math.sin(y/50 + t*5);
           ctx.beginPath();
           ctx.moveTo(offset, y);
           ctx.lineTo(canvas.width+offset, y);
           ctx.stroke();
         }
-        // basic EQ line with jitter
+        // waveform
         ctx.beginPath();
         for (let i=0; i<dataArray.length; i++) {
           const f = Math.min((dataArray[i]/255)*sens,1);
           const x = i*slice;
-          const y = canvas.height - f*canvas.height + (Math.random()-0.5)*2;
+          let y = canvas.height - f*canvas.height;
+          y += (noise1D(i*noiseScale + t*noiseSpeed) - 0.5) * noiseAmp * canvas.height;
           i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
         }
-        ctx.lineWidth = 2; ctx.strokeStyle='hsl(0,0%,80%)';
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = `hsl(${baseHue},0%,80%)`;
         ctx.stroke();
-      }
-      else if (preset === 'tape') {
+
+      } else if (preset === 'tape') {
+        const baseHue = (200 + hueOffset) % 360;
         ctx.shadowBlur = 30;
-        ctx.shadowColor = '#fff';
+        ctx.shadowColor = `hsl(${baseHue},100%,80%)`;
         ctx.globalAlpha = 0.7;
         ctx.beginPath();
         for (let i=0; i<dataArray.length; i++) {
           const f = Math.min((dataArray[i]/255)*sens,1);
           const x = i*slice;
-          const y = canvas.height - f*canvas.height;
+          let y = canvas.height - f*canvas.height;
+          y += (noise1D(i*noiseScale + t*noiseSpeed) - 0.5) * noiseAmp * canvas.height;
           i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
         }
-        ctx.lineWidth = 4; ctx.strokeStyle='hsl(200,100%,80%)';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = `hsl(${baseHue},100%,80%)`;
         ctx.stroke();
         ctx.shadowBlur = 0;
         ctx.globalAlpha = 1;
-      }
-      else if (preset === 'neon') {
-        // grid
+
+      } else if (preset === 'neon') {
+        const baseHue = (180 + hueOffset) % 360;
         const cell = 50;
-        ctx.strokeStyle = 'hsl(180,100%,60%)';
+        ctx.strokeStyle = `hsl(${baseHue},100%,60%)`;
         ctx.lineWidth = 1;
         for (let x=0; x<canvas.width; x+=cell) {
           ctx.beginPath();
-          ctx.moveTo(x,0); ctx.lineTo(x,canvas.height);
-          ctx.stroke();
+          ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
         }
         for (let y=0; y<canvas.height; y+=cell) {
           ctx.beginPath();
-          ctx.moveTo(0,y); ctx.lineTo(canvas.width,y);
-          ctx.stroke();
+          ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
         }
-        // neon line
         ctx.shadowBlur = 20;
-        ctx.shadowColor = 'hsl(180,100%,80%)';
+        ctx.shadowColor = `hsl(${baseHue},100%,80%)`;
         ctx.beginPath();
         for (let i=0; i<dataArray.length; i++) {
           const f = Math.min((dataArray[i]/255)*sens,1);
           const x = i*slice;
-          const y = canvas.height - f*canvas.height;
+          let y = canvas.height - f*canvas.height;
+          y += (noise1D(i*noiseScale + t*noiseSpeed) - 0.5) * noiseAmp * canvas.height;
           i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
         }
-        ctx.lineWidth = 3; ctx.strokeStyle='hsl(180,100%,60%)';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = `hsl(${baseHue},100%,60%)`;
         ctx.stroke();
         ctx.shadowBlur = 0;
-      }
-      else if (preset === 'aurora') {
-        // gradient under curve
+
+      } else if (preset === 'aurora') {
+        // gradient under noisy curve
         const grad = ctx.createLinearGradient(0,0,0,canvas.height);
         grad.addColorStop(0,'#081d71');
         grad.addColorStop(0.5,'#20ff90');
@@ -225,18 +244,19 @@
         for (let i=0; i<dataArray.length; i++) {
           const f = Math.min((dataArray[i]/255)*sens,1);
           const x = i*slice;
-          const y = canvas.height - f*canvas.height;
+          let y = canvas.height - f*canvas.height;
+          y += (noise1D(i*noiseScale + t*noiseSpeed) - 0.5) * noiseAmp * canvas.height;
           ctx.lineTo(x,y);
         }
         ctx.lineTo(canvas.width,canvas.height);
         ctx.closePath();
         ctx.fill();
-      }
-      else { // spectrum
+
+      } else { // spectrum
         for (let i=0; i<dataArray.length; i++) {
           const f = Math.min((dataArray[i]/255)*sens,1);
           const x = i*slice;
-          const h = i/dataArray.length * 360;
+          let h = (i/dataArray.length*360 + hueOffset) % 360;
           const barH = f*canvas.height;
           ctx.fillStyle = `hsl(${h},100%,60%)`;
           ctx.fillRect(x, canvas.height-barH, slice, barH);
@@ -256,7 +276,7 @@
     function showControls(){
       controls.style.opacity = '1';
       clearTimeout(hideTimer);
-      hideTimer = setTimeout(()=>controls.style.opacity='0',3000);
+      hideTimer = setTimeout(() => controls.style.opacity='0', 3000);
     }
     ['pointermove','touchstart','keydown'].forEach(evt =>
       document.addEventListener(evt, showControls)
@@ -268,4 +288,5 @@
   </script>
 </body>
 </html>
+
 
