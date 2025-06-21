@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Visual EQ</title>
   <style>
-    /* Minimal black-and-white styling */
     html, body {
       margin: 0;
       padding: 0;
@@ -22,6 +21,7 @@
       margin: 10px;
       display: flex;
       gap: 10px;
+      z-index: 10;
     }
     select, button {
       background: #000;
@@ -34,7 +34,13 @@
       display: block;
       width: 90vw;
       height: 200px;
-      touch-action: none; /* improve mobile/touch compatibility */
+      touch-action: none;
+      background: #000;
+    }
+    /* When fullscreen, make canvas fill everything */
+    :fullscreen canvas {
+      width: 100vw !important;
+      height: 100vh !important;
     }
   </style>
 </head>
@@ -42,86 +48,88 @@
   <div id="controls">
     <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
+    <button id="fsBtn">Fullscreen</button>
   </div>
   <canvas id="vis"></canvas>
 
   <script>
-    // Elements
     const deviceSelect = document.getElementById('deviceSelect');
-    const startBtn = document.getElementById('startBtn');
-    const canvas = document.getElementById('vis');
-    const ctx = canvas.getContext('2d');
-
+    const startBtn     = document.getElementById('startBtn');
+    const fsBtn        = document.getElementById('fsBtn');
+    const canvas       = document.getElementById('vis');
+    const ctx          = canvas.getContext('2d');
     let audioContext, analyser, dataArray;
 
-    // Resize canvas to match CSS dimensions
     function resizeCanvas() {
-      canvas.width = window.innerWidth * 0.9;
-      canvas.height = 200;
+      // match CSS dimensions
+      const style = getComputedStyle(canvas);
+      canvas.width  = parseFloat(style.width);
+      canvas.height = parseFloat(style.height);
     }
+
     window.addEventListener('resize', resizeCanvas);
+    document.addEventListener('fullscreenchange', resizeCanvas);
     resizeCanvas();
 
-    // Enumerate audio input devices
     async function populateDevices() {
       const devices = await navigator.mediaDevices.enumerateDevices();
-      const inputs = devices.filter(d => d.kind === 'audioinput');
-      inputs.forEach((d, i) => {
+      devices.filter(d => d.kind === 'audioinput')
+             .forEach((d,i) => {
         const opt = document.createElement('option');
         opt.value = d.deviceId;
-        opt.textContent = d.label || `Microphone ${i + 1}`;
+        opt.textContent = d.label || `Mic ${i+1}`;
         deviceSelect.appendChild(opt);
       });
     }
 
-    // Start processing
     async function startEQ() {
-      if (audioContext) return; // already started
-
-      // get permission & open stream
-      const deviceId = deviceSelect.value;
+      if (audioContext) return;
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: deviceId ? { exact: deviceId } : undefined }
+        audio: { deviceId: deviceSelect.value ? { exact: deviceSelect.value } : undefined }
       });
-
-      // Web Audio setup
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       const source = audioContext.createMediaStreamSource(stream);
       analyser = audioContext.createAnalyser();
       analyser.fftSize = 512;
-      const bufferLength = analyser.frequencyBinCount;
-      dataArray = new Uint8Array(bufferLength);
-
-      // connect nodes: source → analyser → destination
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
       source.connect(analyser);
-      analyser.connect(audioContext.destination);
-
-      // begin draw loop
       draw();
     }
 
-    // Draw real-time frequency bars
     function draw() {
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
-
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      const barWidth = canvas.width / dataArray.length;
 
+      ctx.beginPath();
+      const slice = canvas.width / dataArray.length;
+      let x = 0;
       for (let i = 0; i < dataArray.length; i++) {
-        const barHeight = (dataArray[i] / 255) * canvas.height;
-        const x = i * barWidth;
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+        const v = dataArray[i] / 255;
+        const y = canvas.height - (v * canvas.height);
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+        x += slice;
       }
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#fff';
+      ctx.stroke();
     }
 
-    // Event listeners
     startBtn.addEventListener('click', startEQ);
 
-    // On load
+    fsBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
     populateDevices();
   </script>
 </body>
 </html>
-
