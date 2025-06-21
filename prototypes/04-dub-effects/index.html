@@ -2,25 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX WEB APP - PHASE 3.5 (Knob UI)</title>
+  <title>DUB FX WEB APP - PHASE 3.6 (Console UI)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; text-align: center; margin: 0; padding: 0; }
-    h1 { font-size: 1.5em; margin-top: 20px; }
-    button { font-size: 1.3em; padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; background: #0a0; color: #fff; }
+    h1 { font-size: 1.5em; margin-top: 20px; color: #fff; }
+    button { font-size: 1.3em; padding: 15px 30px; margin: 10px; border: 1px solid #fff; border-radius: 5px; background: #000; color: #fff; }
+    button:active { background: #fff; color: #000; }
     .heads { margin: 15px; }
-    .head-button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; font-size: 1.1em; }
-    .active { background: #0a0; color: #fff; }
-    .inactive { background: #333; color: #aaa; }
+    .head-button { padding: 10px 20px; margin: 5px; border: 1px solid #fff; border-radius: 5px; font-size: 1.1em; background: #000; color: #fff; }
+    .active { border: 2px solid #fff; }
+    .inactive { opacity: 0.4; }
     .knobs { display: flex; justify-content: center; margin: 20px; gap: 40px; flex-wrap: wrap; }
     .knob-container { display: flex; flex-direction: column; align-items: center; }
     label { margin-top: 10px; font-size: 1em; }
-    canvas#visualizer { background: #000; display: block; margin: 20px auto; border: 1px solid #333; width: 95%; max-width: 900px; height: 300px; }
+    canvas#visualizer { background: #000; display: block; margin: 20px auto; border: 1px solid #fff; width: 95%; max-width: 900px; height: 300px; }
   </style>
 </head>
 <body>
 
-  <h1>DUB FX WEB APP - PHASE 3.5</h1>
+  <h1>DUB FX CONSOLE</h1>
 
   <button id="startBtn">Start Audio</button>
 
@@ -32,28 +33,27 @@
 
   <div class="knobs">
     <div class="knob-container">
-      <canvas id="feedbackKnob" width="100" height="100"></canvas>
+      <canvas id="feedbackKnob" width="120" height="120"></canvas>
       <label>Feedback</label>
     </div>
     <div class="knob-container">
-      <canvas id="highpassKnob" width="100" height="100"></canvas>
+      <canvas id="highpassKnob" width="120" height="120"></canvas>
       <label>Highpass</label>
     </div>
     <div class="knob-container">
-      <canvas id="reverbKnob" width="100" height="100"></canvas>
+      <canvas id="reverbKnob" width="120" height="120"></canvas>
       <label>Reverb</label>
     </div>
   </div>
 
-  <button id="throwBtn" style="font-size:2em; padding:20px 40px; background:#f00;">THROW!</button>
+  <button id="throwBtn" style="font-size:1.8em; padding:20px 50px;">THROW!</button>
 
   <canvas id="visualizer"></canvas>
 
   <script>
-    let audioContext, input, analyser, freqAnalyser, dataArray, freqData;
+    let audioContext, input, analyser, dataArray;
     let delay1, delay2, delay3, feedbackGain, filterNode, reverbNode, dryGain;
     let reverbBuffer = null;
-    const particles = [];
     const headsState = { head1: true, head2: true, head3: true };
     let normalFeedback = 0.4, highpassVal = 20, reverbVal = 0.3;
 
@@ -67,10 +67,6 @@
       analyser = audioContext.createAnalyser();
       analyser.fftSize = 2048;
       dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      freqAnalyser = audioContext.createAnalyser();
-      freqAnalyser.fftSize = 256;
-      freqData = new Uint8Array(freqAnalyser.frequencyBinCount);
 
       delay1 = audioContext.createDelay(5.0);
       delay2 = audioContext.createDelay(5.0);
@@ -88,7 +84,6 @@
 
       input.connect(dryGain);
       dryGain.connect(analyser);
-      dryGain.connect(freqAnalyser);
       dryGain.connect(audioContext.destination);
       dryGain.connect(delay1);
       dryGain.connect(delay2);
@@ -128,7 +123,8 @@
     ['head1', 'head2', 'head3'].forEach(head => {
       document.getElementById(head).addEventListener('click', () => {
         headsState[head] = !headsState[head];
-        document.getElementById(head).className = headsState[head] ? 'head-button active' : 'head-button inactive';
+        document.getElementById(head).classList.toggle('active', headsState[head]);
+        document.getElementById(head).classList.toggle('inactive', !headsState[head]);
         updateHeads();
       });
     });
@@ -155,8 +151,6 @@
       feedbackGain.gain.value = normalFeedback;
     });
 
-    // --- KNOBS ---
-
     function createKnob(canvas, min, max, value, callback) {
       const ctx = canvas.getContext('2d');
       let angle = ((value - min) / (max - min)) * 270 - 135;
@@ -165,23 +159,24 @@
       function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.beginPath();
-        ctx.arc(50, 50, 40, 0, 2 * Math.PI);
-        ctx.fillStyle = "#222";
+        ctx.arc(60, 60, 50, 0, 2 * Math.PI);
+        ctx.fillStyle = "#000";
         ctx.fill();
-        ctx.strokeStyle = "#0a0";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 1;
         ctx.stroke();
+
         const rad = (angle + 135) * Math.PI / 180;
         ctx.beginPath();
-        ctx.moveTo(50, 50);
-        ctx.lineTo(50 + 35 * Math.cos(rad), 50 + 35 * Math.sin(rad));
+        ctx.moveTo(60, 60);
+        ctx.lineTo(60 + 40 * Math.cos(rad), 60 + 40 * Math.sin(rad));
         ctx.stroke();
       }
 
       function updateAngle(e) {
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX || e.touches[0].clientX) - rect.left - 50;
-        const y = (e.clientY || e.touches[0].clientY) - rect.top - 50;
+        const x = (e.clientX || e.touches[0].clientX) - rect.left - 60;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top - 60;
         let newAngle = Math.atan2(y, x) * 180 / Math.PI;
         newAngle = Math.max(-135, Math.min(135, newAngle));
         angle = newAngle;
@@ -207,23 +202,19 @@
       });
     }
 
-    // Create knobs:
     createKnob(document.getElementById('feedbackKnob'), 0, 0.95, normalFeedback, v => { normalFeedback = v; updateAudioNodes(); });
     createKnob(document.getElementById('highpassKnob'), 20, 1000, highpassVal, v => { highpassVal = v; updateAudioNodes(); });
     createKnob(document.getElementById('reverbKnob'), 0, 1, reverbVal, v => { reverbVal = v; updateAudioNodes(); });
 
-    // --- VISUALIZER ---
     function drawVisualizer() {
       const canvas = document.getElementById('visualizer');
       const ctx = canvas.getContext('2d');
       requestAnimationFrame(drawVisualizer);
       analyser.getByteTimeDomainData(dataArray);
-      freqAnalyser.getByteFrequencyData(freqData);
-      ctx.fillStyle = "rgba(0,0,0,0.2)";
+      ctx.fillStyle = "#000";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "#0f0";
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#fff";
       ctx.beginPath();
       const sliceWidth = canvas.width / dataArray.length;
       let x = 0;
@@ -236,14 +227,6 @@
       }
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
-
-      const barWidth = (canvas.width / freqData.length);
-      for (let i = 0; i < freqData.length; i++) {
-        const barHeight = freqData[i];
-        const hue = 120 - (barHeight / 256) * 120;
-        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1, barHeight);
-      }
     }
   </script>
 
