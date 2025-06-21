@@ -2,24 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX WEB APP - MOBILE v2</title>
+  <title>DUB FX WEB APP - PHASE 2</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; text-align: center; margin: 0; padding: 0; }
     h1 { font-size: 1.5em; margin-top: 20px; }
-    button { font-size: 1.5em; padding: 15px 30px; margin: 20px; border: none; border-radius: 5px; background: #0a0; color: #fff; }
+    button, select { font-size: 1.3em; padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; background: #0a0; color: #fff; }
     .controls { display: flex; flex-direction: column; align-items: center; margin: 20px; }
     .control-block { margin: 15px 0; width: 90%; max-width: 400px; }
-    label { font-size: 1.2em; display: block; margin-bottom: 10px; }
+    label { font-size: 1.1em; display: block; margin-bottom: 8px; }
     input[type=range] { width: 100%; height: 40px; }
     canvas { background: #000; display: block; margin: 20px auto; border: 1px solid #333; width: 95%; max-width: 900px; height: 200px; }
   </style>
 </head>
 <body>
 
-  <h1>DUB FX WEB APP</h1>
+  <h1>DUB FX WEB APP - PHASE 2</h1>
 
   <button id="startBtn">Start Audio</button>
+
+  <div>
+    <select id="presetSelect">
+      <option value="">-- Select Preset --</option>
+      <option value="dryYard">Dry Yard Classic</option>
+      <option value="spaceSpiral">Space Tape Spiral</option>
+      <option value="soundSystem">Sound System Burial</option>
+    </select>
+    <button id="applyPresetBtn">Apply Preset</button>
+  </div>
 
   <div class="controls">
     <div class="control-block">
@@ -46,6 +56,12 @@
     let audioContext, input, analyser, dataArray;
     let delayNode, feedbackGain, filterNode, reverbNode, dryGain;
     let reverbBuffer = null;
+
+    const presets = {
+      dryYard:  { delayTime: 200, feedback: 0.3, highpass: 50,  reverb: 0.2 },
+      spaceSpiral: { delayTime: 700, feedback: 0.7, highpass: 80, reverb: 0.5 },
+      soundSystem: { delayTime: 900, feedback: 0.85, highpass: 150, reverb: 0.8 }
+    };
 
     document.getElementById('startBtn').addEventListener('click', async () => {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -110,6 +126,17 @@
 
     document.querySelectorAll('input[type=range]').forEach(slider => {
       slider.addEventListener('input', updateControls);
+    });
+
+    document.getElementById('applyPresetBtn').addEventListener('click', () => {
+      const selected = document.getElementById('presetSelect').value;
+      if (presets[selected]) {
+        document.getElementById('delayTime').value = presets[selected].delayTime;
+        document.getElementById('feedback').value = presets[selected].feedback;
+        document.getElementById('highpass').value = presets[selected].highpass;
+        document.getElementById('reverb').value = presets[selected].reverb;
+        updateControls();
+      }
     });
 
     function drawVisualizer() {
