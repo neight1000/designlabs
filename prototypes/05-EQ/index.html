@@ -54,6 +54,7 @@
       <option value="green">Green</option>
       <option value="blue">Blue</option>
       <option value="purple">Purple</option>
+      <option value="1988">1988</option>
     </select>
     <select id="fftSelect">
       <option value="256">FFT: 256</option>
@@ -74,6 +75,15 @@
     const fsBtn        = document.getElementById('fsBtn');
     const canvas       = document.getElementById('vis');
     const ctx          = canvas.getContext('2d');
+
+    // HSB (via HSL) at 100% brightness & saturation
+    const colorMap = {
+      red:    'hsl(0,100%,50%)',
+      yellow: 'hsl(60,100%,50%)',
+      green:  'hsl(120,100%,50%)',
+      blue:   'hsl(240,100%,50%)',
+      purple: 'hsl(300,100%,50%)'
+    };
 
     let audioContext, analyser, dataArray;
 
@@ -106,7 +116,7 @@
       const source = audioContext.createMediaStreamSource(stream);
 
       analyser = audioContext.createAnalyser();
-      analyser.smoothingTimeConstant = 0.8;              // smooth out jitter
+      analyser.smoothingTimeConstant = 0.8;              
       analyser.fftSize = parseInt(fftSelect.value);
       dataArray = new Uint8Array(analyser.frequencyBinCount);
 
@@ -114,7 +124,6 @@
       draw();
     }
 
-    // allow FFT size changes on the fly
     fftSelect.addEventListener('change', () => {
       if (!analyser) return;
       analyser.fftSize = parseInt(fftSelect.value);
@@ -124,9 +133,12 @@
     function draw() {
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // 1) draw faint frequency-band markers
+      // tracer effect (fade previous frames)
+      ctx.fillStyle = 'rgba(0,0,0,0.1)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // frequency-band markers
       const freqs = [60, 250, 1000, 4000, 16000];
       const binCount = analyser.frequencyBinCount;
       const nyquist = audioContext.sampleRate / 2;
@@ -144,10 +156,22 @@
         ctx.fillText(f + 'Hz', x + 2, 12);
       });
 
-      // 2) draw EQ line or pattern per preset
       const slice = canvas.width / dataArray.length;
       const preset = presetSelect.value;
 
+      // new "1988" bar-style preset
+      if (preset === '1988') {
+        dataArray.forEach((v, i) => {
+          const x = i * slice;
+          const h = (1 - v / 255) * 120; // green→yellow→red
+          const barHeight = (v / 255) * canvas.height;
+          ctx.fillStyle = `hsl(${h},100%,50%)`;
+          ctx.fillRect(x, canvas.height - barHeight, slice, barHeight);
+        });
+        return;
+      }
+
+      // purple: dotted circles
       if (preset === 'purple') {
         ctx.setLineDash([]);
         dataArray.forEach((v, i) => {
@@ -155,67 +179,68 @@
           const y = canvas.height - (v / 255) * canvas.height;
           ctx.beginPath();
           ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fillStyle = 'purple';
+          ctx.fillStyle = colorMap.purple;
           ctx.fill();
         });
-      } else {
-        ctx.beginPath();
-        let x0 = 0;
-        let y0 = canvas.height - (dataArray[0] / 255) * canvas.height;
-
-        if (preset === 'yellow') {
-          for (let i = 1; i < dataArray.length; i++) {
-            const x1 = i * slice;
-            const y1 = canvas.height - (dataArray[i] / 255) * canvas.height;
-            const mx = (x0 + x1) / 2;
-            const my = (y0 + y1) / 2;
-            if (i === 1) ctx.moveTo(x0, y0);
-            ctx.quadraticCurveTo(x0, y0, mx, my);
-            x0 = x1; y0 = y1;
-          }
-        } else {
-          ctx.moveTo(x0, y0);
-          for (let i = 1; i < dataArray.length; i++) {
-            const x = i * slice;
-            const y = canvas.height - (dataArray[i] / 255) * canvas.height;
-            ctx.lineTo(x, y);
-          }
-        }
-
-        ctx.lineWidth = 2;
-        ctx.setLineDash(preset === 'blue' ? [4, 2] : []);
-        ctx.strokeStyle = preset;
-
-        if (preset === 'green') {
-          ctx.save();
-          ctx.lineTo(canvas.width, canvas.height);
-          ctx.lineTo(0, canvas.height);
-          ctx.closePath();
-          ctx.fillStyle = 'rgba(0,255,0,0.2)';
-          ctx.fill();
-          ctx.restore();
-          ctx.beginPath();
-          ctx.moveTo(0, canvas.height - (dataArray[0] / 255) * canvas.height);
-          for (let i = 1; i < dataArray.length; i++) {
-            const x = i * slice;
-            const y = canvas.height - (dataArray[i] / 255) * canvas.height;
-            ctx.lineTo(x, y);
-          }
-        }
-
-        ctx.stroke();
-        ctx.setLineDash([]);
+        return;
       }
+
+      // line-based presets
+      ctx.beginPath();
+      let x0 = 0;
+      let y0 = canvas.height - (dataArray[0] / 255) * canvas.height;
+
+      if (preset === 'yellow') {
+        for (let i = 1; i < dataArray.length; i++) {
+          const x1 = i * slice;
+          const y1 = canvas.height - (dataArray[i] / 255) * canvas.height;
+          const mx = (x0 + x1) / 2;
+          const my = (y0 + y1) / 2;
+          if (i === 1) ctx.moveTo(x0, y0);
+          ctx.quadraticCurveTo(x0, y0, mx, my);
+          x0 = x1; y0 = y1;
+        }
+      } else {
+        ctx.moveTo(x0, y0);
+        for (let i = 1; i < dataArray.length; i++) {
+          const x = i * slice;
+          const y = canvas.height - (dataArray[i] / 255) * canvas.height;
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.lineWidth = 2;
+      ctx.setLineDash(preset === 'blue' ? [4, 2] : []);
+      ctx.strokeStyle = colorMap[preset] || '#fff';
+
+      if (preset === 'green') {
+        ctx.save();
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        ctx.closePath();
+        ctx.fillStyle = 'hsla(120,100%,50%,0.2)';
+        ctx.fill();
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - (dataArray[0] / 255) * canvas.height);
+        for (let i = 1; i < dataArray.length; i++) {
+          const x = i * slice;
+          const y = canvas.height - (dataArray[i] / 255) * canvas.height;
+          ctx.lineTo(x, y);
+        }
+      }
+
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
 
-    // fullscreen toggle
     fsBtn.addEventListener('click', () => {
       document.fullscreenElement
         ? document.exitFullscreen()
         : document.documentElement.requestFullscreen();
     });
 
-    // auto-hide controls after inactivity
     let hideTimer;
     function showControls() {
       controls.style.opacity = '1';
@@ -234,4 +259,3 @@
   </script>
 </body>
 </html>
-
