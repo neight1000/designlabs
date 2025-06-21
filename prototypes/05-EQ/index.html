@@ -1,261 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Visual EQ v2.0</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      background: #000;
-      color: #fff;
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      height: 100vh;
-      box-sizing: border-box;
+      margin:0; padding:0; overflow:hidden;
+      background:#000; color:#fff;
+      font-family:sans-serif;
+      height:100vh; display:flex; flex-direction:column;
     }
     #controls {
-      margin: 10px;
-      display: flex;
-      gap: 10px;
-      z-index: 10;
-      transition: opacity 0.5s;
+      position:absolute; top:10px; left:50%;
+      transform:translateX(-50%);
+      display:flex; gap:8px; z-index:10;
+      transition:opacity .5s;
     }
     select, button {
-      background: #000;
-      color: #fff;
-      border: 1px solid #fff;
-      padding: 5px 10px;
-      font-size: 1rem;
+      background:#000; color:#fff;
+      border:1px solid #fff; padding:4px 8px;
+      font-size:1rem;
     }
-    canvas {
-      display: block;
-      width: 90vw;
-      height: 200px;
-      touch-action: none;
-      background: #000;
-    }
-    :fullscreen canvas {
-      width: 100vw !important;
-      height: 100vh !important;
-    }
+    canvas { width:100%; height:100%; display:block; }
   </style>
 </head>
 <body>
   <div id="controls">
     <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
-    <select id="presetSelect">
-      <option value="red">Red</option>
-      <option value="yellow">Yellow</option>
-      <option value="green">Green</option>
-      <option value="blue">Blue</option>
-      <option value="purple">Purple</option>
-      <option value="1988">1988</option>
-    </select>
     <select id="fftSelect">
-      <option value="256">FFT: 256</option>
-      <option value="512" selected>FFT: 512</option>
-      <option value="1024">FFT: 1024</option>
-      <option value="2048">FFT: 2048</option>
+      <option value="256">FFT 256</option>
+      <option value="512" selected>FFT 512</option>
+      <option value="1024">FFT 1024</option>
+      <option value="2048">FFT 2048</option>
+    </select>
+    <select id="presetSelect">
+      <option value="0">Aurora</option>
+      <option value="1">Spectrum Cascade</option>
+      <option value="2">Geometric Pulse</option>
+      <option value="3">Nebula</option>
+      <option value="4">1988</option>
     </select>
     <button id="fsBtn">Fullscreen</button>
   </div>
-  <canvas id="vis"></canvas>
+  <canvas id="gl"></canvas>
 
   <script>
-    const controls     = document.getElementById('controls');
-    const deviceSelect = document.getElementById('deviceSelect');
-    const startBtn     = document.getElementById('startBtn');
-    const presetSelect = document.getElementById('presetSelect');
-    const fftSelect    = document.getElementById('fftSelect');
-    const fsBtn        = document.getElementById('fsBtn');
-    const canvas       = document.getElementById('vis');
-    const ctx          = canvas.getContext('2d');
+  // — UI elements —
+  const deviceSelect = document.getElementById('deviceSelect'),
+        startBtn      = document.getElementById('startBtn'),
+        fftSelect     = document.getElementById('fftSelect'),
+        presetSelect  = document.getElementById('presetSelect'),
+        fsBtn         = document.getElementById('fsBtn'),
+        controls      = document.getElementById('controls'),
+        canvas        = document.getElementById('gl');
+  let gl, program, audioCtx, analyser, freqData;
 
-    // HSB (via HSL) at 100% brightness & saturation
-    const colorMap = {
-      red:    'hsl(0,100%,50%)',
-      yellow: 'hsl(60,100%,50%)',
-      green:  'hsl(120,100%,50%)',
-      blue:   'hsl(240,100%,50%)',
-      purple: 'hsl(300,100%,50%)'
-    };
+  // — WebGL2 setup —
+  function createShader(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))
+      console.error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function createProgram(vs, fs) {
+    const p = gl.createProgram();
+    gl.attachShader(p, vs);
+    gl.attachShader(p, fs);
+    gl.linkProgram(p);
+    if(!gl.getProgramParameter(p,gl.LINK_STATUS))
+      console.error(gl.getProgramInfoLog(p));
+    return p;
+  }
 
-    let audioContext, analyser, dataArray;
+  function initGL() {
+    gl = canvas.getContext('webgl2', { antialias:true });
+    const vs = createShader(gl.VERTEX_SHADER, `#version 300 es
+      in vec2 a_pos;
+      out vec2 v_uv;
+      void main(){
+        v_uv = a_pos * 0.5 + 0.5;
+        gl_Position = vec4(a_pos, 0, 1);
+      }`);
+    const fs = createShader(gl.FRAGMENT_SHADER, `#version 300 es
+      precision mediump float;
+      in vec2 v_uv;
+      out vec4 o;
+      uniform float uFreqs[1024];
+      uniform int   uBins;
+      uniform int   uPreset;
+      uniform float uTime;
 
-    function resizeCanvas() {
-      const style = getComputedStyle(canvas);
-      canvas.width  = parseFloat(style.width);
-      canvas.height = parseFloat(style.height);
-    }
-    window.addEventListener('resize', resizeCanvas);
-    document.addEventListener('fullscreenchange', resizeCanvas);
-    resizeCanvas();
-
-    async function populateDevices() {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      devices.filter(d => d.kind === 'audioinput')
-             .forEach((d, i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId;
-        opt.textContent = d.label || `Mic ${i+1}`;
-        deviceSelect.appendChild(opt);
-      });
-    }
-
-    async function startEQ() {
-      if (audioContext) return;
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: deviceSelect.value ? { exact: deviceSelect.value } : undefined }
-      });
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
-
-      analyser = audioContext.createAnalyser();
-      analyser.smoothingTimeConstant = 0.8;              
-      analyser.fftSize = parseInt(fftSelect.value);
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      source.connect(analyser);
-      draw();
-    }
-
-    fftSelect.addEventListener('change', () => {
-      if (!analyser) return;
-      analyser.fftSize = parseInt(fftSelect.value);
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-    });
-
-    function draw() {
-      requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(dataArray);
-
-      // tracer effect (fade previous frames)
-      ctx.fillStyle = 'rgba(0,0,0,0.1)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // frequency-band markers
-      const freqs = [60, 250, 1000, 4000, 16000];
-      const binCount = analyser.frequencyBinCount;
-      const nyquist = audioContext.sampleRate / 2;
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 1;
-      ctx.font = '10px sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      freqs.forEach(f => {
-        const bin = Math.round(f / nyquist * binCount);
-        const x = bin * (canvas.width / binCount);
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-        ctx.fillText(f + 'Hz', x + 2, 12);
-      });
-
-      const slice = canvas.width / dataArray.length;
-      const preset = presetSelect.value;
-
-      // new "1988" bar-style preset
-      if (preset === '1988') {
-        dataArray.forEach((v, i) => {
-          const x = i * slice;
-          const h = (1 - v / 255) * 120; // green→yellow→red
-          const barHeight = (v / 255) * canvas.height;
-          ctx.fillStyle = `hsl(${h},100%,50%)`;
-          ctx.fillRect(x, canvas.height - barHeight, slice, barHeight);
-        });
-        return;
+      // simple beat detection (energy)
+      float beat() {
+        float e = 0.0;
+        for(int i=0;i<64;i++) e += uFreqs[i];
+        return step(0.15, e / 64.0);
       }
 
-      // purple: dotted circles
-      if (preset === 'purple') {
-        ctx.setLineDash([]);
-        dataArray.forEach((v, i) => {
-          const x = i * slice;
-          const y = canvas.height - (v / 255) * canvas.height;
-          ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fillStyle = colorMap.purple;
-          ctx.fill();
-        });
-        return;
-      }
+      void main(){
+        int idx = int(v_uv.x * float(uBins-1));
+        float f = uFreqs[idx];
+        vec3 col;
 
-      // line-based presets
-      ctx.beginPath();
-      let x0 = 0;
-      let y0 = canvas.height - (dataArray[0] / 255) * canvas.height;
-
-      if (preset === 'yellow') {
-        for (let i = 1; i < dataArray.length; i++) {
-          const x1 = i * slice;
-          const y1 = canvas.height - (dataArray[i] / 255) * canvas.height;
-          const mx = (x0 + x1) / 2;
-          const my = (y0 + y1) / 2;
-          if (i === 1) ctx.moveTo(x0, y0);
-          ctx.quadraticCurveTo(x0, y0, mx, my);
-          x0 = x1; y0 = y1;
+        if(uPreset==0){
+          // Aurora: vertical gradient + noise drift
+          float g = smoothstep(0.0,1.0,v_uv.y);
+          col = mix(vec3(0.0,0.1,0.4), vec3(0.8,1.0,0.8), g)
+                + 0.1*sin(10.0*v_uv.x+uTime);
+        } else if(uPreset==1){
+          // Spectrum Cascade
+          col = vec3(v_uv.x, 1.0-f, f);
+        } else if(uPreset==2){
+          // Geometric Pulse
+          float r = length(v_uv-0.5);
+          col = vec3(step(abs(sin(6.2831*uTime)-r),0.02));
+        } else if(uPreset==3){
+          // Nebula: swirling particles
+          float a = atan(v_uv.y-0.5, v_uv.x-0.5);
+          float r = length(v_uv-0.5);
+          col = vec3(0.2+0.6*sin(a*5.0+uTime*0.5)*r);
+        } else {
+          // 1988 bar style
+          float h = mix(120.0,0.0, f); // green→red
+          col = hsv2rgb(vec3(h/360.0,1.0,1.0));
         }
-      } else {
-        ctx.moveTo(x0, y0);
-        for (let i = 1; i < dataArray.length; i++) {
-          const x = i * slice;
-          const y = canvas.height - (dataArray[i] / 255) * canvas.height;
-          ctx.lineTo(x, y);
-        }
+
+        // intensity & tracer (fade)
+        float intensity = smoothstep(v_uv.y, v_uv.y+0.01, f);
+        o = vec4(col * intensity,1);
       }
 
-      ctx.lineWidth = 2;
-      ctx.setLineDash(preset === 'blue' ? [4, 2] : []);
-      ctx.strokeStyle = colorMap[preset] || '#fff';
-
-      if (preset === 'green') {
-        ctx.save();
-        ctx.lineTo(canvas.width, canvas.height);
-        ctx.lineTo(0, canvas.height);
-        ctx.closePath();
-        ctx.fillStyle = 'hsla(120,100%,50%,0.2)';
-        ctx.fill();
-        ctx.restore();
-
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height - (dataArray[0] / 255) * canvas.height);
-        for (let i = 1; i < dataArray.length; i++) {
-          const x = i * slice;
-          const y = canvas.height - (dataArray[i] / 255) * canvas.height;
-          ctx.lineTo(x, y);
-        }
+      // helper HSV → RGB
+      vec3 hsv2rgb(vec3 c){
+        vec4 K = vec4(1.,2./3.,1./3.,3.);
+        vec3 p = abs(fract(c.xxx+K.xyz)*6.-K.www);
+        return c.z * mix(K.xxx, clamp(p-K.xxx,0.,1.),c.y);
       }
+    `);
+    program = createProgram(vs, fs);
 
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
-    fsBtn.addEventListener('click', () => {
-      document.fullscreenElement
-        ? document.exitFullscreen()
-        : document.documentElement.requestFullscreen();
-    });
-
-    let hideTimer;
-    function showControls() {
-      controls.style.opacity = '1';
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => {
-        controls.style.opacity = '0';
-      }, 3000);
-    }
-    ['pointermove','touchstart','keydown'].forEach(evt =>
-      document.addEventListener(evt, showControls)
+    // Full-screen triangle
+    const buf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array([-1,-1, 3,-1, -1,3]),
+      gl.STATIC_DRAW
     );
-    showControls();
+    const loc = gl.getAttribLocation(program,'a_pos');
+    gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
 
-    startBtn.addEventListener('click', startEQ);
-    populateDevices();
+    gl.useProgram(program);
+    gl.clearColor(0,0,0,1);
+  }
+
+  // — Audio setup —
+  async function startAudio() {
+    if(audioCtx) return;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio:{ deviceId: deviceSelect.value || undefined }
+    });
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = parseInt(fftSelect.value);
+    analyser.smoothingTimeConstant = 0.8;
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    audioCtx.createMediaStreamSource(stream)
+            .connect(analyser);
+    animate();
+  }
+
+  // — Render loop —
+  let startTime = Date.now();
+  function animate(){
+    requestAnimationFrame(animate);
+
+    // read FFT
+    analyser.getByteFrequencyData(freqData);
+    // normalize into [0,1]
+    const norm = new Float32Array(freqData.length);
+    for(let i=0;i<freqData.length;i++)
+      norm[i] = freqData[i] / 255;
+
+    // upload uniforms
+    const locFreq = gl.getUniformLocation(program,'uFreqs');
+    gl.uniform1fv(locFreq, norm);
+    gl.uniform1i(
+      gl.getUniformLocation(program,'uBins'),
+      norm.length
+    );
+    gl.uniform1i(
+      gl.getUniformLocation(program,'uPreset'),
+      parseInt(presetSelect.value)
+    );
+    gl.uniform1f(
+      gl.getUniformLocation(program,'uTime'),
+      (Date.now()-startTime)*0.001
+    );
+
+    // draw
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+
+  // — Helpers & UI wiring —
+  async function populateDevices(){
+    const list = await navigator.mediaDevices.enumerateDevices();
+    list.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
+      const o=document.createElement('option');
+      o.value=d.deviceId;
+      o.textContent=d.label||`Mic ${i+1}`;
+      deviceSelect.append(o);
+    });
+  }
+  fsBtn.onclick = ()=> {
+    document.fullscreenElement
+      ? document.exitFullscreen()
+      : canvas.requestFullscreen();
+  };
+
+  // auto-hide controls
+  let hidet;
+  function showCtrls(){
+    controls.style.opacity='1';
+    clearTimeout(hidet);
+    hidet = setTimeout(()=>controls.style.opacity='0',3000);
+  }
+  ['pointermove','touchstart','keydown'].forEach(e=>
+    document.addEventListener(e, showCtrls)
+  );
+  showCtrls();
+
+  // — Init everything —
+  initGL();
+  populateDevices();
+  startBtn.onclick = startAudio;
+  fftSelect .onchange = ()=> {
+    if(analyser) analyser.fftSize = parseInt(fftSelect.value);
+  };
   </script>
 </body>
 </html>
