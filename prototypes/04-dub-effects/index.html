@@ -2,26 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX WEB APP - PHASE 3.4 (EQ Visualizer)</title>
+  <title>DUB FX WEB APP - PHASE 3.5 (Knob UI)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; text-align: center; margin: 0; padding: 0; }
     h1 { font-size: 1.5em; margin-top: 20px; }
-    button, select { font-size: 1.3em; padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; background: #0a0; color: #fff; }
-    .controls { display: flex; flex-direction: column; align-items: center; margin: 20px; }
-    .control-block { margin: 15px 0; width: 90%; max-width: 400px; }
-    label { font-size: 1.1em; display: block; margin-bottom: 8px; }
-    input[type=range] { width: 100%; height: 40px; }
+    button { font-size: 1.3em; padding: 10px 20px; margin: 10px; border: none; border-radius: 5px; background: #0a0; color: #fff; }
     .heads { margin: 15px; }
     .head-button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; font-size: 1.1em; }
     .active { background: #0a0; color: #fff; }
     .inactive { background: #333; color: #aaa; }
-    canvas { background: #000; display: block; margin: 20px auto; border: 1px solid #333; width: 95%; max-width: 900px; height: 300px; }
+    .knobs { display: flex; justify-content: center; margin: 20px; gap: 40px; flex-wrap: wrap; }
+    .knob-container { display: flex; flex-direction: column; align-items: center; }
+    label { margin-top: 10px; font-size: 1em; }
+    canvas#visualizer { background: #000; display: block; margin: 20px auto; border: 1px solid #333; width: 95%; max-width: 900px; height: 300px; }
   </style>
 </head>
 <body>
 
-  <h1>DUB FX WEB APP - PHASE 3.4</h1>
+  <h1>DUB FX WEB APP - PHASE 3.5</h1>
 
   <button id="startBtn">Start Audio</button>
 
@@ -31,24 +30,22 @@
     <button id="head3" class="head-button active">Head 3</button>
   </div>
 
-  <div class="controls">
-    <div class="control-block">
+  <div class="knobs">
+    <div class="knob-container">
+      <canvas id="feedbackKnob" width="100" height="100"></canvas>
       <label>Feedback</label>
-      <input type="range" id="feedback" min="0" max="0.95" step="0.01" value="0.4">
     </div>
-    <div class="control-block">
-      <label>Highpass Filter</label>
-      <input type="range" id="highpass" min="20" max="1000" value="20">
+    <div class="knob-container">
+      <canvas id="highpassKnob" width="100" height="100"></canvas>
+      <label>Highpass</label>
     </div>
-    <div class="control-block">
+    <div class="knob-container">
+      <canvas id="reverbKnob" width="100" height="100"></canvas>
       <label>Reverb</label>
-      <input type="range" id="reverb" min="0" max="1" step="0.01" value="0.3">
     </div>
   </div>
 
-  <div>
-    <button id="throwBtn" style="font-size:2em; padding:20px 40px; background:#f00;">THROW!</button>
-  </div>
+  <button id="throwBtn" style="font-size:2em; padding:20px 40px; background:#f00;">THROW!</button>
 
   <canvas id="visualizer"></canvas>
 
@@ -58,7 +55,7 @@
     let reverbBuffer = null;
     const particles = [];
     const headsState = { head1: true, head2: true, head3: true };
-    let normalFeedback = 0.4;
+    let normalFeedback = 0.4, highpassVal = 20, reverbVal = 0.3;
 
     document.getElementById('startBtn').addEventListener('click', async () => {
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -107,7 +104,7 @@
       reverbNode.connect(audioContext.destination);
       filterNode.connect(audioContext.destination);
 
-      updateControls();
+      updateAudioNodes();
       drawVisualizer();
     });
 
@@ -117,21 +114,16 @@
       reverbBuffer = await (new AudioContext()).decodeAudioData(arrayBuffer);
     }
 
-    function updateControls() {
-      normalFeedback = parseFloat(document.getElementById('feedback').value);
+    function updateAudioNodes() {
       feedbackGain.gain.value = normalFeedback;
-      filterNode.frequency.value = parseFloat(document.getElementById('highpass').value);
+      filterNode.frequency.value = highpassVal;
       reverbNode.disconnect();
       const reverbGain = audioContext.createGain();
-      reverbGain.gain.value = parseFloat(document.getElementById('reverb').value);
+      reverbGain.gain.value = reverbVal;
       filterNode.connect(reverbGain);
       reverbGain.connect(reverbNode);
       reverbNode.connect(audioContext.destination);
     }
-
-    document.querySelectorAll('input[type=range]').forEach(slider => {
-      slider.addEventListener('input', updateControls);
-    });
 
     ['head1', 'head2', 'head3'].forEach(head => {
       document.getElementById(head).addEventListener('click', () => {
@@ -163,14 +155,71 @@
       feedbackGain.gain.value = normalFeedback;
     });
 
+    // --- KNOBS ---
+
+    function createKnob(canvas, min, max, value, callback) {
+      const ctx = canvas.getContext('2d');
+      let angle = ((value - min) / (max - min)) * 270 - 135;
+      draw();
+
+      function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.arc(50, 50, 40, 0, 2 * Math.PI);
+        ctx.fillStyle = "#222";
+        ctx.fill();
+        ctx.strokeStyle = "#0a0";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        const rad = (angle + 135) * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(50, 50);
+        ctx.lineTo(50 + 35 * Math.cos(rad), 50 + 35 * Math.sin(rad));
+        ctx.stroke();
+      }
+
+      function updateAngle(e) {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX || e.touches[0].clientX) - rect.left - 50;
+        const y = (e.clientY || e.touches[0].clientY) - rect.top - 50;
+        let newAngle = Math.atan2(y, x) * 180 / Math.PI;
+        newAngle = Math.max(-135, Math.min(135, newAngle));
+        angle = newAngle;
+        const val = min + ((angle + 135) / 270) * (max - min);
+        callback(val);
+        draw();
+      }
+
+      canvas.addEventListener('mousedown', e => {
+        updateAngle(e);
+        window.addEventListener('mousemove', updateAngle);
+        window.addEventListener('mouseup', () => {
+          window.removeEventListener('mousemove', updateAngle);
+        });
+      });
+
+      canvas.addEventListener('touchstart', e => {
+        updateAngle(e);
+        window.addEventListener('touchmove', updateAngle);
+        window.addEventListener('touchend', () => {
+          window.removeEventListener('touchmove', updateAngle);
+        });
+      });
+    }
+
+    // Create knobs:
+    createKnob(document.getElementById('feedbackKnob'), 0, 0.95, normalFeedback, v => { normalFeedback = v; updateAudioNodes(); });
+    createKnob(document.getElementById('highpassKnob'), 20, 1000, highpassVal, v => { highpassVal = v; updateAudioNodes(); });
+    createKnob(document.getElementById('reverbKnob'), 0, 1, reverbVal, v => { reverbVal = v; updateAudioNodes(); });
+
+    // --- VISUALIZER ---
     function drawVisualizer() {
       const canvas = document.getElementById('visualizer');
       const ctx = canvas.getContext('2d');
       requestAnimationFrame(drawVisualizer);
       analyser.getByteTimeDomainData(dataArray);
       freqAnalyser.getByteFrequencyData(freqData);
-
-      ctx.fillStyle = "rgba(0,0,0,0.25)";
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.lineWidth = 2;
@@ -188,32 +237,12 @@
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
 
-      // Draw EQ bars
       const barWidth = (canvas.width / freqData.length);
       for (let i = 0; i < freqData.length; i++) {
         const barHeight = freqData[i];
         const hue = 120 - (barHeight / 256) * 120;
         ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
         ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth - 1, barHeight);
-      }
-
-      // Particle system
-      const feedbackValue = feedbackGain.gain.value;
-      if (Math.random() < feedbackValue * 0.1) {
-        particles.push({ x: Math.random() * canvas.width, y: canvas.height / 2, alpha: 1 });
-      }
-      ctx.fillStyle = "#f00";
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i];
-        ctx.globalAlpha = p.alpha;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y + (Math.random() * 20 - 10), 5, 0, 2 * Math.PI);
-        ctx.fill();
-        p.alpha -= 0.01;
-      }
-      ctx.globalAlpha = 1;
-      for (let i = particles.length - 1; i >= 0; i--) {
-        if (particles[i].alpha <= 0) particles.splice(i, 1);
       }
     }
   </script>
