@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ v1.11</title>
+  <title>Visual EQ v1.12</title>
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden;
@@ -75,18 +75,19 @@
           canvas          = document.getElementById('vis'),
           ctx             = canvas.getContext('2d');
 
-    let audioContext, splitter, leftAnalyser, rightAnalyser, dataLeft, dataRight, startTime;
+    let audioContext, splitter, leftAnalyser, rightAnalyser,
+        dataLeft, dataRight, startTime;
     let mainPreset = presetSelect.value;
-    let xfadeActive = false, xfadeStart = 0, xfadeDur = 5, nextXfade = 0;
-    let secondaryPreset = mainPreset;
-    let lastBeatTime = 0, momentHue = 0, momentHueAlpha = 0;
+    let xfadeActive=false, xfadeStart=0, xfadeDur=5, nextXfade=0,
+        secondaryPreset=mainPreset;
+    let lastBeatTime=0, momentHue=0, momentHueAlpha=0;
 
-    // noise helper
+    // 1D noise
     function fract(x){ return x - Math.floor(x); }
     function rand(n){ return fract(Math.sin(n)*43758.5453123); }
     function noise1D(x){
-      const i = Math.floor(x), f = fract(x);
-      return rand(i)*(1-f) + rand(i+1)*f;
+      const i=Math.floor(x), f=fract(x);
+      return rand(i)*(1-f)+rand(i+1)*f;
     }
 
     function resizeCanvas(){
@@ -100,9 +101,8 @@
     async function populateDevices(){
       const devs = await navigator.mediaDevices.enumerateDevices();
       devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
-        const o = document.createElement('option');
-        o.value = d.deviceId;
-        o.textContent = d.label || `Mic ${i+1}`;
+        const o=document.createElement('option');
+        o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
         deviceSelect.append(o);
       });
     }
@@ -110,7 +110,7 @@
     async function startEQ(){
       if(audioContext) return;
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: deviceSelect.value||undefined, channelCount:2 }
+        audio: { deviceId: deviceSelect.value||undefined }
       });
       audioContext = new (window.AudioContext||window.webkitAudioContext)();
       splitter = audioContext.createChannelSplitter(2);
@@ -143,36 +143,35 @@
       leftAnalyser.getByteFrequencyData(dataLeft);
       rightAnalyser.getByteFrequencyData(dataRight);
 
-      const t = (performance.now()-startTime)*0.001;
+      const t = (performance.now() - startTime)*0.001;
       const hueOffset = (t*5)%360;
-      const lfo = (Math.sin(2*Math.PI*0.1*t)+1)/2; // 0.1 Hz LFO
-      const noiseAmpBase = 0.02 * (0.5 + 0.5*lfo);
+      const lfo = (Math.sin(2*Math.PI*0.1*t)+1)/2;       // 0.1Hz
+      const noiseAmp = 0.02 * (0.5 + 0.5*lfo);           // rhythmic modulation
 
-      // crossfade logic...
+      // crossfade
       if(crossfadeToggle.checked){
         if(!xfadeActive && t > nextXfade){
           xfadeActive = true;
           xfadeStart = t;
-          secondaryPreset = ['vhs','tape','neon','aurora','spectrum','pultec','neve','ssl']
-            .filter(p=>p!==mainPreset)[Math.floor(Math.random()*7)];
+          const all = ['vhs','tape','neon','aurora','spectrum','pultec','neve','ssl'];
+          secondaryPreset = all.filter(p=>p!==mainPreset)[Math.floor(Math.random()*7)];
         }
       } else xfadeActive = false;
-      let w2=0;
+      let w2 = 0;
       if(xfadeActive){
         w2 = Math.min((t - xfadeStart)/xfadeDur,1);
         if(w2>=1){
           mainPreset = secondaryPreset;
           presetSelect.value = mainPreset;
-          xfadeActive = false;
+          xfadeActive=false;
           nextXfade = t + 300 + Math.random()*300;
           w2 = 0;
         }
       }
       const w1 = 1 - w2;
 
-      // beat detection mid band
-      let bassL = dataLeft[2], bassR = dataRight[2];
-      const bassAvg = (bassL + bassR)/2/255;
+      // beat-moments color shift
+      const bassAvg = ((dataLeft[2]+dataRight[2])/2)/255;
       if(momentsToggle.checked && bassAvg>0.7 && t - lastBeatTime>0.3){
         lastBeatTime = t;
         momentHue = Math.random()*360;
@@ -189,39 +188,38 @@
       }
 
       // band markers
-      const freqs = [60,250,1000,4000,16000];
-      const bins = leftAnalyser.frequencyBinCount;
-      const nyq = audioContext.sampleRate/2;
-      const slice = canvas.width/bins;
+      const freqs=[60,250,1000,4000,16000];
+      const bins=leftAnalyser.frequencyBinCount;
+      const nyq=audioContext.sampleRate/2;
+      const slice=canvas.width/bins;
       ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
       ctx.font='12px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.2)';
       freqs.forEach(f=>{
-        const b = Math.round(f/nyq*bins), x=b*slice;
+        const b=Math.round(f/nyq*bins), x=b*slice;
         ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
-        ctx.fillText(f+'Hz', x+2, 14);
+        ctx.fillText(f+'Hz', x+2,14);
       });
 
-      // draw presets
-      drawPreset(mainPreset, w1, hueOffset, t, noiseAmpBase);
-      if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmpBase);
+      // draw main & crossfade presets
+      drawPreset(mainPreset, w1, hueOffset, t, noiseAmp, lfo);
+      if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmp, lfo);
     }
 
-    function drawPreset(preset, alpha, hueOffset, t, noiseAmp){
+    function drawPreset(preset, alpha, hueOffset, t, noiseAmp, lfo){
       const sens = parseFloat(sensSlider.value);
-      const bins = leftAnalyser.frequencyBinCount;
+      const bins  = leftAnalyser.frequencyBinCount;
       const slice = canvas.width/bins;
       const jitter = 1 + (Math.random()-0.5)*0.1*lfo;
       ctx.globalAlpha = alpha;
 
-      const getMid = i => (dataLeft[i] + dataRight[i]) / 2 / 255;
-      const getSide = i => Math.abs(dataLeft[i] - dataRight[i]) / 255;
+      const midVal  = i => (dataLeft[i]+dataRight[i])/2/255;
+      const sideVal = i => Math.abs(dataLeft[i]-dataRight[i])/255;
 
-      // draw mid (solid) and side (dashed) curves
       function drawCurve(getVal, color, dash=false){
         ctx.beginPath();
         for(let i=0;i<bins;i++){
-          const f = Math.min(getVal(i)*sens,1);
-          let x = i*slice, y = canvas.height - f*canvas.height;
+          let f = Math.min(getVal(i)*sens,1);
+          let x=i*slice, y=canvas.height-f*canvas.height;
           y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
           i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
         }
@@ -236,64 +234,74 @@
 
       switch(preset){
         case 'vhs':
-          drawCurve(i=>getMid(i), `hsla(${dynHue(0)},0%,80%,${alpha})`);
-          drawCurve(i=>getSide(i), `hsla(${dynHue(0)},0%,50%,${alpha})`, true);
+          drawCurve(i=>midVal(i),
+            `hsla(${dynHue(0)},0%,80%,${alpha})`);
+          drawCurve(i=>sideVal(i),
+            `hsla(${dynHue(0)},0%,50%,${alpha})`, true);
           break;
         case 'tape':
-          ctx.shadowBlur = 30; ctx.shadowColor = `hsla(${dynHue(200)},100%,80%,${alpha})`;
-          drawCurve(i=>getMid(i), `hsla(${dynHue(200)},100%,80%,${alpha*0.7})`);
-          ctx.shadowBlur = 0; ctx.globalAlpha = alpha;
-          drawCurve(i=>getSide(i), `hsla(${dynHue(200)},100%,50%,${alpha})`, true);
+          ctx.shadowBlur=30; ctx.shadowColor=`hsla(${dynHue(200)},100%,80%,${alpha})`;
+          drawCurve(i=>midVal(i),
+            `hsla(${dynHue(200)},100%,80%,${alpha*0.7})`);
+          ctx.shadowBlur=0; ctx.globalAlpha=alpha;
+          drawCurve(i=>sideVal(i),
+            `hsla(${dynHue(200)},100%,50%,${alpha})`, true);
           break;
         case 'neon':
-          drawCurve(i=>getMid(i), `hsla(${dynHue(180)},100%,60%,${alpha})`);
-          drawCurve(i=>getSide(i), `hsla(${dynHue(180)},100%,30%,${alpha})`, true);
+          drawCurve(i=>midVal(i),
+            `hsla(${dynHue(180)},100%,60%,${alpha})`);
+          drawCurve(i=>sideVal(i),
+            `hsla(${dynHue(180)},100%,30%,${alpha})`, true);
           break;
         case 'aurora':
-          ctx.fillStyle = ctx.createLinearGradient(0,0,0,canvas.height);
-          ctx.fillStyle.addColorStop(0,'#081d71');
-          ctx.fillStyle.addColorStop(0.5,'#20ff90');
-          ctx.fillStyle.addColorStop(1,'#081d71');
-          ctx.globalAlpha = alpha*0.5;
-          drawCurve(i=>getMid(i), ctx.fillStyle);
-          ctx.globalAlpha = alpha;
-          drawCurve(i=>getSide(i), `hsla(${dynHue(120)},100%,50%,${alpha})`, true);
+          const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+          grad.addColorStop(0,'#081d71');
+          grad.addColorStop(0.5,'#20ff90');
+          grad.addColorStop(1,'#081d71');
+          ctx.globalAlpha=alpha*0.5;
+          drawCurve(i=>midVal(i), grad);
+          ctx.globalAlpha=alpha;
+          drawCurve(i=>sideVal(i),
+            `hsla(${dynHue(120)},100%,50%,${alpha})`, true);
           break;
         case 'spectrum':
           for(let i=0;i<bins;i++){
-            const f = Math.min(getMid(i)*sens,1);
-            const x = i*slice;
-            const h = (i/bins*360 + hueOffset)%360;
-            const barH = f*canvas.height;
-            ctx.fillStyle = `hsl(${h},100%,60%)`;
+            let f = Math.min(midVal(i)*sens,1);
+            let x=i*slice;
+            let h=(i/bins*360 + hueOffset)%360;
+            let barH=f*canvas.height;
+            ctx.fillStyle=`hsl(${h},100%,60%)`;
             ctx.fillRect(x, canvas.height-barH, slice, barH);
           }
           break;
         case 'pultec':
-          ctx.lineJoin = 'round';
-          drawCurve(i=>getMid(i), `hsla(${dynHue(30)},100%,60%,${alpha})`);
+          drawCurve(i=>midVal(i),
+            `hsla(${dynHue(30)},100%,60%,${alpha})`);
           break;
         case 'neve':
-          drawCurve(i=>getMid(i), `hsla(${dynHue(15)},100%,55%,${alpha})`);
+          drawCurve(i=>midVal(i),
+            `hsla(${dynHue(15)},100%,55%,${alpha})`);
           break;
         case 'ssl':
-          drawCurve(i=>getMid(i), `hsla(${dynHue(200)},100%,60%,${alpha})`);
+          drawCurve(i=>midVal(i),
+            `hsla(${dynHue(200)},100%,60%,${alpha})`);
           break;
       }
 
       ctx.globalAlpha = 1;
     }
 
+    // full-screen & auto-hide
     fsBtn.onclick = ()=>{
       document.fullscreenElement
         ? document.exitFullscreen()
         : canvas.requestFullscreen();
     };
-    ['pointermove','touchstart','keydown'].forEach(e=>
-      document.addEventListener(e,()=>{
+    ['pointermove','touchstart','keydown'].forEach(evt=>
+      document.addEventListener(evt,()=>{
         controls.style.opacity='1';
         clearTimeout(this.hideT);
-        this.hideT=setTimeout(()=>controls.style.opacity='0',3000);
+        this.hideT = setTimeout(()=>controls.style.opacity='0',3000);
       })
     );
 
