@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX v4.3 - Device Selector + Sound Upgrade</title>
+  <title>DUB FX v4.3 - Device Selector (Safe Sound Update)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
@@ -16,7 +16,7 @@
 </head>
 <body>
 
-  <h1>DUB FX v4.3 — DEVICE SELECTOR + SOUND TUNE</h1>
+  <h1>DUB FX v4.3 — SAFE SOUND UPGRADE</h1>
 
   <div id="deviceSection">
     <label>Select Audio Input Device:</label>
@@ -38,7 +38,6 @@
   <script>
     let audioContext, input, feedbackGain, filterNode, dryGain;
     let delay1, delay2, delay3;
-    let dampingFilter;
     let normalFeedback = 0.4;
 
     async function listAudioDevices() {
@@ -84,20 +83,14 @@
       delay2 = audioContext.createDelay(5.0);
       delay3 = audioContext.createDelay(5.0);
 
-      // Tighter, more musical dub delay head times
-      delay1.delayTime.value = 0.06;   // short head ~60ms
-      delay2.delayTime.value = 0.18;   // mid head ~180ms
-      delay3.delayTime.value = 0.38;   // long head ~380ms
+      // Only adjusting delay head times (safe sound improvement)
+      delay1.delayTime.value = 0.06;
+      delay2.delayTime.value = 0.18;
+      delay3.delayTime.value = 0.38;
 
       feedbackGain = audioContext.createGain();
       filterNode = audioContext.createBiquadFilter();
       filterNode.type = "highpass";
-
-      // Add damping filter in feedback loop for analog-style rolloff
-      dampingFilter = audioContext.createBiquadFilter();
-      dampingFilter.type = "lowpass";
-      dampingFilter.frequency.value = 4000;  // Smooth out highs in repeats
-
       dryGain = audioContext.createGain();
 
       input.connect(dryGain);
@@ -109,9 +102,7 @@
       delay1.connect(feedbackGain);
       delay2.connect(feedbackGain);
       delay3.connect(feedbackGain);
-
-      feedbackGain.connect(dampingFilter);
-      dampingFilter.connect(filterNode);
+      feedbackGain.connect(filterNode);
       filterNode.connect(delay1);
       filterNode.connect(delay2);
       filterNode.connect(delay3);
@@ -161,5 +152,6 @@
 
 </body>
 </html>
+
 
 
