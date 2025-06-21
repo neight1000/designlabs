@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX v4.4 - Device Selector + Sound Upgrade + Visualizer</title>
+  <title>DUB FX v4.5 - Visualizer Tab Extension</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
-    button { font-size: 1.5em; padding: 20px 40px; margin: 20px; border: 1px solid #fff; border-radius: 5px; background: #000; color: #fff; }
+    button { font-size: 1.5em; padding: 20px 40px; margin: 10px; border: 1px solid #fff; border-radius: 5px; background: #000; color: #fff; }
     button:active { background: #fff; color: #000; }
     select { font-size: 1.2em; padding: 10px; margin: 20px; }
     .controls { margin: 20px auto; width: 80%; max-width: 400px; }
@@ -17,7 +17,7 @@
 </head>
 <body>
 
-  <h1>DUB FX v4.4 — DEVICE SELECTOR + SOUND UPGRADE + VISUALIZER</h1>
+  <h1>DUB FX v4.5 — VISUALIZER TAB EXTENSION</h1>
 
   <div id="deviceSection">
     <label>Select Audio Input Device:</label>
@@ -36,12 +36,24 @@
     <button id="throwBtn">THROW</button>
   </div>
 
-  <canvas id="visualizer"></canvas>
+  <div id="tabSection" style="display:none;">
+    <button id="fxTabBtn">FX</button>
+    <button id="visualizerTabBtn">VISUALIZER</button>
+  </div>
+
+  <div id="fxControls" style="display:none;">
+    <canvas id="visualizer"></canvas>
+  </div>
+
+  <div id="visualizerOnly" style="display:none;">
+    <canvas id="visualizerPure"></canvas>
+  </div>
 
   <script>
     let audioContext, input, feedbackGain, filterNode, dryGain, analyser, dataArray;
     let delay1, delay2, delay3;
     let normalFeedback = 0.4;
+    let analyserPure, dataArrayPure;
 
     async function listAudioDevices() {
       const devices = await navigator.mediaDevices.enumerateDevices();
@@ -72,9 +84,12 @@
         setupAudioGraph();
         updateControls();
         drawVisualizer();
+        drawVisualizerPure();
 
         document.getElementById('controlPanel').style.display = 'block';
         document.getElementById('deviceSection').style.display = 'none';
+        document.getElementById('tabSection').style.display = 'block';
+        document.getElementById('fxControls').style.display = 'block';
 
       } catch (err) {
         alert("Error initializing audio: " + err.message);
@@ -87,7 +102,6 @@
       delay2 = audioContext.createDelay(5.0);
       delay3 = audioContext.createDelay(5.0);
 
-      // Updated delay head times only (safe sound upgrade)
       delay1.delayTime.value = 0.06;
       delay2.delayTime.value = 0.18;
       delay3.delayTime.value = 0.38;
@@ -101,12 +115,17 @@
       analyser.fftSize = 512;
       dataArray = new Uint8Array(analyser.frequencyBinCount);
 
+      analyserPure = audioContext.createAnalyser();
+      analyserPure.fftSize = 512;
+      dataArrayPure = new Uint8Array(analyserPure.frequencyBinCount);
+
       input.connect(dryGain);
       dryGain.connect(audioContext.destination);
       dryGain.connect(delay1);
       dryGain.connect(delay2);
       dryGain.connect(delay3);
       dryGain.connect(analyser);
+      input.connect(analyserPure);
 
       delay1.connect(feedbackGain);
       delay2.connect(feedbackGain);
@@ -179,10 +198,43 @@
       }
       ctx.stroke();
     }
+
+    function drawVisualizerPure() {
+      requestAnimationFrame(drawVisualizerPure);
+      analyserPure.getByteFrequencyData(dataArrayPure);
+      const canvas = document.getElementById('visualizerPure');
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#fff";
+      ctx.beginPath();
+      const barWidth = canvas.width / dataArrayPure.length;
+      let x = 0;
+      for (let i = 0; i < dataArrayPure.length; i++) {
+        const v = dataArrayPure[i] / 255;
+        const y = canvas.height - (v * canvas.height);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        x += barWidth;
+      }
+      ctx.stroke();
+    }
+
+    document.getElementById('fxTabBtn').addEventListener('click', () => {
+      document.getElementById('fxControls').style.display = 'block';
+      document.getElementById('visualizerOnly').style.display = 'none';
+    });
+
+    document.getElementById('visualizerTabBtn').addEventListener('click', () => {
+      document.getElementById('fxControls').style.display = 'none';
+      document.getElementById('visualizerOnly').style.display = 'block';
+    });
   </script>
 
 </body>
 </html>
+
 
 
 
