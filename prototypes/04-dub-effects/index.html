@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX v4.3 - Device Selector (Safe Sound Update)</title>
+  <title>DUB FX v4.4 - Device Selector + Sound Upgrade + Visualizer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
@@ -12,11 +12,12 @@
     .controls { margin: 20px auto; width: 80%; max-width: 400px; }
     label { display: block; margin: 20px 0 10px 0; }
     input[type=range] { width: 100%; }
+    canvas { border: 1px solid #fff; margin-top: 20px; width: 90%; max-width: 600px; height: 200px; }
   </style>
 </head>
 <body>
 
-  <h1>DUB FX v4.3 — SAFE SOUND UPGRADE</h1>
+  <h1>DUB FX v4.4 — DEVICE SELECTOR + SOUND UPGRADE + VISUALIZER</h1>
 
   <div id="deviceSection">
     <label>Select Audio Input Device:</label>
@@ -35,8 +36,10 @@
     <button id="throwBtn">THROW</button>
   </div>
 
+  <canvas id="visualizer"></canvas>
+
   <script>
-    let audioContext, input, feedbackGain, filterNode, dryGain;
+    let audioContext, input, feedbackGain, filterNode, dryGain, analyser, dataArray;
     let delay1, delay2, delay3;
     let normalFeedback = 0.4;
 
@@ -68,6 +71,7 @@
 
         setupAudioGraph();
         updateControls();
+        drawVisualizer();
 
         document.getElementById('controlPanel').style.display = 'block';
         document.getElementById('deviceSection').style.display = 'none';
@@ -83,7 +87,7 @@
       delay2 = audioContext.createDelay(5.0);
       delay3 = audioContext.createDelay(5.0);
 
-      // Only adjusting delay head times (safe sound improvement)
+      // Updated delay head times only (safe sound upgrade)
       delay1.delayTime.value = 0.06;
       delay2.delayTime.value = 0.18;
       delay3.delayTime.value = 0.38;
@@ -93,11 +97,16 @@
       filterNode.type = "highpass";
       dryGain = audioContext.createGain();
 
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 512;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+
       input.connect(dryGain);
       dryGain.connect(audioContext.destination);
       dryGain.connect(delay1);
       dryGain.connect(delay2);
       dryGain.connect(delay3);
+      dryGain.connect(analyser);
 
       delay1.connect(feedbackGain);
       delay2.connect(feedbackGain);
@@ -148,10 +157,33 @@
       delay2.delayTime.value = 0.18 + Math.sin(wowPhase * 0.9) * wowDepth + Math.sin(flutterPhase * 0.9) * flutterDepth;
       delay3.delayTime.value = 0.38 + Math.sin(wowPhase * 0.8) * wowDepth + Math.sin(flutterPhase * 0.8) * flutterDepth;
     }
+
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+      analyser.getByteFrequencyData(dataArray);
+      const canvas = document.getElementById('visualizer');
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#fff";
+      ctx.beginPath();
+      const barWidth = canvas.width / dataArray.length;
+      let x = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        const v = dataArray[i] / 255;
+        const y = canvas.height - (v * canvas.height);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+        x += barWidth;
+      }
+      ctx.stroke();
+    }
   </script>
 
 </body>
 </html>
+
 
 
 
