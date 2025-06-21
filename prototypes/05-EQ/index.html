@@ -1,46 +1,30 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ v1.6</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Visual EQ v2.2</title>
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: #000;
-      color: #fff;
-      font-family: sans-serif;
-      height: 100vh;
-      width: 100vw;
+      margin:0; padding:0; overflow:hidden;
+      background:#000; color:#fff;
+      font-family:sans-serif;
+      height:100vh; width:100vw;
     }
     #controls {
-      position: absolute;
-      top: 10px; left: 50%;
-      transform: translateX(-50%);
-      display: flex; gap: 10px;
-      align-items: center;
-      z-index: 10;
-      transition: opacity 0.5s;
+      position:absolute; top:10px; left:50%;
+      transform:translateX(-50%);
+      display:flex; gap:8px; align-items:center;
+      z-index:10; transition:opacity .5s;
     }
     select, button, label, input[type=range] {
-      background: #000;
-      color: #fff;
-      border: 1px solid #fff;
-      padding: 4px 8px;
-      font-size: 1rem;
+      background:#000; color:#fff;
+      border:1px solid #fff; padding:4px 8px;
+      font-size:1rem;
     }
-    label { display: flex; align-items: center; gap: 4px; }
-    input[type=range] { width: 100px; }
-    canvas {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw;
-      height: 100vh;
-      touch-action: none;
-    }
+    label { display:flex; gap:4px; align-items:center; }
+    input[type=range] { width:100px; }
+    canvas { width:100%; height:100%; display:block; }
   </style>
 </head>
 <body>
@@ -48,234 +32,280 @@
     <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
     <select id="fftSelect">
-      <option value="256">FFT:256</option>
-      <option value="512" selected>FFT:512</option>
-      <option value="1024">FFT:1024</option>
-      <option value="2048">FFT:2048</option>
-      <option value="4096">FFT:4096</option>
-      <option value="8192">FFT:8192</option>
-      <option value="16384">FFT:16384</option>
+      <option>256</option><option selected>512</option>
+      <option>1024</option><option>2048</option>
+      <option>4096</option><option>8192</option>
+      <option>16384</option>
     </select>
     <select id="presetSelect">
-      <option value="red">Red</option>
-      <option value="yellow">Yellow</option>
-      <option value="green">Green</option>
-      <option value="blue">Blue</option>
-      <option value="purple">Purple</option>
-      <option value="1988">1988</option>
-      <option value="revs">REVS</option>
+      <option value="0">VHS Drift</option>
+      <option value="1">Tape Echo</option>
+      <option value="2">Neon Grid</option>
+      <option value="3">Aurora</option>
+      <option value="4">Spectrum Cascade</option>
     </select>
-    <label>
-      Sensitivity
-      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
-    </label>
-    <label>
-      Tracers
-      <input type="checkbox" id="tracerToggle" checked>
-    </label>
+    <label>Tracers<input type="checkbox" id="tracerToggle" checked></label>
+    <label>Sensitivity<input type="range" id="sens" min="0.5" max="3" step="0.05" value="1.15"></label>
     <button id="fsBtn">Fullscreen</button>
   </div>
-  <canvas id="vis"></canvas>
+  <canvas id="gl"></canvas>
 
   <script>
-    const deviceSelect  = document.getElementById('deviceSelect'),
-          startBtn       = document.getElementById('startBtn'),
-          fftSelect      = document.getElementById('fftSelect'),
-          presetSelect   = document.getElementById('presetSelect'),
-          sensSlider     = document.getElementById('sensSlider'),
-          tracerToggle   = document.getElementById('tracerToggle'),
-          fsBtn          = document.getElementById('fsBtn'),
-          controls       = document.getElementById('controls'),
-          canvas         = document.getElementById('vis'),
-          ctx            = canvas.getContext('2d');
+  // --- UI & WebAudio setup ---
+  const deviceSelect = document.getElementById('deviceSelect'),
+        startBtn      = document.getElementById('startBtn'),
+        fftSelect     = document.getElementById('fftSelect'),
+        presetSelect  = document.getElementById('presetSelect'),
+        tracerToggle  = document.getElementById('tracerToggle'),
+        sensSlider    = document.getElementById('sens'),
+        fsBtn         = document.getElementById('fsBtn'),
+        controls      = document.getElementById('controls'),
+        canvas        = document.getElementById('gl');
+  let audioCtx, analyser, freqData;
 
-    let audioContext, analyser, dataArray;
-
-    const colorMap = {
-      red:    'hsl(0,100%,60%)',
-      yellow: 'hsl(55,100%,60%)',
-      green:  'hsl(120,100%,60%)',
-      blue:   'hsl(220,100%,60%)',
-      purple: 'hsl(280,100%,60%)'
-    };
-    const revsColors = ['#cc6633','#ffcc33','#ffffcc','#44322e'];
-
-    function resizeCanvas() {
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    document.addEventListener('fullscreenchange', resizeCanvas);
-    resizeCanvas();
-
-    async function populateDevices() {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      devices.filter(d => d.kind === 'audioinput')
-             .forEach((d,i) => {
-        const opt = document.createElement('option');
-        opt.value = d.deviceId;
-        opt.textContent = d.label || `Mic ${i+1}`;
-        deviceSelect.appendChild(opt);
-      });
-    }
-
-    async function startEQ() {
-      if (audioContext) return;
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: deviceSelect.value || undefined }
-      });
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      analyser = audioContext.createAnalyser();
-      analyser.smoothingTimeConstant = 0.8;
-      analyser.fftSize = parseInt(fftSelect.value);
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-      audioContext.createMediaStreamSource(stream).connect(analyser);
-      draw();
-    }
-
-    fftSelect.addEventListener('change', () => {
-      if (!analyser) return;
-      analyser.fftSize = parseInt(fftSelect.value);
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
+  async function populateDevices() {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    devices.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
+      const o = document.createElement('option');
+      o.value = d.deviceId;
+      o.textContent = d.label||`Mic ${i+1}`;
+      deviceSelect.append(o);
     });
+  }
+  async function startAudio(){
+    if(audioCtx) return;
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio:{deviceId: deviceSelect.value||undefined}
+    });
+    audioCtx = new AudioContext();
+    analyser = audioCtx.createAnalyser();
+    analyser.smoothingTimeConstant = 0.8;
+    analyser.fftSize = parseInt(fftSelect.value);
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    audioCtx.createMediaStreamSource(stream).connect(analyser);
+    startTime = performance.now();
+    initGL(); animate();
+  }
+  fftSelect.onchange = ()=> analyser && (analyser.fftSize = parseInt(fftSelect.value),
+                                        freqData=new Uint8Array(analyser.frequencyBinCount));
+  startBtn.onclick = startAudio;
+  populateDevices();
 
-    function draw() {
-      requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(dataArray);
+  // --- WebGL2 & Shaders ---
+  let gl, program, fb1, fb2, tex1, tex2, quadVBO;
+  let startTime = 0, lastFrame=0, renderScale=1.0;
 
-      // tracer effect
-      if (tracerToggle.checked) {
-        ctx.fillStyle = 'rgba(0,0,0,0.15)'; 
-        ctx.fillRect(0,0,canvas.width,canvas.height);
+  function createShader(type, src){
+    const s = gl.createShader(type);
+    gl.shaderSource(s,src); gl.compileShader(s);
+    if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))
+      console.error(gl.getShaderInfoLog(s));
+    return s;
+  }
+  function createProgram(vs,fs){
+    const p=gl.createProgram();
+    gl.attachShader(p,vs); gl.attachShader(p,fs);
+    gl.linkProgram(p);
+    if(!gl.getProgramParameter(p,gl.LINK_STATUS))
+      console.error(gl.getProgramInfoLog(p));
+    return p;
+  }
+
+  const vsSrc = `#version 300 es
+    in vec2 a_pos; out vec2 v_uv;
+    void main(){
+      v_uv = a_pos*0.5+0.5;
+      gl_Position=vec4(a_pos,0,1);
+    }`;
+
+  // Scene shader: spectral bars + semantic effects
+  const fsScene = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D uTex; // dummy
+    uniform float uFreq[16384];
+    uniform int   uBins;
+    uniform int   uPreset;
+    uniform float uTime;
+    uniform float uSens;
+    void main(){
+      int idx=int(v_uv.x*float(uBins-1));
+      float f = clamp(uFreq[idx]*uSens,0.,1.);
+      vec3 col=vec3(0);
+      if(uPreset==0){
+        // VHS drift: scanline flicker
+        float flick=fract(uTime*5.0+v_uv.y*10.0);
+        col = vec3(f*0.2, f*0.05, f*0.05)*mix(1.0,1.2,flick);
+      } else if(uPreset==1){
+        // Tape echo: smear vertical
+        col = vec3(f*0.3,f*0.6,f*0.9)*v_uv.y;
+      } else if(uPreset==2){
+        // Neon grid: grid lines + glow
+        float gx=step(0.02,fract(v_uv.x*20.0))*step(0.02,fract(v_uv.y*20.0));
+        col = vec3(f,0.2,1.0)*gx*2.0;
+      } else if(uPreset==3){
+        // Aurora
+        col = mix(vec3(0.1,0.0,0.4),vec3(0.8,1.0,0.8),v_uv.y)*f;
       } else {
-        ctx.clearRect(0,0,canvas.width,canvas.height);
+        // Spectrum Cascade
+        col = vec3(v_uv.x,1.0-f,f);
       }
+      o = vec4(col,1.0);
+    }`;
 
-      // frequency-band markers
-      const freqs = [60,250,1000,4000,16000];
-      const binCount = analyser.frequencyBinCount;
-      const nyquist = audioContext.sampleRate / 2;
-      const slice = canvas.width / binCount;
-      ctx.strokeStyle = 'rgba(255,255,255,0.2)';
-      ctx.lineWidth = 1;
-      ctx.font = '12px sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.2)';
-      freqs.forEach(f => {
-        const bin = Math.round(f/nyquist*binCount);
-        const x = bin * slice;
-        ctx.beginPath();
-        ctx.moveTo(x,0);
-        ctx.lineTo(x,canvas.height);
-        ctx.stroke();
-        ctx.fillText(f+'Hz', x+2, 14);
-      });
-
-      const preset = presetSelect.value;
-      const sensitivity = parseFloat(sensSlider.value);
-
-      if (preset === 'purple') {
-        dataArray.forEach((v,i) => {
-          let f = Math.min((v/255)*sensitivity,1);
-          const x = i * slice;
-          const y = canvas.height - f * canvas.height;
-          ctx.beginPath();
-          ctx.arc(x, y, 4, 0, Math.PI*2);
-          ctx.fillStyle = colorMap.purple;
-          ctx.fill();
-        });
+  // Simple two-pass Gaussian blur for bloom
+  const fsBlur = `#version 300 es
+    precision mediump float;
+    in vec2 v_uv; out vec4 o;
+    uniform sampler2D uScene;
+    uniform vec2 uDir;
+    void main(){
+      vec3 sum=vec3(0);
+      float w[5]=float[5](0.204164,0.304005,0.093913,0.010381,0.000229);
+      for(int i=-4;i<=4;i++){
+        sum += texture(uScene,
+                v_uv+uDir*float(i)/512.0).rgb * w[abs(i)];
       }
-      else if (preset === '1988') {
-        dataArray.forEach((v,i) => {
-          let f = Math.min((v/255)*sensitivity,1);
-          const x = i * slice;
-          const h = mix(120,0,f);
-          const hsl = `hsl(${h},100%,60%)`;
-          const barH = f * canvas.height;
-          ctx.fillStyle = hsl;
-          ctx.fillRect(x, canvas.height - barH, slice, barH);
-        });
-      }
-      else if (preset === 'revs') {
-        dataArray.forEach((v,i) => {
-          let f = Math.min((v/255)*sensitivity,1);
-          const x = i * slice + slice/2;
-          const y = canvas.height - f * canvas.height;
-          const seg = Math.floor(i/(binCount/revsColors.length));
-          ctx.strokeStyle = revsColors[seg] || revsColors.slice(-1)[0];
-          ctx.lineWidth = 8;
-          ctx.beginPath();
-          ctx.moveTo(x,canvas.height);
-          ctx.lineTo(x,y);
-          ctx.stroke();
-        });
-      }
-      else {
-        // line-based presets
-        ctx.beginPath();
-        let x0 = 0, y0 = canvas.height - Math.min((dataArray[0]/255)*sensitivity,1)*canvas.height;
+      o=vec4(sum,1);
+    }`;
 
-        if (preset === 'yellow') {
-          for (let i=1; i<dataArray.length; i++) {
-            let f = Math.min((dataArray[i]/255)*sensitivity,1);
-            const x1 = i * slice;
-            const y1 = canvas.height - f * canvas.height;
-            const mx = (x0+x1)/2, my = (y0+y1)/2;
-            if (i===1) ctx.moveTo(x0,y0);
-            ctx.quadraticCurveTo(x0,y0,mx,my);
-            x0 = x1; y0 = y1;
-          }
-        } else {
-          ctx.moveTo(x0,y0);
-          for (let i=1; i<dataArray.length; i++) {
-            let f = Math.min((dataArray[i]/255)*sensitivity,1);
-            const x = i * slice;
-            const y = canvas.height - f * canvas.height;
-            ctx.lineTo(x,y);
-          }
-        }
+  function initGL(){
+    gl = canvas.getContext('webgl2',{antialias:true});
+    // framebuffers & textures
+    const makeRT = ()=>{
+      const fbo = gl.createFramebuffer();
+      const tex = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D,tex);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,
+                    canvas.width*renderScale,
+                    canvas.height*renderScale,
+                    0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,
+                gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+      return {fbo,tex};
+    };
+    resizeRTs();
 
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = colorMap[preset] || '#fff';
-        if (preset === 'blue') ctx.setLineDash([6,4]);
+    // compile shaders
+    const vs = createShader(gl.VERTEX_SHADER, vsSrc);
+    const fs1= createShader(gl.FRAGMENT_SHADER, fsScene);
+    const fs2= createShader(gl.FRAGMENT_SHADER, fsBlur);
+    const progScene = createProgram(vs, fs1);
+    const progBlur  = createProgram(vs, fs2);
+    program = {scene:progScene, blur:progBlur};
 
-        if (preset === 'green') {
-          ctx.save();
-          ctx.lineTo(canvas.width,canvas.height);
-          ctx.lineTo(0,canvas.height);
-          ctx.closePath();
-          ctx.fillStyle = 'rgba(0,255,0,0.3)';
-          ctx.fill();
-          ctx.restore();
-        }
+    // quad
+    quadVBO = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadVBO);
+    gl.bufferData(gl.ARRAY_BUFFER,
+      new Float32Array([-1,-1,3,-1,-1,3]),
+      gl.STATIC_DRAW);
+  }
 
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
+  let rtA, rtB;
+  function resizeRTs(){
+    resizeCanvas();
+    if(gl){
+      rtA = makeRT();
+      rtB = makeRT();
+      gl.viewport(0,0,canvas.width*renderScale,canvas.height*renderScale);
     }
+  }
 
-    function mix(a,b,t){ return a + (b-a)*t; }
+  window.addEventListener('resize', resizeRTs);
 
-    fsBtn.addEventListener('click', () => {
-      document.fullscreenElement
-        ? document.exitFullscreen()
-        : document.documentElement.requestFullscreen();
-    });
+  function resizeCanvas(){
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
 
-    // auto-hide controls
-    let hideTimer;
-    function showControls(){
-      controls.style.opacity = '1';
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(()=>controls.style.opacity='0',3000);
-    }
-    ['pointermove','touchstart','keydown'].forEach(evt =>
-      document.addEventListener(evt, showControls)
-    );
-    showControls();
+  // --- Render loop with adaptive scaling ---
+  function animate(now=0){
+    requestAnimationFrame(animate);
+    if(!analyser) return;
+    analyser.getByteFrequencyData(freqData);
+    const dt = now - lastFrame; lastFrame=now;
+    // adjust renderScale to target ~60fps
+    if(dt>20 && renderScale>0.5) renderScale-=0.05;
+    if(dt<12 && renderScale<1.0) renderScale+=0.02;
+    resizeRTs();
 
-    startBtn.addEventListener('click', startEQ);
-    populateDevices();
+    // 1) render scene into rtA
+    gl.bindFramebuffer(gl.FRAMEBUFFER, rtA.fbo);
+    drawScene();
+
+    // 2) horizontal blur into rtB
+    gl.bindFramebuffer(gl.FRAMEBUFFER, rtB.fbo);
+    drawBlur(rtA.tex, [1,0]);
+
+    // 3) vertical blur back into rtA
+    gl.bindFramebuffer(gl.FRAMEBUFFER, rtA.fbo);
+    drawBlur(rtB.tex, [0,1]);
+
+    // 4) composite to screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    drawTexture(rtA.tex);
+  }
+
+  function setQuad(prog){
+    const pos = gl.getAttribLocation(prog,'a_pos');
+    gl.bindBuffer(gl.ARRAY_BUFFER, quadVBO);
+    gl.enableVertexAttribArray(pos);
+    gl.vertexAttribPointer(pos,2,gl.FLOAT,false,0,0);
+  }
+
+  function drawScene(){
+    const p = program.scene; gl.useProgram(p);
+    setQuad(p);
+    // upload uniforms
+    const locF = gl.getUniformLocation(p,'uFreq');
+    gl.uniform1fv(locF, new Float32Array( freqData.map(v=>v/255) ));
+    gl.uniform1i(gl.getUniformLocation(p,'uBins'), freqData.length);
+    gl.uniform1i(gl.getUniformLocation(p,'uPreset'),
+                 parseInt(presetSelect.value));
+    gl.uniform1f(gl.getUniformLocation(p,'uTime'),
+                 (performance.now()-startTime)*0.001);
+    gl.uniform1f(gl.getUniformLocation(p,'uSens'),
+                 parseFloat(sensSlider.value));
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+
+  function drawBlur(inputTex, dir){
+    const p = program.blur; gl.useProgram(p);
+    setQuad(p);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, inputTex);
+    gl.uniform1i(gl.getUniformLocation(p,'uScene'), 0);
+    gl.uniform2fv(gl.getUniformLocation(p,'uDir'), dir);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+
+  function drawTexture(tex){
+    gl.useProgram(program.blur); setQuad(program.blur);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.uniform1i(gl.getUniformLocation(program.blur,'uScene'),0);
+    gl.uniform2fv(gl.getUniformLocation(program.blur,'uDir'), [0,0]);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+  }
+
+  // --- Fullscreen & auto-hide ---
+  fsBtn.onclick = ()=> document.fullscreenElement
+    ? document.exitFullscreen()
+    : canvas.requestFullscreen();
+
+  let hidet;
+  function showCtrls(){
+    controls.style.opacity='1';
+    clearTimeout(hidet);
+    hidet=setTimeout(()=>controls.style.opacity='0',3000);
+  }
+  ['pointermove','touchstart','keydown'].forEach(e=>
+    document.addEventListener(e, showCtrls)
+  );
+  showCtrls();
   </script>
 </body>
 </html>
-```
