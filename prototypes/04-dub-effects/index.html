@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX WEB APP - PHASE 2</title>
+  <title>DUB FX WEB APP - PHASE 3</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; text-align: center; margin: 0; padding: 0; }
@@ -17,7 +17,7 @@
 </head>
 <body>
 
-  <h1>DUB FX WEB APP - PHASE 2</h1>
+  <h1>DUB FX WEB APP - PHASE 3</h1>
 
   <button id="startBtn">Start Audio</button>
 
@@ -56,6 +56,7 @@
     let audioContext, input, analyser, dataArray;
     let delayNode, feedbackGain, filterNode, reverbNode, dryGain;
     let reverbBuffer = null;
+    const particles = [];
 
     const presets = {
       dryYard:  { delayTime: 200, feedback: 0.3, highpass: 50,  reverb: 0.2 },
@@ -86,12 +87,10 @@
       input.connect(dryGain);
       dryGain.connect(analyser);
       dryGain.connect(audioContext.destination);
-
       dryGain.connect(delayNode);
       delayNode.connect(feedbackGain);
       feedbackGain.connect(filterNode);
       filterNode.connect(delayNode);
-
       filterNode.connect(reverbNode);
       reverbNode.connect(audioContext.destination);
       filterNode.connect(audioContext.destination);
@@ -144,8 +143,12 @@
       const ctx = canvas.getContext('2d');
       requestAnimationFrame(drawVisualizer);
       analyser.getByteTimeDomainData(dataArray);
-      ctx.fillStyle = "#000";
+
+      // Fade previous frame for trailing effect
+      ctx.fillStyle = "rgba(0,0,0,0.2)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw waveform
       ctx.lineWidth = 2;
       ctx.strokeStyle = "#0f0";
       ctx.beginPath();
@@ -160,6 +163,27 @@
       }
       ctx.lineTo(canvas.width, canvas.height / 2);
       ctx.stroke();
+
+      // Particle system trigger (feedback visual)
+      const feedbackValue = parseFloat(document.getElementById('feedback').value);
+      if (Math.random() < feedbackValue * 0.1) {
+        particles.push({ x: Math.random() * canvas.width, y: canvas.height / 2, alpha: 1 });
+      }
+      
+      // Draw particles
+      ctx.fillStyle = "#f00";
+      for (let i = 0; i < particles.length; i++) {
+        const p = particles[i];
+        ctx.globalAlpha = p.alpha;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y + (Math.random() * 20 - 10), 5, 0, 2 * Math.PI);
+        ctx.fill();
+        p.alpha -= 0.01;
+      }
+      ctx.globalAlpha = 1;
+      for (let i = particles.length - 1; i >= 0; i--) {
+        if (particles[i].alpha <= 0) particles.splice(i, 1);
+      }
     }
   </script>
 
