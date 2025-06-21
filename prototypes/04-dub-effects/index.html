@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>DUB FX v4.1 - OFFLINE STABLE CORE</title>
+  <title>DUB FX v4.2 - Hardware Selector</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background: #000; color: #fff; font-family: monospace; margin: 0; padding: 20px; text-align: center; }
     button { font-size: 1.5em; padding: 20px 40px; margin: 20px; border: 1px solid #fff; border-radius: 5px; background: #000; color: #fff; }
     button:active { background: #fff; color: #000; }
+    select { font-size: 1.2em; padding: 10px; margin: 20px; }
     .controls { margin: 20px auto; width: 80%; max-width: 400px; }
     label { display: block; margin: 20px 0 10px 0; }
     input[type=range] { width: 100%; }
@@ -15,9 +16,13 @@
 </head>
 <body>
 
-  <h1>DUB FX v4.1 — OFFLINE CORE</h1>
+  <h1>DUB FX v4.2 — DEVICE SELECTOR</h1>
 
-  <button id="startBtn">START AUDIO</button>
+  <div id="deviceSection">
+    <label>Select Audio Input Device:</label>
+    <select id="deviceSelect"></select>
+    <button id="startBtn">START AUDIO</button>
+  </div>
 
   <div class="controls" style="display:none;" id="controlPanel">
     <label>Feedback</label>
@@ -35,18 +40,38 @@
     let delay1, delay2, delay3;
     let normalFeedback = 0.4;
 
+    // Device enumeration on page load
+    async function listAudioDevices() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputDevices = devices.filter(device => device.kind === 'audioinput');
+      const select = document.getElementById('deviceSelect');
+      inputDevices.forEach(device => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.text = device.label || `Input ${device.deviceId}`;
+        select.appendChild(option);
+      });
+    }
+
+    listAudioDevices();
+
     document.getElementById('startBtn').addEventListener('click', async () => {
       try {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        const deviceId = document.getElementById('deviceSelect').value;
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: deviceId ? { exact: deviceId } : undefined }
+        });
+
         input = audioContext.createMediaStreamSource(stream);
 
         setupAudioGraph();
         updateControls();
 
         document.getElementById('controlPanel').style.display = 'block';
-        document.getElementById('startBtn').style.display = 'none';
+        document.getElementById('deviceSection').style.display = 'none';
 
       } catch (err) {
         alert("Error initializing audio: " + err.message);
