@@ -1,47 +1,45 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ v1.5</title>
+  <title>Visual EQ v1.6</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
+      overflow: hidden;
       background: #000;
       color: #fff;
       font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       height: 100vh;
-      box-sizing: border-box;
+      width: 100vw;
     }
     #controls {
-      margin: 10px;
-      display: flex;
-      gap: 10px;
+      position: absolute;
+      top: 10px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 10px;
+      align-items: center;
       z-index: 10;
       transition: opacity 0.5s;
     }
-    select, button, label {
+    select, button, label, input[type=range] {
       background: #000;
       color: #fff;
       border: 1px solid #fff;
-      padding: 5px 10px;
+      padding: 4px 8px;
       font-size: 1rem;
     }
     label { display: flex; align-items: center; gap: 4px; }
+    input[type=range] { width: 100px; }
     canvas {
-      display: block;
-      width: 90vw;
-      height: 200px;
-      background: #000;
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
       touch-action: none;
-    }
-    :fullscreen canvas {
-      width: 100vw !important;
-      height: 100vh !important;
     }
   </style>
 </head>
@@ -49,6 +47,15 @@
   <div id="controls">
     <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
+    <select id="fftSelect">
+      <option value="256">FFT:256</option>
+      <option value="512" selected>FFT:512</option>
+      <option value="1024">FFT:1024</option>
+      <option value="2048">FFT:2048</option>
+      <option value="4096">FFT:4096</option>
+      <option value="8192">FFT:8192</option>
+      <option value="16384">FFT:16384</option>
+    </select>
     <select id="presetSelect">
       <option value="red">Red</option>
       <option value="yellow">Yellow</option>
@@ -58,39 +65,44 @@
       <option value="1988">1988</option>
       <option value="revs">REVS</option>
     </select>
-    <select id="fftSelect">
-      <option value="256">FFT: 256</option>
-      <option value="512" selected>FFT: 512</option>
-      <option value="1024">FFT: 1024</option>
-      <option value="2048">FFT: 2048</option>
-      <option value="4096">FFT: 4096</option>
-      <option value="8192">FFT: 8192</option>
-    </select>
     <label>
-      <input type="checkbox" id="tracerToggle" checked>
+      Sensitivity
+      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
+    </label>
+    <label>
       Tracers
+      <input type="checkbox" id="tracerToggle" checked>
     </label>
     <button id="fsBtn">Fullscreen</button>
   </div>
   <canvas id="vis"></canvas>
 
   <script>
-    const deviceSelect = document.getElementById('deviceSelect');
-    const startBtn     = document.getElementById('startBtn');
-    const presetSelect = document.getElementById('presetSelect');
-    const fftSelect    = document.getElementById('fftSelect');
-    const tracerToggle = document.getElementById('tracerToggle');
-    const fsBtn        = document.getElementById('fsBtn');
-    const controls     = document.getElementById('controls');
-    const canvas       = document.getElementById('vis');
-    const ctx          = canvas.getContext('2d');
+    const deviceSelect  = document.getElementById('deviceSelect'),
+          startBtn       = document.getElementById('startBtn'),
+          fftSelect      = document.getElementById('fftSelect'),
+          presetSelect   = document.getElementById('presetSelect'),
+          sensSlider     = document.getElementById('sensSlider'),
+          tracerToggle   = document.getElementById('tracerToggle'),
+          fsBtn          = document.getElementById('fsBtn'),
+          controls       = document.getElementById('controls'),
+          canvas         = document.getElementById('vis'),
+          ctx            = canvas.getContext('2d');
 
     let audioContext, analyser, dataArray;
 
+    const colorMap = {
+      red:    'hsl(0,100%,60%)',
+      yellow: 'hsl(55,100%,60%)',
+      green:  'hsl(120,100%,60%)',
+      blue:   'hsl(220,100%,60%)',
+      purple: 'hsl(280,100%,60%)'
+    };
+    const revsColors = ['#cc6633','#ffcc33','#ffffcc','#44322e'];
+
     function resizeCanvas() {
-      const style = getComputedStyle(canvas);
-      canvas.width  = parseFloat(style.width);
-      canvas.height = parseFloat(style.height);
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
     }
     window.addEventListener('resize', resizeCanvas);
     document.addEventListener('fullscreenchange', resizeCanvas);
@@ -99,7 +111,7 @@
     async function populateDevices() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       devices.filter(d => d.kind === 'audioinput')
-             .forEach((d, i) => {
+             .forEach((d,i) => {
         const opt = document.createElement('option');
         opt.value = d.deviceId;
         opt.textContent = d.label || `Mic ${i+1}`;
@@ -110,17 +122,14 @@
     async function startEQ() {
       if (audioContext) return;
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: { deviceId: deviceSelect.value ? { exact: deviceSelect.value } : undefined }
+        audio: { deviceId: deviceSelect.value || undefined }
       });
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const source = audioContext.createMediaStreamSource(stream);
-
       analyser = audioContext.createAnalyser();
       analyser.smoothingTimeConstant = 0.8;
       analyser.fftSize = parseInt(fftSelect.value);
       dataArray = new Uint8Array(analyser.frequencyBinCount);
-
-      source.connect(analyser);
+      audioContext.createMediaStreamSource(stream).connect(analyser);
       draw();
     }
 
@@ -134,116 +143,109 @@
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
 
-      // tracer or clear
+      // tracer effect
       if (tracerToggle.checked) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.125)';  // 25% stronger than 0.1
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(0,0,0,0.15)'; 
+        ctx.fillRect(0,0,canvas.width,canvas.height);
       } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.clearRect(0,0,canvas.width,canvas.height);
       }
 
       // frequency-band markers
-      const freqs = [60, 250, 1000, 4000, 16000];
+      const freqs = [60,250,1000,4000,16000];
       const binCount = analyser.frequencyBinCount;
       const nyquist = audioContext.sampleRate / 2;
       const slice = canvas.width / binCount;
-
       ctx.strokeStyle = 'rgba(255,255,255,0.2)';
       ctx.lineWidth = 1;
-      ctx.font = '10px sans-serif';
+      ctx.font = '12px sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.2)';
       freqs.forEach(f => {
-        const bin = Math.round(f / nyquist * binCount);
+        const bin = Math.round(f/nyquist*binCount);
         const x = bin * slice;
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
+        ctx.moveTo(x,0);
+        ctx.lineTo(x,canvas.height);
         ctx.stroke();
-        ctx.fillText(f + 'Hz', x + 2, 12);
+        ctx.fillText(f+'Hz', x+2, 14);
       });
 
       const preset = presetSelect.value;
+      const sensitivity = parseFloat(sensSlider.value);
 
       if (preset === 'purple') {
-        ctx.setLineDash([]);
-        dataArray.forEach((v, i) => {
+        dataArray.forEach((v,i) => {
+          let f = Math.min((v/255)*sensitivity,1);
           const x = i * slice;
-          const y = canvas.height - (v / 255) * canvas.height;
+          const y = canvas.height - f * canvas.height;
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
-          ctx.fillStyle = '#fff';
+          ctx.arc(x, y, 4, 0, Math.PI*2);
+          ctx.fillStyle = colorMap.purple;
           ctx.fill();
         });
       }
       else if (preset === '1988') {
-        dataArray.forEach((v, i) => {
+        dataArray.forEach((v,i) => {
+          let f = Math.min((v/255)*sensitivity,1);
           const x = i * slice;
-          const h = (1 - v / 255) * 120; 
-          const barHeight = (v / 255) * canvas.height;
-          ctx.fillStyle = `hsl(${h},100%,50%)`;
-          ctx.fillRect(x, canvas.height - barHeight, slice, barHeight);
+          const h = mix(120,0,f);
+          const hsl = `hsl(${h},100%,60%)`;
+          const barH = f * canvas.height;
+          ctx.fillStyle = hsl;
+          ctx.fillRect(x, canvas.height - barH, slice, barH);
         });
       }
       else if (preset === 'revs') {
-        const revsColors = ['#cc6633', '#ffcc33', '#ffffcc', '#44322e'];
-        ctx.setLineDash([]);
-        dataArray.forEach((v, i) => {
+        dataArray.forEach((v,i) => {
+          let f = Math.min((v/255)*sensitivity,1);
           const x = i * slice + slice/2;
-          const y = canvas.height - (v / 255) * canvas.height;
-          const seg = Math.floor(i / (dataArray.length / revsColors.length));
-          ctx.strokeStyle = revsColors[seg] || revsColors[revsColors.length-1];
-          ctx.lineWidth = 6;
+          const y = canvas.height - f * canvas.height;
+          const seg = Math.floor(i/(binCount/revsColors.length));
+          ctx.strokeStyle = revsColors[seg] || revsColors.slice(-1)[0];
+          ctx.lineWidth = 8;
           ctx.beginPath();
-          ctx.moveTo(x, canvas.height);
-          ctx.lineTo(x, y);
+          ctx.moveTo(x,canvas.height);
+          ctx.lineTo(x,y);
           ctx.stroke();
         });
       }
       else {
         // line-based presets
         ctx.beginPath();
-        let x0 = 0;
-        let y0 = canvas.height - (dataArray[0] / 255) * canvas.height;
+        let x0 = 0, y0 = canvas.height - Math.min((dataArray[0]/255)*sensitivity,1)*canvas.height;
 
         if (preset === 'yellow') {
-          for (let i = 1; i < dataArray.length; i++) {
+          for (let i=1; i<dataArray.length; i++) {
+            let f = Math.min((dataArray[i]/255)*sensitivity,1);
             const x1 = i * slice;
-            const y1 = canvas.height - (dataArray[i] / 255) * canvas.height;
-            const mx = (x0 + x1) / 2;
-            const my = (y0 + y1) / 2;
-            if (i === 1) ctx.moveTo(x0, y0);
-            ctx.quadraticCurveTo(x0, y0, mx, my);
+            const y1 = canvas.height - f * canvas.height;
+            const mx = (x0+x1)/2, my = (y0+y1)/2;
+            if (i===1) ctx.moveTo(x0,y0);
+            ctx.quadraticCurveTo(x0,y0,mx,my);
             x0 = x1; y0 = y1;
           }
         } else {
-          ctx.moveTo(x0, y0);
-          for (let i = 1; i < dataArray.length; i++) {
+          ctx.moveTo(x0,y0);
+          for (let i=1; i<dataArray.length; i++) {
+            let f = Math.min((dataArray[i]/255)*sensitivity,1);
             const x = i * slice;
-            const y = canvas.height - (dataArray[i] / 255) * canvas.height;
-            ctx.lineTo(x, y);
+            const y = canvas.height - f * canvas.height;
+            ctx.lineTo(x,y);
           }
         }
 
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = preset;
-        if (preset === 'blue') ctx.setLineDash([4,2]);
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = colorMap[preset] || '#fff';
+        if (preset === 'blue') ctx.setLineDash([6,4]);
 
         if (preset === 'green') {
           ctx.save();
-          ctx.lineTo(canvas.width, canvas.height);
-          ctx.lineTo(0, canvas.height);
+          ctx.lineTo(canvas.width,canvas.height);
+          ctx.lineTo(0,canvas.height);
           ctx.closePath();
-          ctx.fillStyle = 'rgba(0,255,0,0.2)';
+          ctx.fillStyle = 'rgba(0,255,0,0.3)';
           ctx.fill();
           ctx.restore();
-
-          ctx.beginPath();
-          ctx.moveTo(0, canvas.height - (dataArray[0] / 255) * canvas.height);
-          for (let i = 1; i < dataArray.length; i++) {
-            const x = i * slice;
-            const y = canvas.height - (dataArray[i] / 255) * canvas.height;
-            ctx.lineTo(x, y);
-          }
         }
 
         ctx.stroke();
@@ -251,26 +253,23 @@
       }
     }
 
-    // fullscreen toggle
+    function mix(a,b,t){ return a + (b-a)*t; }
+
     fsBtn.addEventListener('click', () => {
-      if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
-      } else {
-        document.exitFullscreen();
-      }
+      document.fullscreenElement
+        ? document.exitFullscreen()
+        : document.documentElement.requestFullscreen();
     });
 
     // auto-hide controls
     let hideTimer;
-    function showControls() {
+    function showControls(){
       controls.style.opacity = '1';
       clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => {
-        controls.style.opacity = '0';
-      }, 3000);
+      hideTimer = setTimeout(()=>controls.style.opacity='0',3000);
     }
-    ['pointermove','touchstart','keydown'].forEach(e =>
-      document.addEventListener(e, showControls)
+    ['pointermove','touchstart','keydown'].forEach(evt =>
+      document.addEventListener(evt, showControls)
     );
     showControls();
 
@@ -279,3 +278,4 @@
   </script>
 </body>
 </html>
+```
