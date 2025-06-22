@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro - Fully Restored Build</title>
+  <title>Visual EQ Pro - Thematic Presets</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
@@ -33,15 +33,13 @@
     </select>
     <label for="presetSelect">Preset</label>
     <select id="presetSelect">
-      <option value="vhs">VHS Drift</option>
-      <option value="tape">Tape Echo</option>
-      <option value="neon">Neon Grid</option>
-      <option value="aurora">Aurora</option>
-      <option value="spectrum">Spectrum Cascade</option>
-      <option value="pultec">Pultec EQ</option>
-      <option value="neve">Neve EQ</option>
-      <option value="ssl">SSL EQ</option>
-      <option value="alpine">Alpine 86</option>
+      <option value="sunrise">Sunrise Chill</option>
+      <option value="nightdrive">Night Drive</option>
+      <option value="retro">Retro Vibes</option>
+      <option value="crystal">Crystal Clear</option>
+      <option value="lofi">Lo-Fi Dreams</option>
+      <option value="cinematic">Cinematic Sweep</option>
+      <option value="club">Club Pulse</option>
     </select>
     <label>Sensitivity <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15"></label>
     <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
@@ -60,6 +58,19 @@
     const $ = id => document.getElementById(id);
     const canvas = $("vis");
     const ctx = canvas.getContext("2d");
+
+    // Thematic & Conceptual Presets: 5-band (example) values, can be adjusted for your EQ system
+    const PRESETS = {
+      sunrise:    [ 2,  1,  0, -1,  2], // gentle smile
+      nightdrive: [ 3,  0, -2,  0,  2], // deep lows, crisp highs
+      retro:      [ 0,  2,  3,  2,  0], // mids forward
+      crystal:    [ 1,  1,  1,  1,  3], // bright, open
+      lofi:      [-2,  1,  2,  1, -2], // muted highs/lows
+      cinematic: [ 4,  1, -2,  1,  4], // wide sweep
+      club:       [ 5,  2, -1,  2,  5], // strong bass + highs
+    };
+    // This is a placeholder for band gain values. Replace with your own EQ band system as needed.
+    let currentPreset = [...PRESETS.sunrise];
 
     let audioContext, analyser, source;
     let dataArray;
@@ -90,56 +101,44 @@
       ctx.fillStyle = $("tracerToggle").checked ? 'rgba(0,0,0,0.1)' : '#000';
       ctx.fillRect(0,0,canvas.width,canvas.height);
 
-      const preset = $("presetSelect").value;
-
-      if (preset === 'alpine') {
-        drawAlpine();
-      } else {
-        drawClassicPreset(preset);
-      }
+      // Example visual: use currentPreset to color bands
+      drawPresetBars();
 
       drawDbMeter();
       drawBpmMeter();
     }
 
-    function drawClassicPreset(preset) {
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        let color;
-        switch(preset) {
-          case 'vhs': color = `hsl(${(i/dataArray.length)*60}, 100%, 80%)`; break;
-          case 'tape': color = `hsl(${(i/dataArray.length)*40 + 200}, 80%, 65%)`; break;
-          case 'neon': color = `hsl(${(i/dataArray.length)*360}, 100%, 60%)`; break;
-          case 'aurora': color = `hsl(${(i/dataArray.length)*100}, 90%, 70%)`; break;
-          case 'spectrum': color = `hsl(${(i/dataArray.length)*180}, 100%, 50%)`; break;
-          case 'pultec': color = `hsl(${(i/dataArray.length)*120}, 80%, 70%)`; break;
-          case 'neve': color = `hsl(${(i/dataArray.length)*30 + 220}, 90%, 60%)`; break;
-          case 'ssl': color = `hsl(${(i/dataArray.length)*45 + 160}, 90%, 70%)`; break;
-          default: color = '#00FFAA';
-        }
-        ctx.fillStyle = color;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
-      }
-    }
-
-    function drawAlpine() {
-      const bins = 12;
-      const binSize = Math.floor(dataArray.length / bins);
-      for (let i = 0; i < bins; i++) {
-        let sum = 0;
-        for (let j = 0; j < binSize; j++) sum += dataArray[i * binSize + j];
-        let avg = sum / binSize;
-        let barHeight = avg * 2.5;
-        ctx.fillStyle = '#00FFAA';
-        ctx.fillRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
-        ctx.strokeStyle = '#fff';
+    function drawPresetBars() {
+      // Draws 5 big bars at bottom, colored and sized by currentPreset
+      const bandCount = currentPreset.length;
+      const spacing = 60;
+      const barWidth = 36;
+      const offsetX = (canvas.width - ((bandCount-1)*spacing + barWidth)) / 2;
+      const offsetY = 64;
+      for (let i = 0; i < bandCount; i++) {
+        // Value -5 to +5, map to color and height
+        const value = currentPreset[i];
+        const norm = (value + 5) / 10;
+        const barHeight = 140 + norm * 110;
+        const x = offsetX + i * spacing;
+        const y = canvas.height - barHeight - offsetY;
+        const hue = 180 + i * 36;
+        ctx.fillStyle = `hsl(${hue}, 90%, ${55 + 15 * norm}%)`;
+        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.strokeStyle = "#fff";
         ctx.lineWidth = 2;
-        ctx.strokeRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
+        ctx.strokeRect(x, y, barWidth, barHeight);
+
+        // Draw value
+        ctx.font = "16px sans-serif";
+        ctx.fillStyle = "#fff";
+        ctx.textAlign = "center";
+        ctx.fillText((value > 0 ? "+" : "") + value, x + barWidth/2, y - 10);
       }
     }
 
     function drawDbMeter() {
+      if (!dataArray) return;
       const rms = Math.sqrt(dataArray.reduce((sum, v) => sum + (v*v), 0) / dataArray.length);
       const db = 20 * Math.log10(rms / 255);
       $("dbReadout").textContent = `dB: ${db.toFixed(1)}`;
@@ -149,6 +148,29 @@
       $("bpmReadout").textContent = `BPM: --`;
     }
 
+    // Preset system: update currentPreset and optionally update EQ bands here
+    function applyPreset(name) {
+      if (PRESETS[name]) {
+        currentPreset = [...PRESETS[name]];
+        // If you have a real EQ, apply gain values here!
+        // eqBands.forEach((band, i) => band.gain.value = currentPreset[i]);
+      }
+    }
+
+    $("presetSelect").onchange = (e) => {
+      applyPreset(e.target.value);
+    };
+
     $("startBtn").onclick = start;
-    $("fftSelect").onchange = () => { if (analyser) { analyser.fftSize = parseInt($("fftSelect").value); dataArray = new Uint8Array(analyser.frequencyBinCount); } };
+    $("fftSelect").onchange = () => {
+      if (analyser) {
+        analyser.fftSize = parseInt($("fftSelect").value);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+      }
+    };
+
+    // Apply default on load
+    applyPreset($("presetSelect").value);
   </script>
+</body>
+</html>
