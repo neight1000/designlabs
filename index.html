@@ -1,241 +1,324 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Design Labs Dashboard</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
-    <style>
-    /* GLOBAL STYLES */
-
-    body {
-      background-color: #ffffff;
-      color: #000000;
-      font-family: 'Roboto Mono', monospace;
-      font-size: 14px;
-      line-height: 1.4;
-      margin: 0;
-      padding: 20px;
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visual EQ v1.14</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; overflow: hidden;
+      background: #000; color: #fff;
+      font-family: sans-serif;
+      height: 100vh; width: 100vw;
     }
-
-    /* ALL CONTAINERS */
-
-    .container {
-      border: 1px solid #000000;
-      background-color: #ffffff;
-      box-shadow: none;
-      border-radius: 0;
-      padding: 20px;
-      margin-bottom: 20px;
+    #controls {
+      position: absolute; top: 10px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px; align-items: center;
+      z-index: 10; transition: opacity .5s;
+      background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
     }
-
-    /* ICON STYLING */
-
-    .icon {
-      stroke: #000000;
-      fill: none;
-      stroke-width: 1px;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      width: 16px;
-      height: 16px;
-      box-shadow: none;
-      background: none;
+    select, button, label, input[type=range] {
+      background: #000; color: #fff;
+      border: 1px solid #fff; padding: 4px 8px;
+      font-size: 1rem;
     }
-
-    /* BUTTON STYLING */
-
-    .button {
-      border: 1px solid #000000;
-      background: #ffffff;
-      color: #000000;
-      padding: 8px 16px;
-      font-family: 'Roboto Mono', monospace;
-      font-size: 14px;
-      cursor: pointer;
-      box-shadow: none;
-      border-radius: 0;
+    label { display: flex; align-items: center; gap: 4px; }
+    input[type=range] { width: 80px; }
+    canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100vw; height: 100vh;
     }
-
-    .button:hover {
-      background-color: #f5f5f5;
-    }
-
-    /* TOGGLE SWITCHES */
-
-    .toggle {
-      border: 1px solid #000000;
-      background: #ffffff;
-      width: 32px;
-      height: 16px;
-      position: relative;
-    }
-
-    .toggle::before {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 12px;
-      height: 12px;
-      background: #000000;
-      transition: left 0.2s;
-    }
-
-    .toggle.active::before {
-      left: 18px;
-    }
-
-    /* CARDS (ADAPTIVE TILE COMPONENTS) */
-
-    .card {
-      border: 1px solid #000000;
-      background: #ffffff;
-      padding: 16px;
-      box-shadow: none;
-      border-radius: 0;
-      transition: transform 0.2s, box-shadow 0.2s;
-      margin-bottom: 12px;
-    }
-
-    .card:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-title {
-      font-weight: bold;
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
-
-    .card-subtitle {
-      font-size: 12px;
-      color: #000000;
-    }
-
-    /* FEEDBACK ICONS */
-
-    .feedback {
-      display: flex;
-      gap: 8px;
-    }
-
-    .feedback button {
-      border: none;
-      background: none;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    </style>
+  </style>
 </head>
 <body>
+  <div id="controls">
+    <select id="deviceSelect"></select>
+    <button id="startBtn">Start</button>
+    <select id="fftSelect">
+      <option>256</option><option selected>512</option>
+      <option>1024</option><option>2048</option>
+      <option>4096</option><option>8192</option>
+      <option>16384</option><option>32768</option>
+    </select>
+    <select id="presetSelect">
+      <option value="vhs">VHS Drift</option>
+      <option value="tape">Tape Echo</option>
+      <option value="neon">Neon Grid</option>
+      <option value="aurora">Aurora</option>
+      <option value="spectrum">Spectrum Cascade</option>
+      <option value="pultec">Pultec EQ</option>
+      <option value="neve">Neve EQ</option>
+      <option value="ssl">SSL EQ</option>
+    </select>
+    <label>Sensitivity
+      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
+    </label>
+    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
+    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
+    <label><input type="checkbox" id="momentsToggle"> Moments</label>
+    <label>Beat Thr
+      <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7">
+    </label>
+    <label>Cooldown
+      <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3">
+    </label>
+    <button id="fsBtn">Fullscreen</button>
+  </div>
+  <canvas id="vis"></canvas>
 
-    <h1>Design Labs Dashboard</h1>
+  <script>
+    const deviceSelect   = document.getElementById('deviceSelect'),
+          startBtn        = document.getElementById('startBtn'),
+          fftSelect       = document.getElementById('fftSelect'),
+          presetSelect    = document.getElementById('presetSelect'),
+          sensSlider      = document.getElementById('sensSlider'),
+          tracerToggle    = document.getElementById('tracerToggle'),
+          crossfadeToggle = document.getElementById('crossfadeToggle'),
+          momentsToggle   = document.getElementById('momentsToggle'),
+          beatThreshold   = document.getElementById('beatThreshold'),
+          beatCooldown    = document.getElementById('beatCooldown'),
+          fsBtn           = document.getElementById('fsBtn'),
+          controls        = document.getElementById('controls'),
+          canvas          = document.getElementById('vis'),
+          ctx             = canvas.getContext('2d');
 
-<div class="container">
-    <h2>GitHub Prototypes</h2>
+    let audioContext, splitter, leftAnalyser, rightAnalyser,
+        dataLeft, dataRight, startTime;
+    let mainPreset = presetSelect.value;
+    let xfadeActive=false, xfadeStart=0, xfadeDur=5, nextXfade=0,
+        secondaryPreset=mainPreset;
+    let lastBeatTime=0, momentHue=0, momentHueAlpha=0;
 
-<div class="container">
-    <h2>GitHub Prototypes</h2>
+    function fract(x){ return x - Math.floor(x); }
+    function rand(n){ return fract(Math.sin(n)*43758.5453123); }
+    function noise1D(x){
+      const i=Math.floor(x), f=fract(x);
+      return rand(i)*(1-f)+rand(i+1)*f;
+    }
 
-<div class="container">
-    <h2>GitHub Prototypes</h2>
+    function resizeCanvas(){
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    document.addEventListener('fullscreenchange', resizeCanvas);
+    resizeCanvas();
 
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/01-dmt-emulator/index.html" target="_blank">01 DMT Emulator</a></div>
-        <div class="card-subtitle">DMT audio emulator prototype</div>
-    </div>
+    async function populateDevices(){
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
+        const o=document.createElement('option');
+        o.value=d.deviceId;
+        o.textContent=d.label||`Mic ${i+1}`;
+        deviceSelect.append(o);
+      });
+    }
 
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/02-delay/index.html" target="_blank">02 Delay</a></div>
-        <div class="card-subtitle">Delay processor prototype</div>
-    </div>
+    async function startEQ(){
+      if(audioContext) return;
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: deviceSelect.value||undefined }
+      });
+      audioContext = new (window.AudioContext||window.webkitAudioContext)();
+      splitter = audioContext.createChannelSplitter(2);
+      leftAnalyser = audioContext.createAnalyser();
+      rightAnalyser = audioContext.createAnalyser();
+      leftAnalyser.fftSize = rightAnalyser.fftSize = parseInt(fftSelect.value);
+      leftAnalyser.smoothingTimeConstant = rightAnalyser.smoothingTimeConstant = 0.8;
+      dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+      dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+      const src = audioContext.createMediaStreamSource(stream);
+      src.connect(splitter);
+      splitter.connect(leftAnalyser, 0);
+      splitter.connect(rightAnalyser, 1);
+      startTime = performance.now();
+      nextXfade = startTime/1000 + 300 + Math.random()*300;
+      draw();
+    }
 
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/03-sp-1200/index.html" target="_blank">03 SP-1200</a></div>
-        <div class="card-subtitle">SP-1200 style drum machine emulator</div>
-    </div>
+    fftSelect.addEventListener('change', ()=>{
+      if(!leftAnalyser) return;
+      leftAnalyser.fftSize = rightAnalyser.fftSize = parseInt(fftSelect.value);
+      dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+      dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+    });
+    presetSelect.addEventListener('change', ()=>{ mainPreset = presetSelect.value; });
 
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/04-dub-effects/index.html" target="_blank">04 Dub Effects</a></div>
-        <div class="card-subtitle">Dub effects processor demo</div>
-    </div>
+    function draw(){
+      requestAnimationFrame(draw);
+      leftAnalyser.getByteFrequencyData(dataLeft);
+      rightAnalyser.getByteFrequencyData(dataRight);
 
-        <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/05-EQ/index.html" target="_blank">05 Live EQ</a></div>
-        <div class="Live EQ">EQ Demo</div>
-    </div>
+      const t = (performance.now() - startTime)*0.001;
+      const hueOffset = (t*5) % 360;
+      const lfo = (Math.sin(Math.PI*0.2*t)+1)/2;
+      const noiseAmp = 0.02 * (0.5 + 0.5*lfo);
 
-</div>
+      // crossfade
+      if(crossfadeToggle.checked){
+        if(!xfadeActive && t > nextXfade){
+          xfadeActive=true; xfadeStart=t;
+          const all=['vhs','tape','neon','aurora','spectrum','pultec','neve','ssl'];
+          secondaryPreset=all.filter(p=>p!==mainPreset)[Math.floor(Math.random()*7)];
+        }
+      } else xfadeActive=false;
+      let w2=0;
+      if(xfadeActive){
+        w2=Math.min((t-xfadeStart)/xfadeDur,1);
+        if(w2>=1){
+          mainPreset=secondaryPreset; presetSelect.value=mainPreset;
+          xfadeActive=false;
+          nextXfade=t+300+Math.random()*300;
+          w2=0;
+        }
+      }
+      const w1=1-w2;
 
+      // configurable beat detection
+      const threshold = parseFloat(beatThreshold.value);
+      const cooldown  = parseFloat(beatCooldown.value);
+      const bassAvg = ((dataLeft[2]+dataRight[2])/2)/255;
+      if(momentsToggle.checked && bassAvg>threshold && t - lastBeatTime>cooldown){
+        lastBeatTime = t;
+        momentHue = Math.random()*360;
+        momentHueAlpha = 1;
+      }
+      momentHueAlpha *= 0.9;
 
-</div>
+      // tracer
+      if(tracerToggle.checked){
+        ctx.fillStyle='rgba(0,0,0,0.15)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+      } else {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+      }
 
+      // band markers
+      const freqs=[60,250,1000,4000,16000];
+      const bins=leftAnalyser.frequencyBinCount;
+      const nyq=audioContext.sampleRate/2;
+      const slice=canvas.width/bins;
+      ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
+      ctx.font='12px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.2)';
+      freqs.forEach(f=>{
+        const b=Math.round(f/nyq*bins), x=b*slice;
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+        ctx.fillText(f+'Hz', x+2,14);
+      });
 
-</div>
+      // draw presets
+      drawPreset(mainPreset, w1, hueOffset, t, noiseAmp);
+      if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmp);
+    }
 
+    function drawPreset(preset, alpha, hueOffset, t, noiseAmp){
+      const sens=parseFloat(sensSlider.value);
+      const bins=leftAnalyser.frequencyBinCount;
+      const slice=canvas.width/bins;
+      const jitter=1+(Math.random()-0.5)*0.1*lfo;
+      ctx.globalAlpha=alpha;
 
-<div class="container">
-    <h2>Lovable Prototypes</h2>
+      const midVal=i=>(dataLeft[i]+dataRight[i])/2/255;
+      const sideVal=i=>Math.abs(dataLeft[i]-dataRight[i])/255;
 
-    <div class="card">
-        <div class="card-title"><a href="https://ai-tile-architect-visual.lovable.app" target="_blank">AI Tile Architect Visual</a></div>
-        <div class="card-subtitle">Dynamic tile generator for adaptive layouts</div>
-    </div>
+      function drawCurve(getVal, color, dash=false){
+        ctx.beginPath();
+        for(let i=0;i<bins;i++){
+          let f=Math.min(getVal(i)*sens,1);
+          let x=i*slice, y=canvas.height-f*canvas.height;
+          y+=(noise1D(i*0.05+t*0.3)-0.5)*noiseAmp*canvas.height;
+          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.lineWidth=2*jitter;
+        ctx.strokeStyle=color;
+        ctx.setLineDash(dash?[4,4]:[]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
 
-    <div class="card">
-        <div class="card-title"><a href="https://ai-adaptive-tiles.lovable.app/" target="_blank">AI Adaptive Tiles</a></div>
-        <div class="card-subtitle">Auto-resizing modular tile system prototype</div>
-    </div>
+      const dynHue=base=>(base+hueOffset+momentHue*momentHueAlpha)%360;
 
-    <div class="card">
-        <div class="card-title"><a href="https://rag-and.lovable.app" target="_blank">RAG & Retrieval Demo</a></div>
-        <div class="card-subtitle">Retrieval-augmented generation testing interface</div>
-    </div>
+      switch(preset){
+        case 'vhs':
+          ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
+          for(let y=0;y<canvas.height;y+=4){
+            const off=2*Math.sin(y/50+t*3);
+            ctx.beginPath(); ctx.moveTo(off,y);
+            ctx.lineTo(canvas.width+off,y); ctx.stroke();
+          }
+          drawCurve(i=>midVal(i),'hsl(0,0%,80%)');
+          drawCurve(i=>sideVal(i),'hsl(0,0%,80%)',true);
+          break;
+        case 'tape':
+          ctx.shadowBlur=30; ctx.shadowColor='#fff';
+          ctx.globalAlpha=alpha*0.7;
+          drawCurve(i=>midVal(i),'hsl(200,100%,80%)');
+          ctx.shadowBlur=0; ctx.globalAlpha=alpha;
+          drawCurve(i=>sideVal(i),'hsl(200,100%,80%)',true);
+          break;
+        case 'neon':
+          ctx.strokeStyle='hsl(180,100%,60%)'; ctx.lineWidth=1;
+          for(let x=0;x<canvas.width;x+=50){
+            ctx.beginPath(); ctx.moveTo(x,0);
+            ctx.lineTo(x,canvas.height); ctx.stroke();
+          }
+          for(let y=0;y<canvas.height;y+=50){
+            ctx.beginPath(); ctx.moveTo(0,y);
+            ctx.lineTo(canvas.width,y); ctx.stroke();
+          }
+          ctx.shadowBlur=20; ctx.shadowColor='hsl(180,100%,80%)';
+          drawCurve(i=>midVal(i),'hsl(180,100%,60%)');
+          ctx.shadowBlur=0;
+          drawCurve(i=>sideVal(i),'hsl(180,100%,60%)',true);
+          break;
+        case 'aurora':
+          const grad=ctx.createLinearGradient(0,0,0,canvas.height);
+          grad.addColorStop(0,'#081d71');
+          grad.addColorStop(0.5,'#20ff90');
+          grad.addColorStop(1,'#081d71');
+          ctx.globalAlpha=alpha*0.5;
+          drawCurve(i=>midVal(i),grad);
+          ctx.globalAlpha=alpha;
+          drawCurve(i=>sideVal(i),'hsl(120,100%,50%)',true);
+          break;
+        case 'spectrum':
+          for(let i=0;i<bins;i++){
+            let f=Math.min(midVal(i)*sens,1);
+            let x=i*slice, h=(i/bins*360)%360, barH=f*canvas.height;
+            ctx.fillStyle=`hsl(${h},100%,60%)`;
+            ctx.fillRect(x,canvas.height-barH,slice,barH);
+          }
+          break;
+        case 'pultec':
+          drawCurve(i=>midVal(i),'hsl(30,100%,60%)');
+          break;
+        case 'neve':
+          drawCurve(i=>midVal(i),'hsl(15,100%,55%)');
+          break;
+        case 'ssl':
+          drawCurve(i=>midVal(i),'hsl(200,100%,60%)');
+          break;
+      }
 
-    <div class="card">
-        <div class="card-title"><a href="https://plantasia-audio-garden.lovable.app/" target="_blank">Plantasia Audio Garden</a></div>
-        <div class="card-subtitle">Generative ambient tone system for plant harmonics</div>
-    </div>
+      ctx.globalAlpha=1;
+    }
 
-    <div class="card">
-        <div class="card-title"><a href="https://sonic-serato-visuals.lovable.app/" target="_blank">Sonic Serato Visuals</a></div>
-        <div class="card-subtitle">DJ audio visualizer concept with reactive graphics</div>
-    </div>
+    fsBtn.onclick=()=>{
+      document.fullscreenElement
+        ? document.exitFullscreen()
+        : canvas.requestFullscreen();
+    };
+    ['pointermove','touchstart','keydown'].forEach(evt=>
+      document.addEventListener(evt,()=>{
+        controls.style.opacity='1';
+        clearTimeout(this.hideT);
+        this.hideT=setTimeout(()=>controls.style.opacity='0',3000);
+      })
+    );
 
-    <h3>Xbox AI Console Prototypes</h3>
-
-    <div class="card">
-        <div class="card-title"><a href="https://xbox-ai-mosaic-vision.lovable.app" target="_blank">Xbox AI Mosaic Vision</a></div>
-        <div class="card-subtitle">AI-powered Xbox dashboard UI concept</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://xbox-ai-wireframe-card.lovable.app/" target="_blank">Xbox AI Wireframe Card</a></div>
-        <div class="card-subtitle">Wireframe system for AI modular dashboard layout</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://xbox-ai-nexus-flow.lovable.app" target="_blank">Xbox AI Nexus Flow</a></div>
-        <div class="card-subtitle">AI concept for Xbox content and services hub</div>
-    </div>
-
-</div>
-
-
-    <div class="container">
-        <h2>Other Hosted Prototypes</h2>
-        <div class="card">
-            <div class="card-title"><a href="https://vercel.app/your-project-name" target="_blank">Vercel Project</a></div>
-            <div class="card-subtitle">External Host</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title"><a href="https://netlify.app/your-project-name" target="_blank">Netlify Project</a></div>
-            <div class="card-subtitle">External Host</div>
-        </div>
-        <!-- Add more external cards -->
-    </div>
-
+    startBtn.addEventListener('click', startEQ);
+    populateDevices();
+  </script>
 </body>
 </html>
