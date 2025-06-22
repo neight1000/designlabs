@@ -248,29 +248,6 @@
       if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmp);
     }
 
-    function drawGrid(spacing, color = gridColor.value, opacity = 0.3) {
-      if (!gridToggle.checked) return;
-      
-      ctx.strokeStyle = `${color}${Math.floor(opacity * 255).toString(16).padStart(2, '0')}`;
-      ctx.lineWidth = 1;
-      
-      // Vertical lines
-      for(let x = 0; x < canvas.width; x += spacing) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-      }
-      
-      // Horizontal lines
-      for(let y = 0; y < canvas.height; y += spacing) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-      }
-    }
-
     function drawPreset(preset, alpha, hueOffset, t, noiseAmp){
       const sens = parseFloat(sensSlider.value);
       const bins  = leftAnalyser.frequencyBinCount;
@@ -301,7 +278,15 @@
       switch(preset){
         case 'synthwave':
           // Retro grid
-          drawGrid(50, '#ff00ff', 0.3);
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'4D'; ctx.lineWidth=1;
+            for(let x=0;x<canvas.width;x+=50){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+            for(let y=0;y<canvas.height;y+=30){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+          }
           // Pink/cyan waveforms
           ctx.shadowBlur=15; ctx.shadowColor='#ff00ff';
           drawCurve(i=>midVal(i), `hsl(${dynHue(300)},100%,70%)`);
@@ -313,7 +298,7 @@
         case 'cyberpunk':
           // Digital hexagons background
           if(gridToggle.checked) {
-            ctx.strokeStyle=`${gridColor.value}4D`; ctx.lineWidth=1;
+            ctx.strokeStyle=gridColor.value+'33'; ctx.lineWidth=1;
             for(let x=0;x<canvas.width;x+=40){
               for(let y=0;y<canvas.height;y+=40){
                 ctx.beginPath();
@@ -336,7 +321,7 @@
         case 'vhs':
           // Enhanced scanlines
           if(gridToggle.checked) {
-            ctx.strokeStyle=`${gridColor.value}1A`; ctx.lineWidth=1;
+            ctx.strokeStyle=gridColor.value+'1A'; ctx.lineWidth=1;
             for(let y=0;y<canvas.height;y+=3){
               const off = 3*Math.sin(y/30 + t*4);
               ctx.beginPath(); ctx.moveTo(off,y);
@@ -352,7 +337,15 @@
           break;
 
         case 'tape':
-          drawGrid(80, '#8B4513', 0.2);
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'33'; ctx.lineWidth=1;
+            for(let x=0;x<canvas.width;x+=80){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+            for(let y=0;y<canvas.height;y+=50){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+          }
           // Warm vintage glow
           ctx.shadowBlur=40; ctx.shadowColor='#ffaa00';
           ctx.globalAlpha=alpha*0.8;
@@ -363,7 +356,15 @@
 
         case 'neon':
           // Enhanced neon grid
-          drawGrid(60, `hsl(${dynHue(180)},100%,60%)`, 0.4);
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'66'; ctx.lineWidth=2;
+            for(let x=0;x<canvas.width;x+=60){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+            for(let y=0;y<canvas.height;y+=40){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+          }
           // Triple glow effect
           ctx.shadowBlur=30; ctx.shadowColor=`hsl(${dynHue(180)},100%,80%)`;
           drawCurve(i=>midVal(i), `hsl(${dynHue(180)},100%,70%)`);
@@ -373,7 +374,15 @@
           break;
 
         case 'aurora':
-          drawGrid(100, '#4B0082', 0.15);
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'26'; ctx.lineWidth=1;
+            for(let x=0;x<canvas.width;x+=100){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+            for(let y=0;y<canvas.height;y+=80){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+          }
           // Flowing aurora effect
           const grad=ctx.createLinearGradient(0,0,0,canvas.height);
           grad.addColorStop(0,`hsl(${dynHue(200)},100%,60%)`);
@@ -416,9 +425,18 @@
 
         case 'oscilloscope':
           // Oscilloscope grid
-          drawGrid(canvas.width/10, '#00ff00', 0.3);
-          const centerY=canvas.height/2;
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'4D'; ctx.lineWidth=1;
+            const centerY=canvas.height/2;
+            for(let y=0;y<canvas.height;y+=canvas.height/8){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+            for(let x=0;x<canvas.width;x+=canvas.width/10){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+          }
           // Oscilloscope trace
+          const centerY=canvas.height/2;
           ctx.strokeStyle=`hsl(${dynHue(120)},100%,70%)`;
           ctx.lineWidth=3;
           ctx.beginPath();
@@ -437,8 +455,15 @@
 
         case 'retro70s':
           // Wood grain effect
-          drawGrid(120, '#8B4513', 0.25);
           if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'40'; ctx.lineWidth=1;
+            for(let x=0;x<canvas.width;x+=120){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+            for(let y=0;y<canvas.height;y+=60){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+            // Wood grain lines
             ctx.strokeStyle='rgba(139,69,19,0.1)'; ctx.lineWidth=2;
             for(let y=20;y<canvas.height;y+=8){
               const wave = 5*Math.sin(y/20 + t*0.5);
@@ -456,7 +481,6 @@
         case 'disco80s':
           // Disco ball reflection pattern
           if(gridToggle.checked) {
-            ctx.strokeStyle=`${gridColor.value}66`; ctx.lineWidth=1;
             for(let x=0;x<canvas.width;x+=25){
               for(let y=0;y<canvas.height;y+=25){
                 const phase = (x+y)/50 + t*2;
@@ -477,7 +501,7 @@
         case 'rave90s':
           // Geometric rave patterns
           if(gridToggle.checked) {
-            ctx.strokeStyle=`${gridColor.value}4D`; ctx.lineWidth=2;
+            ctx.strokeStyle=gridColor.value+'4D'; ctx.lineWidth=2;
             for(let i=0;i<20;i++){
               const angle = (i/20)*Math.PI*2 + t*0.5;
               const x = canvas.width/2 + Math.cos(angle)*200;
@@ -499,7 +523,7 @@
         case 'y2k2000s':
           // Futuristic circuit board
           if(gridToggle.checked) {
-            ctx.strokeStyle=`${gridColor.value}80`; ctx.lineWidth=1;
+            ctx.strokeStyle=gridColor.value+'80'; ctx.lineWidth=1;
             for(let x=0;x<canvas.width;x+=40){
               for(let y=0;y<canvas.height;y+=40){
                 // Circuit traces
@@ -527,8 +551,14 @@
 
         case 'alpine':
           // Car stereo display grid
-          drawGrid(30, '#00ff00', 0.6);
           if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'99'; ctx.lineWidth=1;
+            for(let x=0;x<canvas.width;x+=30){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+            for(let y=0;y<canvas.height;y+=20){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
             // LCD-style segments
             ctx.fillStyle='rgba(0,255,0,0.1)';
             for(let x=10;x<canvas.width;x+=60){
@@ -550,51 +580,4 @@
           }
           // Peak hold dots
           for(let i=0;i<bins;i++){
-            const peak = Math.min(midVal(i)*sens,1);
-            if(peak>0.1){
-              const x = i*slice + slice/2;
-              const y = canvas.height - peak*canvas.height;
-              ctx.fillStyle = '#ffffff';
-              ctx.fillRect(x-1,y-1,3,3);
-            }
-          }
-          break;
-
-        case 'rainbow':
-          // Glitter background
-          if(gridToggle.checked) {
-            for(let i=0;i<200;i++){
-              const x = Math.random()*canvas.width;
-              const y = Math.random()*canvas.height;
-              const sparkle = Math.sin(t*10 + i)>0.8;
-              if(sparkle){
-                ctx.fillStyle=`hsl(${Math.random()*360},100%,80%)`;
-                ctx.beginPath();
-                ctx.arc(x,y,2,0,Math.PI*2);
-                ctx.fill();
-              }
-            }
-          }
-          // Rainbow spectrum waves
-          for(let i=0;i<bins;i++){
-            const f = Math.min(midVal(i)*sens,1);
-            const x = i*slice;
-            const hue = (i/bins*360 + t*50)%360;
-            
-            // Main rainbow wave
-            ctx.strokeStyle=`hsl(${hue},100%,70%)`;
-            ctx.lineWidth=4;
-            ctx.shadowBlur=20; ctx.shadowColor=`hsl(${hue},100%,50%)`;
-            ctx.beginPath();
-            const y1 = canvas.height - f*canvas.height;
-            const y2 = canvas.height - f*canvas.height*0.7;
-            ctx.moveTo(x,canvas.height);
-            ctx.lineTo(x,y1);
-            ctx.stroke();
-            
-            // Glitter particles on peaks
-            if(f>0.5){
-              for(let p=0;p<3;p++){
-                const px = x + (Math.random()-0.5)*10;
-                const py = y1 + (Math.random()-0.5)*20;
-                ctx.fillStyle=`hsl(${(hue
+            const peak = Math.min(midVal
