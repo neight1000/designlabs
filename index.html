@@ -1,249 +1,259 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Design Labs Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prototype Index</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
     <style>
-    /* GLOBAL STYLES */
-
-    body {
-      background-color: #ffffff;
-      color: #000000;
-      font-family: 'Roboto Mono', monospace;
-      font-size: 14px;
-      line-height: 1.4;
-      margin: 0;
-      padding: 20px;
-    }
-
-    /* ALL CONTAINERS */
-
-    .container {
-      border: 1px solid #000000;
-      background-color: #ffffff;
-      box-shadow: none;
-      border-radius: 0;
-      padding: 20px;
-      margin-bottom: 20px;
-    }
-
-    /* ICON STYLING */
-
-    .icon {
-      stroke: #000000;
-      fill: none;
-      stroke-width: 1px;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      width: 16px;
-      height: 16px;
-      box-shadow: none;
-      background: none;
-    }
-
-    /* BUTTON STYLING */
-
-    .button {
-      border: 1px solid #000000;
-      background: #ffffff;
-      color: #000000;
-      padding: 8px 16px;
-      font-family: 'Roboto Mono', monospace;
-      font-size: 14px;
-      cursor: pointer;
-      box-shadow: none;
-      border-radius: 0;
-    }
-
-    .button:hover {
-      background-color: #f5f5f5;
-    }
-
-    /* TOGGLE SWITCHES */
-
-    .toggle {
-      border: 1px solid #000000;
-      background: #ffffff;
-      width: 32px;
-      height: 16px;
-      position: relative;
-    }
-
-    .toggle::before {
-      content: "";
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 12px;
-      height: 12px;
-      background: #000000;
-      transition: left 0.2s;
-    }
-
-    .toggle.active::before {
-      left: 18px;
-    }
-
-    /* CARDS (ADAPTIVE TILE COMPONENTS) */
-
-    .card {
-      border: 1px solid #000000;
-      background: #ffffff;
-      padding: 16px;
-      box-shadow: none;
-      border-radius: 0;
-      transition: transform 0.2s, box-shadow 0.2s;
-      margin-bottom: 12px;
-    }
-
-    .card:hover {
-      transform: scale(1.05);
-      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
-    }
-
-    .card-title {
-      font-weight: bold;
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
-
-    .card-subtitle {
-      font-size: 12px;
-      color: #000000;
-    }
-
-    /* FEEDBACK ICONS */
-
-    .feedback {
-      display: flex;
-      gap: 8px;
-    }
-
-    .feedback button {
-      border: none;
-      background: none;
-      font-size: 16px;
-      cursor: pointer;
-    }
+        body {
+            background-color: #ffffff;
+            color: #000000;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            margin: 0;
+            padding: 0;
+        }
+        .container, .panel, .section, .card {
+            border: 1px solid #000000;
+            background-color: #ffffff;
+            border-radius: 0px;
+            box-shadow: none;
+            margin: 8px;
+            padding: 16px;
+        }
+        .icon {
+            stroke: #000000;
+            fill: none;
+            stroke-width: 1px;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            width: 16px;
+            height: 16px;
+            box-shadow: none;
+            background: none;
+        }
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #000000;
+        }
+        .navbar-item {
+            font-weight: bold;
+            text-transform: uppercase;
+            margin-right: 24px;
+            cursor: pointer;
+        }
+        .card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 240px;
+            height: auto;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+        }
+        .card-title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .card-subtitle {
+            font-size: 12px;
+            text-align: center;
+        }
+        .card-content {
+            margin-top: 8px;
+            width: 100%;
+        }
+        .button {
+            border: 1px solid #000000;
+            background: #ffffff;
+            color: #000000;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+            padding: 8px 16px;
+            margin-top: 8px;
+            cursor: pointer;
+            border-radius: 0px;
+            transition: background 0.2s;
+        }
+        .button:hover {
+            background-color: #f5f5f5;
+        }
+        .feedback {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .feedback-button {
+            border: 1px solid #000000;
+            background: #ffffff;
+            color: #000000;
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            text-align: center;
+            line-height: 32px;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+        .toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            border: 1px solid #000000;
+            background: #ffffff;
+            padding: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .toggle-switch {
+            width: 32px;
+            height: 16px;
+            border: 1px solid #000000;
+            position: relative;
+        }
+        .toggle-switch::before {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 12px;
+            height: 12px;
+            background: #000000;
+            transition: left 0.2s;
+        }
+        .toggle-switch.active::before {
+            left: 18px;
+        }
+        .status-panel {
+            border: 1px solid #000000;
+            padding: 16px;
+            text-align: center;
+        }
+        .status-animation {
+            width: 200px;
+            height: 200px;
+            border: 1px solid #000000;
+            margin: 0 auto;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        a {
+            color: #000000;
+            text-decoration: none;
+            display: block;
+            margin: 4px 0;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Design Labs Dashboard</h1>
+<h1 class="navbar">Prototype Index</h1>
 
 <div class="container">
-    <h2>GitHub Prototypes</h2>
+    <div class="toggle" onclick="toggleSection('designLabs')">
+        <span>Design Labs</span>
+    </div>
+    <div class="panel" id="designLabs" style="display: none;">
+        <a href="https://neight1000.github.io/designlabs/prototypes/01-dmt-emulator/index.html">01 - DMT Emulator</a>
+        <a href="https://neight1000.github.io/designlabs/prototypes/02-delay/index.html">02 - Delay</a>
+        <a href="https://neight1000.github.io/designlabs/prototypes/03-sp-1200/index.html">03 - SP-1200</a>
+        <a href="https://neight1000.github.io/designlabs/prototypes/04-dub-effects/index.html">04 - Dub Effects</a>
+        <a href="https://neight1000.github.io/designlabs/prototypes/05-EQ/index.html">05 - EQ</a>
+        <a href="https://neight1000.github.io/designlabs/prototypes/06-Spotify/index.html">06 - Spotify</a>
+    </div>
+</div>
 
 <div class="container">
-    <h2>GitHub Prototypes</h2>
-
-<div class="container">
-    <h2>GitHub Prototypes</h2>
-
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/01-dmt-emulator/index.html" target="_blank">01 DMT Emulator</a></div>
-        <div class="card-subtitle">DMT audio emulator prototype</div>
+    <div class="toggle" onclick="toggleSection('grooves')">
+        <span>Grooves</span>
     </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/02-delay/index.html" target="_blank">02 Delay</a></div>
-        <div class="card-subtitle">Delay processor prototype</div>
+    <div class="panel" id="grooves" style="display: none;">
+        <a href="https://neight1000.github.io/Grooves/DMT.html">DMT</a>
+        <a href="https://neight1000.github.io/Grooves/butterfly.html">butterfly</a>
+        <a href="https://neight1000.github.io/Grooves/center.html">center</a>
+        <a href="https://neight1000.github.io/Grooves/delay.html">delay</a>
+        <a href="https://neight1000.github.io/Grooves/design.html">design</a>
+        <a href="https://neight1000.github.io/Grooves/dub-mode.html">dub-mode</a>
+        <a href="https://neight1000.github.io/Grooves/effects.html">effects</a>
+        <a href="https://neight1000.github.io/Grooves/fractal-plantasia.html">fractal-plantasia</a>
+        <a href="https://neight1000.github.io/Grooves/fractal-plantasia2.html">fractal-plantasia2</a>
+        <a href="https://neight1000.github.io/Grooves/fractal-plantasia3.html">fractal-plantasia3</a>
+        <a href="https://neight1000.github.io/Grooves/fractal1.html">fractal1</a>
+        <a href="https://neight1000.github.io/Grooves/fractal2.html">fractal2</a>
+        <a href="https://neight1000.github.io/Grooves/fractal3.html">fractal3</a>
+        <a href="https://neight1000.github.io/Grooves/fractal4.html">fractal4</a>
+        <a href="https://neight1000.github.io/Grooves/index.html">index</a>
+        <a href="https://neight1000.github.io/Grooves/midi-growth-vine.html">midi-growth-vine</a>
+        <a href="https://neight1000.github.io/Grooves/midi-growth-vine2.html">midi-growth-vine2</a>
+        <a href="https://neight1000.github.io/Grooves/midi.html">midi</a>
+        <a href="https://neight1000.github.io/Grooves/midi2.html">midi2</a>
+        <a href="https://neight1000.github.io/Grooves/midi3.html">midi3</a>
+        <a href="https://neight1000.github.io/Grooves/midi4.html">midi4</a>
+        <a href="https://neight1000.github.io/Grooves/midi5.html">midi5</a>
+        <a href="https://neight1000.github.io/Grooves/midi6.html">midi6</a>
+        <a href="https://neight1000.github.io/Grooves/midi7.html">midi7</a>
+        <a href="https://neight1000.github.io/Grooves/midimobil3.html">midimobil3</a>
+        <a href="https://neight1000.github.io/Grooves/midimobile.html">midimobile</a>
+        <a href="https://neight1000.github.io/Grooves/midimobile2.html">midimobile2</a>
+        <a href="https://neight1000.github.io/Grooves/midimobile4.html">midimobile4</a>
+        <a href="https://neight1000.github.io/Grooves/midimobile5.html">midimobile5</a>
+        <a href="https://neight1000.github.io/Grooves/mpc1.html">mpc1</a>
+        <a href="https://neight1000.github.io/Grooves/mpc2.html">mpc2</a>
+        <a href="https://neight1000.github.io/Grooves/mpc3.html">mpc3</a>
+        <a href="https://neight1000.github.io/Grooves/mpc4.html">mpc4</a>
+        <a href="https://neight1000.github.io/Grooves/mpc5-plantasia.html">mpc5-plantasia</a>
+        <a href="https://neight1000.github.io/Grooves/mpc5.html">mpc5</a>
+        <a href="https://neight1000.github.io/Grooves/mpc6-plantasia.html">mpc6-plantasia</a>
+        <a href="https://neight1000.github.io/Grooves/plantasia-visualizer2.html">plantasia-visualizer2</a>
+        <a href="https://neight1000.github.io/Grooves/plantasia-visualizer3.html">plantasia-visualizer3</a>
+        <a href="https://neight1000.github.io/Grooves/plantasia.html">plantasia</a>
+        <a href="https://neight1000.github.io/Grooves/plantasia2.html">plantasia2</a>
+        <a href="https://neight1000.github.io/Grooves/plantasia3.html">plantasia3</a>
+        <a href="https://neight1000.github.io/Grooves/plantasia4.html">plantasia4</a>
+        <a href="https://neight1000.github.io/Grooves/readme.html">readme</a>
+        <a href="https://neight1000.github.io/Grooves/v0.html">v0</a>
+        <a href="https://neight1000.github.io/Grooves/v10.html">v10</a>
+        <a href="https://neight1000.github.io/Grooves/v15.html">v15</a>
+        <a href="https://neight1000.github.io/Grooves/v17.html">v17</a>
+        <a href="https://neight1000.github.io/Grooves/v20.html">v20</a>
+        <a href="https://neight1000.github.io/Grooves/v21.html">v21</a>
+        <a href="https://neight1000.github.io/Grooves/v22.html">v22</a>
+        <a href="https://neight1000.github.io/Grooves/v23.html">v23</a>
+        <a href="https://neight1000.github.io/Grooves/v40.html">v40</a>
+        <a href="https://neight1000.github.io/Grooves/v7.html">v7</a>
+        <a href="https://neight1000.github.io/Grooves/v8.html">v8</a>
+        <a href="https://neight1000.github.io/Grooves/v9.html">v9</a>
     </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/03-sp-1200/index.html" target="_blank">03 SP-1200</a></div>
-        <div class="card-subtitle">SP-1200 style drum machine emulator</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/04-dub-effects/index.html" target="_blank">04 Dub Effects</a></div>
-        <div class="card-subtitle">Dub effects processor demo</div>
-    </div>
-
-        <div class="card">
-        <div class="card-title"><a href="hhttps://neight1000.github.io/designlabs/prototypes/05-EQ/index.html" target="_blank">04 Dub Effects</a></div>
-        <div class="card-subtitle">EQ Demo</div>
-    </div>
-
 </div>
 
-
-</div>
-
-
-</div>
-
-
-<div class="container">
-    <h2>Lovable Prototypes</h2>
-
-    <div class="card">
-        <div class="card-title"><a href="https://ai-tile-architect-visual.lovable.app" target="_blank">AI Tile Architect Visual</a></div>
-        <div class="card-subtitle">Dynamic tile generator for adaptive layouts</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://ai-adaptive-tiles.lovable.app/" target="_blank">AI Adaptive Tiles</a></div>
-        <div class="card-subtitle">Auto-resizing modular tile system prototype</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://rag-and.lovable.app" target="_blank">RAG & Retrieval Demo</a></div>
-        <div class="card-subtitle">Retrieval-augmented generation testing interface</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://plantasia-audio-garden.lovable.app/" target="_blank">Plantasia Audio Garden</a></div>
-        <div class="card-subtitle">Generative ambient tone system for plant harmonics</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://sonic-serato-visuals.lovable.app/" target="_blank">Sonic Serato Visuals</a></div>
-        <div class="card-subtitle">DJ audio visualizer concept with reactive graphics</div>
-    </div>
-
-      <div class="card">
-        <div class="card-title"><a href="https://ai-adaptive-tiles-50.lovable.app/" target="_blank">Sonic Serato Visuals</a></div>
-        <div class="card-subtitle">ai-adaptive-tiles</div>
-    </div>
-
-    <h3>Xbox AI Console Prototypes</h3>
-
-    <div class="card">
-        <div class="card-title"><a href="https://xbox-ai-mosaic-vision.lovable.app" target="_blank">Xbox AI Mosaic Vision</a></div>
-        <div class="card-subtitle">AI-powered Xbox dashboard UI concept</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://xbox-ai-wireframe-card.lovable.app/" target="_blank">Xbox AI Wireframe Card</a></div>
-        <div class="card-subtitle">Wireframe system for AI modular dashboard layout</div>
-    </div>
-
-    <div class="card">
-        <div class="card-title"><a href="https://xbox-ai-nexus-flow.lovable.app" target="_blank">Xbox AI Nexus Flow</a></div>
-        <div class="card-subtitle">AI concept for Xbox content and services hub</div>
-    </div>
-
-</div>
-
-
-    <div class="container">
-        <h2>Other Hosted Prototypes</h2>
-        <div class="card">
-            <div class="card-title"><a href="https://vercel.app/your-project-name" target="_blank">Vercel Project</a></div>
-            <div class="card-subtitle">External Host</div>
-        </div>
-
-        <div class="card">
-            <div class="card-title"><a href="https://netlify.app/your-project-name" target="_blank">Netlify Project</a></div>
-            <div class="card-subtitle">External Host</div>
-        </div>
-        <!-- Add more external cards -->
-    </div>
+<script>
+function toggleSection(id) {
+    var section = document.getElementById(id);
+    if (section.style.display === "block") {
+        section.style.display = "none";
+    } else {
+        section.style.display = "block";
+    }
+}
+</script>
 
 </body>
 </html>
-
-
