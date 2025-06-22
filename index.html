@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Visual EQ v1.15</title>
-  <!-- Ideally, move this CSS to style.css -->
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden;
@@ -37,11 +36,6 @@
   </style>
 </head>
 <body>
-  <noscript>
-    <div style="color: red; padding: 1em; background: #222;">
-      This app requires JavaScript.
-    </div>
-  </noscript>
   <div id="controls" role="form" aria-label="EQ Controls">
     <label for="deviceSelect">Input</label>
     <select id="deviceSelect" aria-label="Audio input device"></select>
@@ -86,7 +80,6 @@
   </div>
   <canvas id="vis" aria-label="Audio visualizer"></canvas>
   <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#f43;font-size:1.1em;background:#222;padding:1em 2em;border-radius:6px;"></div>
-  <!-- Ideally, move this JS to visual-eq.js -->
   <script>
     // --- Helper: Debounce for resize ---
     function debounce(fn, delay) {
@@ -205,6 +198,153 @@
     });
     presetSelect.addEventListener('change', ()=> state.mainPreset = presetSelect.value);
 
+    // --- PRESET DEFINITIONS ---
+    const EQ_PRESETS = {
+      vhs: {
+        name: 'VHS Drift',
+        sensitivity: 1.15,
+        mainColor: ctx => 'hsl(0,0%,80%)',
+        sideColor: ctx => 'hsl(0,0%,80%)',
+        curveDash: true,
+        beforeDraw: (ctx, state, options) => {
+          ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+          ctx.lineWidth = 1;
+          for(let y=0; y<canvas.height; y+=4){
+            const off = 2 * Math.sin(y/50 + options.t*3);
+            ctx.beginPath(); ctx.moveTo(off, y);
+            ctx.lineTo(canvas.width+off, y); ctx.stroke();
+          }
+        }
+      },
+      tape: {
+        name: 'Tape Echo',
+        sensitivity: 1.2,
+        mainColor: ctx => 'hsl(200,100%,80%)',
+        sideColor: ctx => 'hsl(200,100%,80%)',
+        beforeDraw: (ctx, state, options) => {
+          ctx.shadowBlur = 30; ctx.shadowColor = '#fff';
+          ctx.globalAlpha = options.alpha * 0.7;
+        },
+        afterDraw: (ctx) => {
+          ctx.shadowBlur = 0;
+        }
+      },
+      neon: {
+        name: 'Neon Grid',
+        sensitivity: 1.1,
+        mainColor: ctx => 'hsl(180,100%,60%)',
+        sideColor: ctx => 'hsl(180,100%,60%)',
+        beforeDraw: (ctx, state, options) => {
+          ctx.strokeStyle = 'hsl(180,100%,60%)';
+          ctx.lineWidth = 1;
+          for(let x=0; x<canvas.width; x+=50){
+            ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+          }
+          for(let y=0; y<canvas.height; y+=50){
+            ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+          }
+          ctx.shadowBlur = 20; ctx.shadowColor = 'hsl(180,100%,80%)';
+        },
+        afterDraw: (ctx) => {
+          ctx.shadowBlur = 0;
+        }
+      },
+      aurora: {
+        name: 'Aurora',
+        sensitivity: 1.0,
+        mainColor: ctx => {
+          const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+          grad.addColorStop(0,'#081d71');
+          grad.addColorStop(0.5,'#20ff90');
+          grad.addColorStop(1,'#081d71');
+          return grad;
+        },
+        sideColor: ctx => 'hsl(120,100%,50%)',
+        alpha: 0.5
+      },
+      spectrum: {
+        name: 'Spectrum Cascade',
+        sensitivity: 1.2,
+        customDraw: (ctx, state, options) => {
+          const bins = state.dataMid.length, slice = canvas.width/bins, sens = options.sens;
+          for(let i=0;i<bins;i++){
+            let f = Math.min(state.dataMid[i]/255 * sens,1);
+            let x=i*slice, h=(i/bins*360)%360, barH=f*canvas.height;
+            ctx.fillStyle=`hsl(${h},100%,60%)`;
+            ctx.fillRect(x,canvas.height-barH,slice,barH);
+          }
+        }
+      },
+      pultec: {
+        name: 'Pultec EQ',
+        sensitivity: 1.2,
+        mainColor: ctx => 'hsl(30,100%,60%)'
+      },
+      neve: {
+        name: 'Neve EQ',
+        sensitivity: 1.2,
+        mainColor: ctx => 'hsl(15,100%,55%)'
+      },
+      ssl: {
+        name: 'SSL EQ',
+        sensitivity: 1.2,
+        mainColor: ctx => 'hsl(200,100%,60%)'
+      }
+    };
+
+    // --- Modular DrawPreset Function ---
+    function drawPreset(presetKey, alpha, hueOffset, t, noiseAmp, lfo){
+      const preset = EQ_PRESETS[presetKey];
+      if (!preset) return;
+
+      const sens = parseFloat(sensSlider.value) * (preset.sensitivity || 1);
+      const bins  = state.dataMid.length;
+      const slice = canvas.width/bins;
+      const options = {sens, t, lfo, alpha};
+
+      ctx.globalAlpha = alpha * (preset.alpha || 1);
+
+      // Custom draw logic for advanced presets
+      if (preset.customDraw) {
+        preset.customDraw(ctx, state, options);
+        ctx.globalAlpha = 1;
+        return;
+      }
+
+      // Optional beforeDraw logic
+      if (preset.beforeDraw) preset.beforeDraw(ctx, state, options);
+
+      // Utility functions
+      const midVal  = i => state.dataMid[i]/255;
+      const sideVal = i => Math.abs(state.dataLeft[i]-state.dataRight[i])/255;
+
+      // Curve drawer with flexible color and dash
+      function drawCurve(getVal, color, dash=false){
+        ctx.beginPath();
+        for(let i=0;i<bins;i++){
+          let f = Math.min(getVal(i)*sens,1);
+          let x=i*slice, y=canvas.height-f*canvas.height;
+          y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
+          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.lineWidth = 2 * (1 + (Math.random()-0.5)*0.1*lfo);
+        ctx.strokeStyle = (typeof color === 'function') ? color(ctx) : color;
+        ctx.setLineDash(dash?[4,4]:[]);
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+
+      // Draw main and side curves
+      if (preset.mainColor)
+        drawCurve(midVal, preset.mainColor, preset.curveDash);
+      if (preset.sideColor)
+        drawCurve(sideVal, preset.sideColor, true);
+
+      // Optional afterDraw logic
+      if (preset.afterDraw) preset.afterDraw(ctx);
+
+      ctx.globalAlpha = 1;
+    }
+
     // --- Draw Loop ---
     function draw() {
       requestAnimationFrame(draw);
@@ -223,8 +363,8 @@
       if(crossfadeToggle.checked) {
         if(!state.xfadeActive && t > state.nextXfade){
           state.xfadeActive = true; state.xfadeStart = t;
-          const all=['vhs','tape','neon','aurora','spectrum','pultec','neve','ssl'];
-          state.secondaryPreset = all.filter(p=>p!==state.mainPreset)[Math.floor(Math.random()*7)];
+          const all=Object.keys(EQ_PRESETS);
+          state.secondaryPreset = all.filter(p=>p!==state.mainPreset)[Math.floor(Math.random()*(all.length-1))];
         }
       } else state.xfadeActive=false;
       let w2=0;
@@ -272,96 +412,6 @@
 
       drawPreset(state.mainPreset, w1, hueOffset, t, noiseAmp, lfo);
       if(w2>0) drawPreset(state.secondaryPreset, w2, hueOffset, t, noiseAmp, lfo);
-    }
-
-    // --- Modular DrawPreset ---
-    function drawPreset(preset, alpha, hueOffset, t, noiseAmp, lfo){
-      const sens = parseFloat(sensSlider.value);
-      const bins  = state.dataMid.length;
-      const slice = canvas.width/bins;
-      const jitter = 1 + (Math.random()-0.5)*0.1*lfo;
-      ctx.globalAlpha = alpha;
-      const midVal  = i => state.dataMid[i]/255;
-      const sideVal = i => Math.abs(state.dataLeft[i]-state.dataRight[i])/255;
-
-      function drawCurve(getVal, color, dash=false){
-        ctx.beginPath();
-        for(let i=0;i<bins;i++){
-          let f = Math.min(getVal(i)*sens,1);
-          let x=i*slice, y=canvas.height-f*canvas.height;
-          y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
-          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-        }
-        ctx.lineWidth = 2*jitter;
-        ctx.strokeStyle = color;
-        ctx.setLineDash(dash?[4,4]:[]);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
-      const dynHue = base => (base + hueOffset + state.momentHue*state.momentHueAlpha)%360;
-
-      switch(preset){
-        case 'vhs':
-          ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
-          for(let y=0;y<canvas.height;y+=4){
-            const off=2*Math.sin(y/50 + t*3);
-            ctx.beginPath(); ctx.moveTo(off,y);
-            ctx.lineTo(canvas.width+off,y); ctx.stroke();
-          }
-          drawCurve(i=>midVal(i),'hsl(0,0%,80%)');
-          drawCurve(i=>sideVal(i),'hsl(0,0%,80%)',true);
-          break;
-        case 'tape':
-          ctx.shadowBlur=30; ctx.shadowColor='#fff';
-          ctx.globalAlpha=alpha*0.7;
-          drawCurve(i=>midVal(i),'hsl(200,100%,80%)');
-          ctx.shadowBlur=0; ctx.globalAlpha=alpha;
-          drawCurve(i=>sideVal(i),'hsl(200,100%,80%)',true);
-          break;
-        case 'neon':
-          ctx.strokeStyle='hsl(180,100%,60%)'; ctx.lineWidth=1;
-          for(let x=0;x<canvas.width;x+=50){
-            ctx.beginPath(); ctx.moveTo(x,0);
-            ctx.lineTo(x,canvas.height); ctx.stroke();
-          }
-          for(let y=0;y<canvas.height;y+=50){
-            ctx.beginPath(); ctx.moveTo(0,y);
-            ctx.lineTo(canvas.width,y); ctx.stroke();
-          }
-          ctx.shadowBlur=20; ctx.shadowColor='hsl(180,100%,80%)';
-          drawCurve(i=>midVal(i),'hsl(180,100%,60%)');
-          ctx.shadowBlur=0;
-          drawCurve(i=>sideVal(i),'hsl(180,100%,60%)',true);
-          break;
-        case 'aurora':
-          const grad=ctx.createLinearGradient(0,0,0,canvas.height);
-          grad.addColorStop(0,'#081d71');
-          grad.addColorStop(0.5,'#20ff90');
-          grad.addColorStop(1,'#081d71');
-          ctx.globalAlpha=alpha*0.5;
-          drawCurve(i=>midVal(i),grad);
-          ctx.globalAlpha=alpha;
-          drawCurve(i=>sideVal(i),'hsl(120,100%,50%)',true);
-          break;
-        case 'spectrum':
-          for(let i=0;i<bins;i++){
-            let f = Math.min(midVal(i)*sens,1);
-            let x=i*slice, h=(i/bins*360)%360, barH=f*canvas.height;
-            ctx.fillStyle=`hsl(${h},100%,60%)`;
-            ctx.fillRect(x,canvas.height-barH,slice,barH);
-          }
-          break;
-        case 'pultec':
-          drawCurve(i=>midVal(i),'hsl(30,100%,60%)');
-          break;
-        case 'neve':
-          drawCurve(i=>midVal(i),'hsl(15,100%,55%)');
-          break;
-        case 'ssl':
-          drawCurve(i=>midVal(i),'hsl(200,100%,60%)');
-          break;
-      }
-      ctx.globalAlpha=1;
     }
 
     // --- Fullscreen Button ---
