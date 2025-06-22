@@ -139,7 +139,7 @@
     let xfadeActive = false, xfadeStart = 0, xfadeDur = 5, nextXfade = 0, secondaryPreset = mainPreset;
     let lastBeatTime = 0, momentHue = 0, momentHueAlpha = 0;
 
-    // Three.js variables
+    // Three.js variables (placeholders, real logic goes here if desired)
     let scene, camera, renderer, animationId;
     const bgObjects = {
       synthwave: null, cyberpunk: null, vhs: null, tape: null, neon: null,
@@ -147,35 +147,18 @@
       disco80s: null, rave90s: null, y2k2000s: null, alpine: null, rainbow: null
     };
 
-    // Utility functions
     const showError = (msg) => {
       errorMsg.textContent = msg;
       errorDiv.style.display = 'block';
     };
 
-    const fract = (x) => x - Math.floor(x);
-    const rand = (n) => fract(Math.sin(n) * 43758.5453123);
-    const noise1D = (x) => {
-      const i = Math.floor(x), f = fract(x);
-      return rand(i) * (1 - f) + rand(i + 1) * f;
-    };
-
-    // Canvas resize
     const resizeCanvas = () => {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
-      if (renderer) {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-      }
     };
 
     window.addEventListener('resize', resizeCanvas);
     document.addEventListener('fullscreenchange', resizeCanvas);
-
-    // Three.js initialization (functions unchanged: init3D, create3DBackgrounds, animate3D, draw, etc.)
-    // For brevity, please include your render/visualization code here as in your original.
 
     // Device list population
     const populateDevices = async () => {
@@ -191,6 +174,26 @@
         showError('Failed to load devices: ' + e.message);
       }
     };
+
+    // Minimal draw loop for EQ visualization
+    function draw() {
+      if (!audioContext) return;
+
+      leftAnalyser.getByteFrequencyData(dataLeft);
+      rightAnalyser.getByteFrequencyData(dataRight);
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Basic bar visualization
+      ctx.fillStyle = "#0ff";
+      let barWidth = canvas.width / dataLeft.length;
+      for (let i = 0; i < dataLeft.length; i++) {
+        let height = (dataLeft[i] + dataRight[i]) / 2;
+        ctx.fillRect(i * barWidth, canvas.height - height, barWidth - 1, height);
+      }
+
+      requestAnimationFrame(draw);
+    }
 
     // EQ Start/Stop
     const startEQ = async () => {
@@ -246,15 +249,10 @@
       errorDiv.style.display = 'none';
     });
 
-    // Call on document ready
     window.addEventListener('DOMContentLoaded', () => {
       populateDevices();
       resizeCanvas();
-      // Optionally, call init3D() here if needed.
     });
-
-    // Please include your actual visualization and rendering code below this comment
-    // For brevity, it's omitted here, but you should paste your existing Three.js visualization functions, draw loop, etc.
   </script>
 </body>
 </html>
