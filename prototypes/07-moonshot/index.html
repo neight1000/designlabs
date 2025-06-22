@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moonshot Adaptive Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+<style>
+  body {
+    background-color: #ffffff;
+    color: #000000;
+    font-family: 'Roboto Mono', monospace;
+    margin: 0;
+    padding: 0;
+  }
+  header {
+    text-align: center;
+    padding: 20px;
+    font-size: 24px;
+    font-weight: bold;
+    border-bottom: 1px solid #000;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    padding: 20px;
+  }
+  .tile {
+    border: 1px solid #000;
+    padding: 20px;
+    background: #f9f9f9;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+  .tile:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 15px rgba(0,0,0,0.3);
+  }
+  .tile-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  .panel {
+    display: none;
+    margin-top: 15px;
+    text-align: left;
+  }
+  .panel a {
+    display: block;
+    margin: 5px 0;
+    color: #000;
+    text-decoration: none;
+  }
+  .panel a:hover {
+    text-decoration: underline;
+    color: red;
+  }
+</style>
+</head>
+<body>
+
+<header>Moonshot AI Adaptive Dashboard</header>
+
+<div class="grid">
+  <div class="tile" onclick="togglePanel('design')">
+    <div class="tile-title">Design Labs</div>
+    <div class="panel" id="design">
+      <a href="#">DMT Emulator</a>
+      <a href="#">Delay Processor</a>
+      <a href="#">SP-1200 Sampler</a>
+      <a href="#">Dub Effects</a>
+    </div>
+  </div>
+
+  <div class="tile" onclick="togglePanel('adaptive')">
+    <div class="tile-title">AI Adaptive Tiles</div>
+    <div class="panel" id="adaptive">
+      <a href="#">Adaptive Wireframe System</a>
+      <a href="#">Tile Architect Visualizer</a>
+      <a href="#">AI Scheduling Flow</a>
+    </div>
+  </div>
+
+  <div class="tile" onclick="togglePanel('lovable')">
+    <div class="tile-title">Lovable Prototypes</div>
+    <div class="panel" id="lovable">
+      <a href="#">Xbox AI Squad Up</a>
+      <a href="#">Serato Sonic Visuals</a>
+      <a href="#">Plantasia Audio Garden</a>
+    </div>
+  </div>
+
+  <div class="tile" onclick="togglePanel('plantastic')">
+    <div class="tile-title">Plantastic</div>
+    <div class="panel" id="plantastic">
+      <a href="#">Fractal Plantasia 1</a>
+      <a href="#">Fractal Plantasia 2</a>
+      <a href="#">Immersive Plant Mode</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePanel(id) {
+  const panel = document.getElementById(id);
+  if (panel.style.display === "block") {
+    panel.style.display = "none";
+  } else {
+    panel.style.display = "block";
+  }
+}
+</script>
+
+</body>
+</html>
