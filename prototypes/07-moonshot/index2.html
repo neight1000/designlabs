@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Moonshot Hybrid Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0;
+    background: #000;
+    color: #fff;
+    font-family: 'Roboto Mono', monospace;
+    overflow: hidden;
+  }
+  #gameCanvas {
+    display: block;
+    margin: 0 auto;
+    background: #111;
+    border: 2px solid #0f0;
+  }
+  #score {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 18px;
+  }
+  #titleScreen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-size: 24px;
+  }
+  button {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 18px;
+    margin-top: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    border: 1px solid #fff;
+    background: #000;
+    color: #fff;
+  }
+  button:hover {
+    background: #222;
+  }
+</style>
+</head>
+<body>
+
+<div id="score">Score: 0</div>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+<div id="titleScreen">
+  <div>Moonshot Hybrid</div>
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let grid, player, blocks, bullets, score, gameRunning, dropCounter = 0;
+
+const cols = 10;
+const rows = 20;
+const cellSize = 40;
+const dropInterval = 30; // speed of falling blocks
+
+function initGame() {
+  grid = Array.from({ length: rows }, () => Array(cols).fill(0));
+  player = { x: 4, length: 1 };
+  blocks = [];
+  bullets = [];
+  score = 0;
+  gameRunning = true;
+  document.getElementById('score').innerText = 'Score: 0';
+  spawnBlock();
+  requestAnimationFrame(gameLoop);
+}
+
+function spawnBlock() {
+  blocks.push({ x: Math.floor(Math.random() * cols), y: 0 });
+}
+
+function drawGrid() {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c]) {
+        ctx.fillStyle = '#f00';
+        ctx.fillRect(c * cellSize, r * cellSize, cellSize-2, cellSize-2);
+      }
+    }
+  }
+}
+
+function drawPlayer() {
+  ctx.fillStyle = '#0f0';
+  for (let i = 0; i < player.length; i++) {
+    ctx.fillRect((player.x + i) * cellSize, (rows - 1) * cellSize, cellSize-2, cellSize-2);
+  }
+}
+
+function drawBlocks() {
+  blocks.forEach(b => {
+    ctx.fillStyle = '#ff0';
+    ctx.fillRect(b.x * cellSize, b.y * cellSize, cellSize-2, cellSize-2);
+  });
+}
+
+function drawBullets() {
+  ctx.fillStyle = '#0ff';
+  bullets.forEach(b => {
+    ctx.fillRect(b.x * cellSize + cellSize/2 - 2, b.y, 4, 10);
+  });
+}
+
+function updateBlocks() {
+  dropCounter++;
+  if (dropCounter >= dropInterval) {
+    dropCounter = 0;
+    blocks.forEach(b => b.y++);
+  }
+
+  blocks.forEach(b => {
+    if (b.y >= rows) {
+      grid[rows-1][b.x] = 1;
+      b.remove = true;
+    } else if (grid[b.y][b.x]) {
+      grid[b.y-1][b.x] = 1;
+      b.remove = true;
+    }
+  });
+  blocks = blocks.filter(b => !b.remove);
+
+  if (blocks.length === 0) spawnBlock();
+}
+
+function updateBullets() {
+  bullets.forEach(b => b.y -= 10);
+  bullets = bullets.filter(b => b.y > 0);
+
+  bullets.forEach(b => {
+    blocks.forEach(bl => {
+      if (Math.abs(b.x - bl.x) < 1 && b.y <= bl.y * cellSize + cellSize) {
+        bl.remove = true;
+        b.hit = true;
+        score += 10;
+        document.getElementById('score').innerText = 'Score: ' + score;
+        player.length = Math.min(player.length + 1, cols - player.x);
+      }
+    });
+  });
+  bullets = bullets.filter(b => !b.hit);
+  blocks = blocks.filter(bl => !bl.remove);
+}
+
+function checkRows() {
+  for (let r = rows - 1; r >= 0; r--) {
+    if (grid[r].every(cell => cell)) {
+      grid.splice(r, 1);
+      grid.unshift(Array(cols).fill(0));
+      score += 50;
+      document.getElementById('score').innerText = 'Score: ' + score;
+    }
+  }
+}
+
+function gameLoop() {
+  if (!gameRunning) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawGrid();
+  drawBlocks();
+  drawPlayer();
+  drawBullets();
+  updateBlocks();
+  updateBullets();
+  checkRows();
+  if (grid[0].some(cell => cell)) gameRunning = false;
+  else requestAnimationFrame(gameLoop);
+}
+
+document.addEventListener('keydown', e => {
+  if (!gameRunning) return;
+  if (e.key === 'ArrowLeft' && player.x > 0) player.x--;
+  if (e.key === 'ArrowRight' && player.x + player.length < cols) player.x++;
+  if (e.key === ' ' || e.key === 'Spacebar') {
+    bullets.push({ x: player.x + Math.floor(player.length/2), y: (rows - 1) * cellSize });
+  }
+});
+
+function startGame() {
+  document.getElementById('titleScreen').style.display = 'none';
+  initGame();
+}
+</script>
+
+</body>
+</html>
