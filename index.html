@@ -1,311 +1,244 @@
-```html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro v1.20 + Graphic EQ</title>
-  <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
-    #controls {
-      position: absolute; top: 10px; left: 50%;
-      transform: translateX(-50%);
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-      z-index: 10; transition: opacity .5s;
-      background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
+    <meta charset="UTF-8">
+    <title>Design Labs Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+    /* GLOBAL STYLES */
+
+    body {
+      background-color: #ffffff;
+      color: #000000;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 14px;
+      line-height: 1.4;
+      margin: 0;
+      padding: 20px;
     }
-    select, button, label, input[type=range] {
-      background: #000; color: #fff;
-      border: 1px solid #fff; padding: 4px 8px;
-      font-size: 1rem;
+
+    /* ALL CONTAINERS */
+
+    .container {
+      border: 1px solid #000000;
+      background-color: #ffffff;
+      box-shadow: none;
+      border-radius: 0;
+      padding: 20px;
+      margin-bottom: 20px;
     }
-    label { display: flex; align-items: center; gap: 4px; }
-    input[type=range] { width: 80px; }
-    .readout { min-width: 70px; display: inline-block; text-align: right; font-family: monospace; }
-    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
-    @media (max-width: 700px) {
-      #controls { flex-direction: column; gap: 4px; }
-      select, button, label, input[type=range] { font-size: 0.9rem; }
+
+    /* ICON STYLING */
+
+    .icon {
+      stroke: #000000;
+      fill: none;
+      stroke-width: 1px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      width: 16px;
+      height: 16px;
+      box-shadow: none;
+      background: none;
     }
-  </style>
+
+    /* BUTTON STYLING */
+
+    .button {
+      border: 1px solid #000000;
+      background: #ffffff;
+      color: #000000;
+      padding: 8px 16px;
+      font-family: 'Roboto Mono', monospace;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: none;
+      border-radius: 0;
+    }
+
+    .button:hover {
+      background-color: #f5f5f5;
+    }
+
+    /* TOGGLE SWITCHES */
+
+    .toggle {
+      border: 1px solid #000000;
+      background: #ffffff;
+      width: 32px;
+      height: 16px;
+      position: relative;
+    }
+
+    .toggle::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 12px;
+      height: 12px;
+      background: #000000;
+      transition: left 0.2s;
+    }
+
+    .toggle.active::before {
+      left: 18px;
+    }
+
+    /* CARDS (ADAPTIVE TILE COMPONENTS) */
+
+    .card {
+      border: 1px solid #000000;
+      background: #ffffff;
+      padding: 16px;
+      box-shadow: none;
+      border-radius: 0;
+      transition: transform 0.2s, box-shadow 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-weight: bold;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      color: #000000;
+    }
+
+    /* FEEDBACK ICONS */
+
+    .feedback {
+      display: flex;
+      gap: 8px;
+    }
+
+    .feedback button {
+      border: none;
+      background: none;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    </style>
 </head>
 <body>
-  <div id="controls" role="form" aria-label="EQ Controls">
-    <label for="deviceSelect">Input</label>
-    <select id="deviceSelect" aria-label="Audio input device"></select>
-    <button id="startBtn" aria-label="Start visualization">Start</button>
-    <label for="fftSelect">FFT</label>
-    <select id="fftSelect" aria-label="FFT size">
-      <option>256</option><option selected>512</option>
-      <option>1024</option><option>2048</option>
-      <option>4096</option><option>8192</option>
-      <option>16384</option><option>32768</option>
-    </select>
-    <label for="presetSelect">Preset</label>
-    <select id="presetSelect" aria-label="EQ preset">
-      <option value="vhs">VHS Drift</option>
-      <option value="tape">Tape Echo</option>
-      <option value="neon">Neon Grid</option>
-      <option value="aurora">Aurora</option>
-      <option value="spectrum">Spectrum Cascade</option>
-      <option value="pultec">Pultec EQ</option>
-      <option value="neve">Neve EQ</option>
-      <option value="ssl">SSL EQ</option>
-      <option value="graphic">Graphic EQ</option>
-    </select>
-    <label for="sensSlider">Sensitivity
-      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15" aria-label="Sensitivity">
-    </label>
-    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
-    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
-    <label><input type="checkbox" id="momentsToggle"> Moments</label>
-    <label for="beatThreshold">Beat Thr
-      <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7" aria-label="Beat threshold">
-    </label>
-    <label for="beatCooldown">Cooldown
-      <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3" aria-label="Beat cooldown">
-    </label>
-    <button id="fsBtn" aria-label="Fullscreen">Fullscreen</button>
-    <span class="readout" id="dbReadout">dB: --</span>
-    <span class="readout" id="bpmReadout">BPM: --</span>
-  </div>
 
-  <canvas id="vis" aria-label="Audio visualizer"></canvas>
-  <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;
-       transform:translate(-50%,-50%);color:#f43;font-size:1.1em;
-       background:#222;padding:1em 2em;border-radius:6px;"></div>
+    <h1>Design Labs Dashboard</h1>
 
-  <script>
-    // --- DOM & State ---
-    const $ = id => document.getElementById(id);
-    const deviceSelect   = $('deviceSelect'),
-          startBtn        = $('startBtn'),
-          fftSelect       = $('fftSelect'),
-          presetSelect    = $('presetSelect'),
-          sensSlider      = $('sensSlider'),
-          tracerToggle    = $('tracerToggle'),
-          crossfadeToggle = $('crossfadeToggle'),
-          momentsToggle   = $('momentsToggle'),
-          beatThreshold   = $('beatThreshold'),
-          beatCooldown    = $('beatCooldown'),
-          fsBtn           = $('fsBtn'),
-          controls        = $('controls'),
-          canvas          = $('vis'),
-          fallback        = $('fallback'),
-          ctx             = canvas.getContext('2d'),
-          dbReadout       = $('dbReadout'),
-          bpmReadout      = $('bpmReadout');
+<div class="container">
+    <h2>GitHub Prototypes</h2>
 
-    const state = {
-      audioContext: null,
-      splitter:      null,
-      leftAnalyser:  null,
-      rightAnalyser: null,
-      dataLeft:      null,
-      dataRight:     null,
-      dataMid:       null,
-      startTime:     0,
-      mainPreset:    presetSelect.value,
-      xfadeActive:   false,
-      xfadeStart:    0,
-      xfadeDur:      5,
-      nextXfade:     0,
-      secondaryPreset: presetSelect.value,
-      lastBeatTime:  0,
-      momentHue:     0,
-      momentHueAlpha:0,
-      spectrumTrails:[],
-      dbSmoothed:    -60,
-      beatTimes:     [],
-      bpm:           0
-    };
+<div class="container">
+    <h2>GitHub Prototypes</h2>
 
-    // --- Helpers ---
-    const fract = x => x - Math.floor(x);
-    const rand  = n => fract(Math.sin(n)*43758.5453123);
-    function noise1D(x){
-      const i = Math.floor(x), f = fract(x);
-      return rand(i)*(1-f)+rand(i+1)*f;
-    }
-    function resizeCanvas(){
-      canvas.width  = window.innerWidth;
-      canvas.height = window.innerHeight;
-      state.spectrumTrails = [];
-    }
-    window.addEventListener('resize', resizeCanvas);
-    document.addEventListener('fullscreenchange', resizeCanvas);
-    resizeCanvas();
+<div class="container">
+    <h2>GitHub Prototypes</h2>
 
-    async function populateDevices(){
-      try {
-        const devs = await navigator.mediaDevices.enumerateDevices();
-        deviceSelect.innerHTML = '';
-        devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
-          const o = document.createElement('option');
-          o.value = d.deviceId;
-          o.textContent = d.label||`Mic ${i+1}`;
-          deviceSelect.append(o);
-        });
-      } catch(e){
-        showFallback('Could not enumerate audio devices.');
-      }
-    }
-    function showFallback(msg){
-      fallback.style.display = 'block';
-      fallback.textContent   = msg;
-      controls.style.display = 'none';
-      canvas.style.display   = 'none';
-    }
+    <div class="card">
+        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/01-dmt-emulator/index.html" target="_blank">01 DMT Emulator</a></div>
+        <div class="card-subtitle">DMT audio emulator prototype</div>
+    </div>
 
-    // --- dB & BPM Readouts ---
-    function updateDbMeter(){
-      if(!state.leftAnalyser) return;
-      const buf = new Float32Array(state.leftAnalyser.fftSize);
-      state.leftAnalyser.getFloatTimeDomainData(buf);
-      let sum=0; for(let i=0;i<buf.length;i++) sum+=buf[i]*buf[i];
-      let rms = Math.sqrt(sum/buf.length);
-      let db  = 20*Math.log10(rms||1e-8);
-      if(!isFinite(db)) db=-60;
-      state.dbSmoothed = state.dbSmoothed*0.85 + db*0.15;
-      dbReadout.textContent = 'dB: ' + (db>-59?db.toFixed(1):'--');
-    }
-    function updateBpmMeter(){
-      bpmReadout.textContent = 'BPM: ' + (state.bpm>0?Math.round(state.bpm):'--');
-    }
+    <div class="card">
+        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/02-delay/index.html" target="_blank">02 Delay</a></div>
+        <div class="card-subtitle">Delay processor prototype</div>
+    </div>
 
-    // --- Start EQ ---
-    async function startEQ(){
-      if(state.audioContext) return;
-      if(!navigator.mediaDevices?.getUserMedia){
-        showFallback('Web Audio API not supported.');
-        return;
-      }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: deviceSelect.value||undefined }
-        });
-        const ac = new (window.AudioContext||window.webkitAudioContext)();
-        state.audioContext = ac;
-        state.splitter     = ac.createChannelSplitter(2);
-        state.leftAnalyser = ac.createAnalyser();
-        state.rightAnalyser= ac.createAnalyser();
-        [state.leftAnalyser,state.rightAnalyser].forEach(a=>{
-          a.fftSize = parseInt(fftSelect.value);
-          a.smoothingTimeConstant = 0.8;
-        });
-        state.dataLeft  = new Uint8Array(state.leftAnalyser.frequencyBinCount);
-        state.dataRight = new Uint8Array(state.rightAnalyser.frequencyBinCount);
-        state.dataMid   = new Uint8Array(state.leftAnalyser.frequencyBinCount);
-        const src = ac.createMediaStreamSource(stream);
-        src.connect(state.splitter);
-        state.splitter.connect(state.leftAnalyser, 0);
-        state.splitter.connect(state.rightAnalyser,1);
-        state.startTime  = performance.now();
-        state.nextXfade  = state.startTime/1000 + 300 + Math.random()*300;
-        state.spectrumTrails = [];
-        draw();
-      } catch(e){
-        showFallback('Permission denied or no input device found.');
-      }
-    }
-    fftSelect.addEventListener('change', ()=>{
-      if(!state.leftAnalyser) return;
-      [state.leftAnalyser,state.rightAnalyser].forEach(a=>{
-        a.fftSize = parseInt(fftSelect.value);
-      });
-      state.dataLeft  = new Uint8Array(state.leftAnalyser.frequencyBinCount);
-      state.dataRight = new Uint8Array(state.rightAnalyser.frequencyBinCount);
-      state.dataMid   = new Uint8Array(state.leftAnalyser.frequencyBinCount);
-      state.spectrumTrails = [];
-    });
-    presetSelect.addEventListener('change', ()=> state.mainPreset = presetSelect.value);
+    <div class="card">
+        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/03-sp-1200/index.html" target="_blank">03 SP-1200</a></div>
+        <div class="card-subtitle">SP-1200 style drum machine emulator</div>
+    </div>
 
-    // --- Color Utilities ---
-    function dynamicHSB(hue,sat,bri,shift=0,alpha=1){
-      return `hsla(${(hue+shift)%360},${sat}%,${bri}%,${alpha})`;
-    }
-    function baseHue(t){
-      return ((t*30) + state.momentHue*state.momentHueAlpha)%360;
-    }
+    <div class="card">
+        <div class="card-title"><a href="https://neight1000.github.io/designlabs/prototypes/04-dub-effects/index.html" target="_blank">04 Dub Effects</a></div>
+        <div class="card-subtitle">Dub effects processor demo</div>
+    </div>
 
-    // --- EQ_PRESETS including new Graphic EQ ---
-    const EQ_PRESETS = {
-      vhs:   { /* unchanged v1.20 code ... */ },
-      tape:  { /* unchanged v1.20 code ... */ },
-      neon:  { /* unchanged v1.20 code ... */ },
-      aurora:{ /* unchanged v1.20 code ... */ },
-      spectrum:{ /* unchanged v1.20 code ... */ },
-      pultec:{ /* unchanged v1.20 code ... */ },
-      neve:  { /* unchanged v1.20 code ... */ },
-      ssl:   { /* unchanged v1.20 code ... */ },
-      graphic: {
-        name: 'Graphic EQ',
-        sensitivity: 1.0,
-        customDraw(ctx, state, options) {
-          const { sens } = options;
-          const bands = [31,62,125,250,500,1000,2000,4000,8000,16000];
-          const nyq   = state.audioContext.sampleRate/2;
-          const bins  = state.dataMid.length;
-          const w     = canvas.width / bands.length;
-          const h     = canvas.height;
-          const segs  = 10;
-          const segH  = h / segs;
-          ctx.save();
-          ctx.textAlign = 'center';
-          ctx.font      = '12px sans-serif';
-          bands.forEach((f,i) => {
-            const bin = Math.round(f/nyq * bins);
-            const amp = Math.min(state.dataMid[bin]/255 * sens, 1);
-            for(let s=0; s<segs; s++){
-              const y  = h - (s+1)*segH;
-              const on = amp > (s+1)/segs;
-              ctx.fillStyle = on
-                ? `rgba(0,255,170,${0.4 + 0.6*(s+1)/segs})`
-                : 'rgba(255,255,255,0.12)';
-              ctx.fillRect(i*w + w*0.1, y+2, w*0.8, segH-4);
-            }
-            const label = f>=1000 ? (f/1000)+'k' : f;
-            ctx.fillStyle = '#fff';
-            ctx.fillText(label, i*w + w/2, h - 4);
-          });
-          ctx.restore();
-        }
-      }
-    };
+        <div class="card">
+        <div class="card-title"><a href="hhttps://neight1000.github.io/designlabs/prototypes/05-EQ/index.html" target="_blank">04 Dub Effects</a></div>
+        <div class="card-subtitle">EQ Demo</div>
+    </div>
 
-    // --- drawPreset & other drawing functions unchanged from v1.20 ---
+</div>
 
-    // --- Main Draw Loop (unchanged) ---
-    function draw(){
-      requestAnimationFrame(draw);
-      // ... FFT reads, updateDbMeter(), crossfade, beat detect, updateBpmMeter() ...
-      // ... tracer/clear ...
-      // ... draw band markers bottom→top ...
-      // ... drawPreset() for main & secondary ...
-    }
 
-    fsBtn.onclick = ()=> {
-      document.fullscreenElement
-        ? document.exitFullscreen()
-        : canvas.requestFullscreen();
-    };
-    ['pointermove','touchstart','keydown'].forEach(evt=>
-      document.addEventListener(evt,()=>{
-        controls.style.opacity='1';
-        clearTimeout(this.hideT);
-        this.hideT=setTimeout(()=>controls.style.opacity='0',3000);
-      })
-    );
-    startBtn.addEventListener('click', startEQ);
-    populateDevices();
-  </script>
+</div>
+
+
+</div>
+
+
+<div class="container">
+    <h2>Lovable Prototypes</h2>
+
+    <div class="card">
+        <div class="card-title"><a href="https://ai-tile-architect-visual.lovable.app" target="_blank">AI Tile Architect Visual</a></div>
+        <div class="card-subtitle">Dynamic tile generator for adaptive layouts</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><a href="https://ai-adaptive-tiles.lovable.app/" target="_blank">AI Adaptive Tiles</a></div>
+        <div class="card-subtitle">Auto-resizing modular tile system prototype</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><a href="https://rag-and.lovable.app" target="_blank">RAG & Retrieval Demo</a></div>
+        <div class="card-subtitle">Retrieval-augmented generation testing interface</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><a href="https://plantasia-audio-garden.lovable.app/" target="_blank">Plantasia Audio Garden</a></div>
+        <div class="card-subtitle">Generative ambient tone system for plant harmonics</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><a href="https://sonic-serato-visuals.lovable.app/" target="_blank">Sonic Serato Visuals</a></div>
+        <div class="card-subtitle">DJ audio visualizer concept with reactive graphics</div>
+    </div>
+
+    <h3>Xbox AI Console Prototypes</h3>
+
+    <div class="card">
+        <div class="card-title"><a href="https://xbox-ai-mosaic-vision.lovable.app" target="_blank">Xbox AI Mosaic Vision</a></div>
+        <div class="card-subtitle">AI-powered Xbox dashboard UI concept</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><a href="https://xbox-ai-wireframe-card.lovable.app/" target="_blank">Xbox AI Wireframe Card</a></div>
+        <div class="card-subtitle">Wireframe system for AI modular dashboard layout</div>
+    </div>
+
+    <div class="card">
+        <div class="card-title"><a href="https://xbox-ai-nexus-flow.lovable.app" target="_blank">Xbox AI Nexus Flow</a></div>
+        <div class="card-subtitle">AI concept for Xbox content and services hub</div>
+    </div>
+
+</div>
+
+
+    <div class="container">
+        <h2>Other Hosted Prototypes</h2>
+        <div class="card">
+            <div class="card-title"><a href="https://vercel.app/your-project-name" target="_blank">Vercel Project</a></div>
+            <div class="card-subtitle">External Host</div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><a href="https://netlify.app/your-project-name" target="_blank">Netlify Project</a></div>
+            <div class="card-subtitle">External Host</div>
+        </div>
+        <!-- Add more external cards -->
+    </div>
+
 </body>
 </html>
-```
 
-**Integration notes:**
-
-* The `<option value="graphic">Graphic EQ</option>` was added to your preset select.
-* The `graphic` entry was appended to `EQ_PRESETS` with a `customDraw` that replicates the 10-band bar look.
-* **Nothing else** in your v1.20 build has been altered. Copy-paste this file over your existing one and you’ll have the new Graphic EQ preset ready to go.
 
