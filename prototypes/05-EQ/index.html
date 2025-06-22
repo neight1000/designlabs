@@ -5,52 +5,117 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Visual EQ Pro</title>
   <style>
-    html, body { margin:0; padding:0; background:#000; color:#fff; font-family:sans-serif; overflow:hidden; height:100vh; width:100vw; }
-    #controls { position:absolute; top:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:6px; border-radius:4px; display:flex; flex-wrap:wrap; gap:8px; z-index:10; }
-    select, button, label, input[type=range] { background:#000; color:#fff; border:1px solid #fff; padding:4px 8px; font-size:1rem; }
-    label { display:flex; align-items:center; gap:4px; }
-    input[type=range] { width:80px; }
-    canvas { position:absolute; top:0; left:0; width:100vw; height:100vh; display:block; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+      font-family: sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+    #controls {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.5);
+      padding: 6px;
+      border-radius: 4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      z-index: 10;
+    }
+    select, button, label, input[type=range] {
+      background: #000;
+      color: #fff;
+      border: 1px solid #fff;
+      padding: 4px 8px;
+      font-size: 1rem;
+    }
+    label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    input[type=range] {
+      width: 80px;
+    }
+    canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
-    <label>Input <select id="deviceSelect"></select></label>
+    <label>Input
+      <select id="deviceSelect"></select>
+    </label>
     <button id="startBtn">Start</button>
-    <label>FFT <select id="fftSelect">
-      <option>256</option><option selected>512</option><option>1024</option>
-      <option>2048</option><option>4096</option><option>8192</option>
-      <option>16384</option><option>32768</option>
-    </select></label>
-    <label>Preset <select id="presetSelect">
-      <option value="vhs">VHS Drift</option>
-      <option value="tape">Tape Echo</option>
-      <option value="neon">Neon Grid</option>
-      <option value="aurora">Aurora</option>
-      <option value="spectrum">Spectrum Cascade</option>
-      <option value="pultec">Pultec EQ</option>
-      <option value="neve">Neve EQ</option>
-      <option value="ssl">SSL EQ</option>
-      <option value="alpine">Alpine 86</option> <!-- New preset added -->
-    </select></label>
-    <label>Sensitivity <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15"></label>
-    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
-    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
-    <label><input type="checkbox" id="momentsToggle"> Moments</label>
+    <label>FFT
+      <select id="fftSelect">
+        <option>256</option>
+        <option selected>512</option>
+        <option>1024</option>
+        <option>2048</option>
+        <option>4096</option>
+        <option>8192</option>
+        <option>16384</option>
+        <option>32768</option>
+      </select>
+    </label>
+    <label>Preset
+      <select id="presetSelect">
+        <option value="vhs">VHS Drift</option>
+        <option value="tape">Tape Echo</option>
+        <option value="neon">Neon Grid</option>
+        <option value="aurora">Aurora</option>
+        <option value="spectrum">Spectrum Cascade</option>
+        <option value="pultec">Pultec EQ</option>
+        <option value="neve">Neve EQ</option>
+        <option value="ssl">SSL EQ</option>
+        <option value="alpine">Alpine 86</option>
+      </select>
+    </label>
+    <label>Sensitivity
+      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
+    </label>
+    <label>
+      <input type="checkbox" id="tracerToggle" checked> Tracers
+    </label>
+    <label>
+      <input type="checkbox" id="crossfadeToggle"> Crossfade
+    </label>
+    <label>
+      <input type="checkbox" id="momentsToggle"> Moments
+    </label>
     <button id="fsBtn">Fullscreen</button>
   </div>
-
   <canvas id="vis"></canvas>
-
   <script>
     const $ = id => document.getElementById(id);
-    const deviceSelect = $('deviceSelect'), startBtn = $('startBtn'), fftSelect = $('fftSelect'),
-          presetSelect = $('presetSelect'), sensSlider = $('sensSlider'),
-          tracerToggle = $('tracerToggle'), crossfadeToggle = $('crossfadeToggle'),
-          momentsToggle = $('momentsToggle'), fsBtn = $('fsBtn'),
-          canvas = $('vis'), ctx = canvas.getContext('2d');
+
+    const deviceSelect = $('deviceSelect');
+    const startBtn = $('startBtn');
+    const fftSelect = $('fftSelect');
+    const presetSelect = $('presetSelect');
+    const sensSlider = $('sensSlider');
+    const tracerToggle = $('tracerToggle');
+    const crossfadeToggle = $('crossfadeToggle');
+    const momentsToggle = $('momentsToggle');
+    const fsBtn = $('fsBtn');
+    const canvas = $('vis');
+    const ctx = canvas.getContext('2d');
 
     let audioContext, splitter, analyserL, analyserR, dataL, dataR, dataMid;
+    let currentPreset = presetSelect.value;
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -65,16 +130,19 @@
       devices.filter(d => d.kind === 'audioinput').forEach((d, i) => {
         const o = document.createElement('option');
         o.value = d.deviceId;
-        o.textContent = d.label || `Mic ${i+1}`;
+        o.textContent = d.label || `Mic ${i + 1}`;
         deviceSelect.append(o);
       });
     }
 
     async function startEQ() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert("Web Audio API not supported"); return;
+        alert("Web Audio API not supported");
+        return;
       }
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: deviceSelect.value || undefined } });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { deviceId: deviceSelect.value || undefined }
+      });
       audioContext = new (window.AudioContext || window.webkitAudioContext)();
       splitter = audioContext.createChannelSplitter(2);
       analyserL = audioContext.createAnalyser();
@@ -90,6 +158,32 @@
       draw();
     }
 
+    function getPresetColor(i, bins, value) {
+      // Example color logic for presets
+      switch (currentPreset) {
+        case 'vhs':
+          return `hsl(${(i / bins) * 360}, 100%, ${40 + value * 30}%)`;
+        case 'tape':
+          return `rgb(${100 + value * 155},${80 + value * 50},${100 + value * 80})`;
+        case 'neon':
+          return `hsl(${(i / bins) * 360}, 100%, 60%)`;
+        case 'aurora':
+          return `rgba(${100 + value * 155},${200 + value * 55},255, 0.7)`;
+        case 'spectrum':
+          return `hsl(${180 + (i / bins) * 180}, 80%, 50%)`;
+        case 'pultec':
+          return `hsl(45, 70%, ${40 + value * 30}%)`;
+        case 'neve':
+          return `hsl(220, 60%, ${30 + value * 40}%)`;
+        case 'ssl':
+          return `hsl(130, 60%, ${40 + value * 35}%)`;
+        case 'alpine':
+          return `hsl(${(i / bins) * 360}, 100%, ${60 + value * 20}%)`;
+        default:
+          return `hsl(${(i / bins) * 360}, 100%, 50%)`;
+      }
+    }
+
     function draw() {
       requestAnimationFrame(draw);
       if (!analyserL) return;
@@ -98,28 +192,29 @@
       for (let i = 0; i < dataL.length; i++) {
         dataMid[i] = (dataL[i] + dataR[i]) / 2;
       }
-
       if (tracerToggle.checked) {
         ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
-
       const bins = dataMid.length;
       const barW = canvas.width / bins;
       const sens = parseFloat(sensSlider.value);
 
       for (let i = 0; i < bins; i++) {
         let f = (dataMid[i] / 255) * sens;
-        let h = (i / bins) * 360;
         let height = f * canvas.height;
-        ctx.fillStyle = `hsl(${h},100%,50%)`;
+        ctx.fillStyle = getPresetColor(i, bins, f);
         ctx.fillRect(i * barW, canvas.height - height, barW, height);
       }
     }
 
-    startBtn.onclick = startEQ;
+    // UI Event Handlers
+    presetSelect.onchange = () => {
+      currentPreset = presetSelect.value;
+    };
+
     fftSelect.onchange = () => {
       if (analyserL && analyserR) {
         analyserL.fftSize = analyserR.fftSize = parseInt(fftSelect.value);
@@ -128,10 +223,15 @@
         dataMid = new Uint8Array(analyserL.frequencyBinCount);
       }
     };
-    fsBtn.onclick = () => { document.fullscreenElement ? document.exitFullscreen() : canvas.requestFullscreen(); };
+
+    startBtn.onclick = startEQ;
+    fsBtn.onclick = () => {
+      document.fullscreenElement
+        ? document.exitFullscreen()
+        : canvas.requestFullscreen();
+    };
 
     populateDevices();
   </script>
 </body>
 </html>
-
