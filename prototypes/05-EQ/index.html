@@ -115,16 +115,22 @@
     function drawAlpine() {
       const bins = 12;
       const binSize = Math.floor(dataArray.length / bins);
+      const spacing = 40;
+      const barWidth = 20;
+      const offsetX = (canvas.width - (bins * spacing)) / 2;
+      const offsetY = 80;
       for (let i = 0; i < bins; i++) {
         let sum = 0;
         for (let j = 0; j < binSize; j++) sum += dataArray[i * binSize + j];
         let avg = sum / binSize;
-        let barHeight = avg * 2.5;
-        ctx.fillStyle = '#00FFAA';
-        ctx.fillRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
-        ctx.strokeStyle = '#fff';
+        let barHeight = avg * 2.2;
+        const x = offsetX + i * spacing;
+        const y = canvas.height - barHeight - offsetY;
+        ctx.fillStyle = 'rgba(0,255,150,0.9)';
+        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
         ctx.lineWidth = 2;
-        ctx.strokeRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
+        ctx.strokeRect(x, y, barWidth, barHeight);
       }
     }
 
@@ -135,7 +141,6 @@
     }
 
     function drawBpmMeter() {
-      // Placeholder BPM calculation (not implemented fully)
       $("bpmReadout").textContent = `BPM: --`;
     }
 
@@ -144,3 +149,4 @@
   </script>
 </body>
 </html>
+
