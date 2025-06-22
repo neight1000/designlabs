@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro v1.22</title>
+  <title>Visual EQ Pro v1.19</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
@@ -20,7 +20,6 @@
     }
     label { display: flex; align-items: center; gap: 4px; }
     input[type=range] { width: 80px; }
-    .readout { min-width: 70px; display: inline-block; text-align: right; font-family: monospace; }
     canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
     @media (max-width:700px) {
       #controls { flex-direction: column; gap: 4px; }
@@ -29,7 +28,7 @@
   </style>
 </head>
 <body>
-  <div id="controls" role="form" aria-label="EQ Controls">
+  <div id="controls">
     <label for="deviceSelect">Input</label>
     <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
@@ -50,8 +49,6 @@
       <option value="pultec">Pultec EQ</option>
       <option value="neve">Neve EQ</option>
       <option value="ssl">SSL EQ</option>
-      <option value="graphic">Graphic EQ</option>
-      <option value="alpine86">Alpine 86</option>
     </select>
     <label for="sensSlider">Sensitivity
       <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
@@ -68,25 +65,32 @@
     <button id="fsBtn">Fullscreen</button>
     <span class="readout" id="dbReadout">dB: --</span>
     <span class="readout" id="bpmReadout">BPM: --</span>
+    <span class="version">v1.19</span>
   </div>
-
   <canvas id="vis"></canvas>
   <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;
        transform:translate(-50%,-50%);color:#f43;font-size:1.1em;
        background:#222;padding:1em 2em;border-radius:6px;"></div>
-
   <script>
-    // DOM refs & state (unchanged from v1.20+GraphicEQ)
+    // DOM refs & state
     const $ = id=>document.getElementById(id),
-          deviceSelect=$('deviceSelect'), startBtn=$('startBtn'),
-          fftSelect=$('fftSelect'), presetSelect=$('presetSelect'),
-          sensSlider=$('sensSlider'), tracerToggle=$('tracerToggle'),
-          crossfadeToggle=$('crossfadeToggle'), momentsToggle=$('momentsToggle'),
-          beatThreshold=$('beatThreshold'), beatCooldown=$('beatCooldown'),
-          fsBtn=$('fsBtn'), controls=$('controls'),
-          canvas=$('vis'), fallback=$('fallback'),
+          deviceSelect=$('deviceSelect'),
+          startBtn=$('startBtn'),
+          fftSelect=$('fftSelect'),
+          presetSelect=$('presetSelect'),
+          sensSlider=$('sensSlider'),
+          tracerToggle=$('tracerToggle'),
+          crossfadeToggle=$('crossfadeToggle'),
+          momentsToggle=$('momentsToggle'),
+          beatThreshold=$('beatThreshold'),
+          beatCooldown=$('beatCooldown'),
+          fsBtn=$('fsBtn'),
+          controls=$('controls'),
+          canvas=$('vis'),
+          fallback=$('fallback'),
           ctx=canvas.getContext('2d'),
-          dbReadout=$('dbReadout'), bpmReadout=$('bpmReadout');
+          dbReadout=$('dbReadout'),
+          bpmReadout=$('bpmReadout');
 
     const state = {
       audioContext:null, splitter:null,
@@ -100,7 +104,7 @@
       beatTimes:[], bpm:0
     };
 
-    // Helpers (unchanged)...
+    // Helpers
     const fract=x=>x-Math.floor(x),
           rand=n=>fract(Math.sin(n)*43758.5453123);
     function noise1D(x){const i=Math.floor(x),f=fract(x);return rand(i)*(1-f)+rand(i+1)*f;}
@@ -110,16 +114,15 @@
     resizeCanvas();
 
     async function populateDevices(){
-      try{
+      try {
         const devs=await navigator.mediaDevices.enumerateDevices();
         deviceSelect.innerHTML='';
-        devs.filter(d=>d.kind==='audioinput')
-            .forEach((d,i)=>{
-              const o=document.createElement('option');
-              o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
-              deviceSelect.append(o);
-            });
-      }catch(e){ showFallback('Could not enumerate audio devices.'); }
+        devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
+          const o=document.createElement('option');
+          o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
+          deviceSelect.append(o);
+        });
+      } catch(e){ showFallback('Could not enumerate audio devices.'); }
     }
     function showFallback(msg){
       fallback.style.display='block';
@@ -128,23 +131,22 @@
       canvas.style.display='none';
     }
 
-    // dB/BPM UI updates
+    // dB/BPM readouts
     function updateDbMeter(){
       if(!state.leftAnalyser) return;
       const buf=new Float32Array(state.leftAnalyser.fftSize);
       state.leftAnalyser.getFloatTimeDomainData(buf);
-      let sum=0; for(let v of buf) sum+=v*v;
-      let rms=Math.sqrt(sum/buf.length),
-          db=20*Math.log10(rms||1e-8);
+      let sum=0; buf.forEach(v=>sum+=v*v);
+      let rms=Math.sqrt(sum/buf.length), db=20*Math.log10(rms||1e-8);
       if(!isFinite(db)) db=-60;
-      state.dbSmoothed = state.dbSmoothed*0.85 + db*0.15;
+      state.dbSmoothed=state.dbSmoothed*0.85+db*0.15;
       dbReadout.textContent='dB: '+(db>-59?db.toFixed(1):'--');
     }
     function updateBpmMeter(){
       bpmReadout.textContent='BPM: '+(state.bpm>0?Math.round(state.bpm):'--');
     }
 
-    // Start / FFT / Preset hooks (unchanged)...
+    // startEQ
     async function startEQ(){
       if(state.audioContext) return;
       if(!navigator.mediaDevices?.getUserMedia){
@@ -173,7 +175,7 @@
         state.nextXfade=state.startTime/1000+300+Math.random()*300;
         state.spectrumTrails=[];
         draw();
-      }catch(e){
+      } catch(e){
         showFallback('Permission denied or no input device found.');
       }
     }
@@ -189,7 +191,7 @@
     });
     presetSelect.addEventListener('change',()=>state.mainPreset=presetSelect.value);
 
-    // Color helpers
+    // color
     function dynamicHSB(hue,sat,bri,shift=0,alpha=1){
       return `hsla(${(hue+shift)%360},${sat}%,${bri}%,${alpha})`;
     }
@@ -197,88 +199,19 @@
       return ((t*30)+state.momentHue*state.momentHueAlpha)%360;
     }
 
-    // --- EQ_PRESETS ---
+    // EQ_PRESETS (v1.19, without graphic/alpine)
     const EQ_PRESETS = {
-      // [All of your existing presets: vhs, tape, neon, aurora, spectrum,
-      //  pultec, neve, ssl, graphic — exactly as in v1.20]
-      graphic: {
-        name:'Graphic EQ', sensitivity:1.0,
-        customDraw(ctx,state,opts){
-          const {sens}=opts,
-                bands=[31,62,125,250,500,1000,2000,4000,8000,16000],
-                nyq=state.audioContext.sampleRate/2,
-                bins=state.dataMid.length,
-                w=canvas.width/bands.length,
-                h=canvas.height,
-                segs=10,
-                segH=h/segs;
-          ctx.save();
-          ctx.textAlign='center';
-          ctx.font='12px sans-serif';
-          bands.forEach((f,i)=>{
-            const bin=Math.round(f/nyq*bins),
-                  amp=Math.min(state.dataMid[bin]/255*sens,1);
-            for(let s=0;s<segs;s++){
-              const y=h-(s+1)*segH,
-                    on=amp>(s+1)/segs;
-              ctx.fillStyle = on
-                ? `rgba(0,255,170,${0.4+0.6*(s+1)/segs})`
-                : 'rgba(255,255,255,0.12)';
-              ctx.fillRect(i*w+w*0.1, y+2, w*0.8, segH-4);
-            }
-            const label=f>=1000?(f/1000)+'k':f;
-            ctx.fillStyle='#fff';
-            ctx.fillText(label,i*w+w/2,h-4);
-          });
-          ctx.restore();
-        }
-      },
-      alpine86: {
-        name:'Alpine 86', sensitivity:1.0,
-        customDraw(ctx,state,opts){
-          const bands=[31,62,125,250,500,1000,2000,4000,8000,16000],
-                nyq=state.audioContext.sampleRate/2,
-                bins=state.dataMid.length,
-                w=canvas.width/bands.length,
-                h=canvas.height,
-                segs=10,
-                segH=h/segs;
-          ctx.save();
-          ctx.textAlign='center';
-          ctx.font='12px sans-serif';
-          // left & right scales
-          ctx.fillStyle='rgba(255,255,255,0.6)';
-          ['+10',' +0','-10'].forEach((txt,i)=>{
-            const y = (i/2)*h;
-            ctx.fillText(txt, w*0.5, y);
-            ctx.fillText(txt, canvas.width-w*0.5, y);
-          });
-          // bars
-          bands.forEach((f,i)=>{
-            const bin=Math.round(f/nyq*bins),
-                  amp=state.dataMid[bin]/255*opts.sens;
-            for(let s=0;s<segs;s++){
-              const y=h-(s+1)*segH,
-                    on=amp>(s+1)/segs;
-              ctx.fillStyle = on
-                ? `rgba(0,200,80,${0.5+0.5*(s+1)/segs})`
-                : 'rgba(255,255,255,0.08)';
-              ctx.fillRect(i*w + w*0.2, y+3, w*0.6, segH-6);
-            }
-          });
-          // freq labels bottom
-          ctx.fillStyle='#fff';
-          bands.forEach((f,i)=>{
-            const label=f>=1000?(f/1000)+'k':f;
-            ctx.fillText(label,i*w+w/2,h-6);
-          });
-          ctx.restore();
-        }
-      }
+      vhs:   { /* your v1.19 VHS code */ },
+      tape:  { /* your v1.19 Tape code */ },
+      neon:  { /* your v1.19 Neon code */ },
+      aurora:{ /* your v1.19 Aurora code */ },
+      spectrum:{ /* your v1.19 Spectrum code */ },
+      pultec:{ /* your v1.19 Pultec code */ },
+      neve:  { /* your v1.19 Neve code */ },
+      ssl:   { /* your v1.19 SSL code */ }
     };
 
-    // --- Drawing functions & main loop (unchanged from v1.20) ---
-    // drawPreset, drawBandMarkers, draw(), etc.
+    // drawPreset, drawBandMarkers, draw(), etc. all as they were in v1.19
 
     fsBtn.onclick = ()=> {
       document.fullscreenElement ? document.exitFullscreen() : canvas.requestFullscreen();
