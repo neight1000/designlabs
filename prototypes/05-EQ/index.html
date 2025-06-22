@@ -3,226 +3,693 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro - Clean Restored Build</title>
+  <title>Enhanced Visual EQ v2.0</title>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
+    html, body {
+      margin: 0; padding: 0; overflow: hidden;
+      background: #000; color: #fff;
+      font-family: 'Arial', sans-serif;
+      height: 100vh; width: 100vw;
+    }
     #controls {
-      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; z-index: 10; transition: opacity .5s;
-      background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
+      position: absolute; top: 15px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 12px; align-items: center;
+      z-index: 10; transition: opacity .5s;
+      background: rgba(0,0,0,0.8); 
+      backdrop-filter: blur(10px);
+      padding: 12px 20px; 
+      border-radius: 25px;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
-    select, button, label, input[type=range] {
-      background: #000; color: #fff; border: 1px solid #fff; padding: 4px 8px; font-size: 1rem;
+    select, button, input[type=range] {
+      background: rgba(255,255,255,0.1); 
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.3); 
+      padding: 8px 12px;
+      font-size: 14px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
     }
-    label { display: flex; align-items: center; gap: 4px; }
-    input[type=range] { width: 80px; }
-    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
+    select:hover, button:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: rgba(255,255,255,0.5);
+    }
+    button {
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:active {
+      transform: scale(0.95);
+    }
+    label { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      font-size: 14px;
+      color: rgba(255,255,255,0.9);
+    }
+    input[type=range] { 
+      width: 120px; 
+      -webkit-appearance: none;
+      appearance: none;
+      height: 6px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 3px;
+      outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      background: #00ff88;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,255,136,0.5);
+    }
+    input[type=checkbox] {
+      width: 18px;
+      height: 18px;
+      accent-color: #00ff88;
+    }
+    canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+    }
+    #error {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,0,0,0.1);
+      border: 1px solid rgba(255,0,0,0.3);
+      padding: 20px;
+      border-radius: 12px;
+      text-align: center;
+      color: #ff6b6b;
+      display: none;
+      z-index: 20;
+    }
+    #status {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: rgba(0,0,0,0.7);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.7);
+      z-index: 10;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
-    <label for="deviceSelect">Input</label>
-    <select id="deviceSelect"></select>
-    <button id="startBtn">Start</button>
-    <button id="stopBtn">Stop</button>
-    <label for="fftSelect">FFT</label>
+    <select id="deviceSelect">
+      <option value="">Select Audio Device...</option>
+    </select>
+    <button id="startBtn">🎵 Start</button>
     <select id="fftSelect">
-      <option>256</option><option selected>512</option>
-      <option>1024</option><option>2048</option>
-      <option>4096</option><option>8192</option>
-      <option>16384</option><option>32768</option>
+      <option value="256">256 FFT</option>
+      <option value="512" selected>512 FFT</option>
+      <option value="1024">1024 FFT</option>
+      <option value="2048">2048 FFT</option>
+      <option value="4096">4096 FFT</option>
     </select>
-    <label for="presetSelect">Preset</label>
     <select id="presetSelect">
-      <option value="vhs">VHS Drift</option>
-      <option value="tape">Tape Echo</option>
-      <option value="neon">Neon Grid</option>
-      <option value="aurora">Aurora</option>
-      <option value="spectrum">Spectrum Cascade</option>
-      <option value="pultec">Pultec EQ</option>
-      <option value="neve">Neve EQ</option>
-      <option value="ssl">SSL EQ</option>
+      <option value="synthwave">🌆 Synthwave</option>
+      <option value="cyberpunk">🤖 Cyberpunk</option>
+      <option value="aurora">🌌 Aurora</option>
+      <option value="vintage">📼 Vintage VHS</option>
+      <option value="neon">💫 Neon Grid</option>
+      <option value="spectrum">🌈 Spectrum Bars</option>
+      <option value="oscilloscope">📊 Oscilloscope</option>
+      <option value="waveform">〰️ Waveform</option>
     </select>
-    <label>Sensitivity <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15"></label>
-    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
-    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
-    <label><input type="checkbox" id="momentsToggle"> Moments</label>
-    <label>Beat Thr <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7"></label>
-    <label>Cooldown <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3"></label>
-    <button id="fsBtn">Fullscreen</button>
-    <span id="dbReadout">dB: --</span>
-    <span id="bpmReadout">BPM: --</span>
+    <label>Sensitivity
+      <input type="range" id="sensSlider" min="0.3" max="4" step="0.1" value="1.5">
+    </label>
+    <label><input type="checkbox" id="tracerToggle" checked> Trails</label>
+    <label><input type="checkbox" id="crossfadeToggle"> Auto-Switch</label>
+    <label><input type="checkbox" id="beatToggle"> Beat Sync</label>
+    <button id="fsBtn">⛶ Fullscreen</button>
   </div>
-
+  
+  <div id="error">
+    <h3>Audio Access Error</h3>
+    <p id="errorMessage"></p>
+    <button onclick="this.parentElement.style.display='none'">Close</button>
+  </div>
+  
+  <div id="status">Ready - Click Start to begin</div>
+  
   <canvas id="vis"></canvas>
 
   <script>
-    const $ = id => document.getElementById(id);
-    const canvas = $("vis");
-    const ctx = canvas.getContext("2d");
-    let audioContext, analyser, source, stream;
-    let dataArray;
+    const elements = {
+      deviceSelect: document.getElementById('deviceSelect'),
+      startBtn: document.getElementById('startBtn'),
+      fftSelect: document.getElementById('fftSelect'),
+      presetSelect: document.getElementById('presetSelect'),
+      sensSlider: document.getElementById('sensSlider'),
+      tracerToggle: document.getElementById('tracerToggle'),
+      crossfadeToggle: document.getElementById('crossfadeToggle'),
+      beatToggle: document.getElementById('beatToggle'),
+      fsBtn: document.getElementById('fsBtn'),
+      controls: document.getElementById('controls'),
+      canvas: document.getElementById('vis'),
+      error: document.getElementById('error'),
+      errorMessage: document.getElementById('errorMessage'),
+      status: document.getElementById('status')
+    };
+
+    const ctx = elements.canvas.getContext('2d');
+    
+    let audioContext, splitter, leftAnalyser, rightAnalyser, stream;
+    let dataLeft, dataRight, startTime, isRunning = false;
+    let mainPreset = elements.presetSelect.value;
+    let xfadeActive = false, xfadeStart = 0, xfadeDur = 8, nextXfade = 0;
+    let secondaryPreset = mainPreset;
+    let lastBeatTime = 0, beatHue = 0, beatIntensity = 0;
+    let particleSystem = [];
+
+    // Enhanced 1D noise function
+    function fract(x) { return x - Math.floor(x); }
+    function rand(n) { return fract(Math.sin(n) * 43758.5453123); }
+    function noise1D(x) {
+      const i = Math.floor(x);
+      const f = fract(x);
+      const u = f * f * (3.0 - 2.0 * f); // smoothstep
+      return rand(i) * (1 - u) + rand(i + 1) * u;
+    }
+
+    // Particle system for enhanced effects
+    class Particle {
+      constructor(x, y, vx, vy, color, life) {
+        this.x = x; this.y = y;
+        this.vx = vx; this.vy = vy;
+        this.color = color;
+        this.life = life;
+        this.maxLife = life;
+        this.size = Math.random() * 3 + 1;
+      }
+      
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life--;
+        this.vy += 0.1; // gravity
+        this.vx *= 0.98; // friction
+      }
+      
+      draw() {
+        const alpha = this.life / this.maxLife;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function showError(message) {
+      elements.errorMessage.textContent = message;
+      elements.error.style.display = 'block';
+      elements.status.textContent = 'Error: ' + message;
+    }
+
+    function updateStatus(message) {
+      elements.status.textContent = message;
+    }
 
     function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      elements.canvas.width = window.innerWidth;
+      elements.canvas.height = window.innerHeight;
     }
+
     window.addEventListener('resize', resizeCanvas);
+    document.addEventListener('fullscreenchange', resizeCanvas);
     resizeCanvas();
 
-    async function start() {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        source = audioContext.createMediaStreamSource(stream);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = parseInt($("fftSelect").value);
-        source.connect(analyser);
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-        requestAnimationFrame(draw);
+    async function populateDevices() {
+      try {
+        updateStatus('Loading audio devices...');
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(d => d.kind === 'audioinput');
+        
+        elements.deviceSelect.innerHTML = '<option value="">Default Device</option>';
+        audioInputs.forEach((device, index) => {
+          const option = document.createElement('option');
+          option.value = device.deviceId;
+          option.textContent = device.label || `Microphone ${index + 1}`;
+          elements.deviceSelect.appendChild(option);
+        });
+        
+        updateStatus('Ready - Select device and click Start');
+      } catch (error) {
+        showError('Failed to load audio devices: ' + error.message);
       }
     }
 
-    function stop() {
+    async function startEQ() {
+      if (isRunning) {
+        stopEQ();
+        return;
+      }
+
+      try {
+        updateStatus('Requesting microphone access...');
+        
+        const constraints = {
+          audio: {
+            deviceId: elements.deviceSelect.value || undefined,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            sampleRate: 44100
+          }
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Create audio nodes
+        splitter = audioContext.createChannelSplitter(2);
+        leftAnalyser = audioContext.createAnalyser();
+        rightAnalyser = audioContext.createAnalyser();
+        
+        // Configure analysers
+        const fftSize = parseInt(elements.fftSelect.value);
+        leftAnalyser.fftSize = rightAnalyser.fftSize = fftSize;
+        leftAnalyser.smoothingTimeConstant = rightAnalyser.smoothingTimeConstant = 0.85;
+        leftAnalyser.minDecibels = rightAnalyser.minDecibels = -90;
+        leftAnalyser.maxDecibels = rightAnalyser.maxDecibels = -10;
+        
+        // Create data arrays
+        dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+        dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+        
+        // Connect audio graph
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(splitter);
+        splitter.connect(leftAnalyser, 0);
+        splitter.connect(rightAnalyser, 1);
+        
+        // Initialize timing
+        startTime = performance.now();
+        nextXfade = startTime / 1000 + 30 + Math.random() * 60;
+        
+        isRunning = true;
+        elements.startBtn.textContent = '⏹ Stop';
+        updateStatus('🎵 Visualizing audio...');
+        
+        draw();
+        
+      } catch (error) {
+        showError('Failed to start audio: ' + error.message);
+        console.error('Audio error:', error);
+      }
+    }
+
+    function stopEQ() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
       if (audioContext) {
         audioContext.close();
-        stream.getTracks().forEach(track => track.stop());
         audioContext = null;
       }
+      
+      isRunning = false;
+      elements.startBtn.textContent = '🎵 Start';
+      updateStatus('Stopped');
     }
+
+    // Event listeners
+    elements.fftSelect.addEventListener('change', () => {
+      if (!leftAnalyser) return;
+      const fftSize = parseInt(elements.fftSelect.value);
+      leftAnalyser.fftSize = rightAnalyser.fftSize = fftSize;
+      dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+      dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+    });
+
+    elements.presetSelect.addEventListener('change', () => {
+      mainPreset = elements.presetSelect.value;
+    });
 
     function draw() {
+      if (!isRunning) return;
+      
       requestAnimationFrame(draw);
-      analyser.getByteFrequencyData(dataArray);
-      ctx.fillStyle = $("tracerToggle").checked ? 'rgba(0,0,0,0.15)' : '#000';
-      ctx.fillRect(0,0,canvas.width,canvas.height);
+      
+      if (!leftAnalyser || !rightAnalyser) return;
+      
+      leftAnalyser.getByteFrequencyData(dataLeft);
+      rightAnalyser.getByteFrequencyData(dataRight);
 
-      const preset = $("presetSelect").value;
-      if (preset === 'vhs') drawVHS();
-      else if (preset === 'tape') drawTape();
-      else if (preset === 'neon') drawNeon();
-      else if (preset === 'aurora') drawAurora();
-      else if (preset === 'spectrum') drawSpectrum();
-      else if (preset === 'pultec') drawPultec();
-      else if (preset === 'neve') drawNeve();
-      else if (preset === 'ssl') drawSSL();
-
-      drawDbMeter();
-      drawBpmMeter();
-    }
-
-    function drawVHS() {
-      // ORIGINAL VHS LOGIC RESTORED
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        const hue = 240 - (i / dataArray.length) * 240;
-        ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      const t = (performance.now() - startTime) * 0.001;
+      const hueShift = (t * 10) % 360;
+      
+      // Handle crossfade
+      if (elements.crossfadeToggle.checked && !xfadeActive && t > nextXfade) {
+        xfadeActive = true;
+        xfadeStart = t;
+        const presets = ['synthwave', 'cyberpunk', 'aurora', 'vintage', 'neon', 'spectrum', 'oscilloscope', 'waveform'];
+        secondaryPreset = presets.filter(p => p !== mainPreset)[Math.floor(Math.random() * 7)];
       }
-    }
-
-    function drawTape() {
-      // ORIGINAL TAPE ECHO LOGIC RESTORED
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        ctx.fillStyle = `rgba(255,220,180,0.8)`;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      
+      let crossfadeWeight = 0;
+      if (xfadeActive) {
+        crossfadeWeight = Math.min((t - xfadeStart) / xfadeDur, 1);
+        if (crossfadeWeight >= 1) {
+          mainPreset = secondaryPreset;
+          elements.presetSelect.value = mainPreset;
+          xfadeActive = false;
+          nextXfade = t + 30 + Math.random() * 60;
+          crossfadeWeight = 0;
+        }
       }
+      
+      // Beat detection
+      const bassSum = (dataLeft[1] + dataLeft[2] + dataLeft[3] + dataRight[1] + dataRight[2] + dataRight[3]) / 6;
+      const bassLevel = bassSum / 255;
+      
+      if (elements.beatToggle.checked && bassLevel > 0.6 && t - lastBeatTime > 0.2) {
+        lastBeatTime = t;
+        beatHue = Math.random() * 360;
+        beatIntensity = 1;
+        
+        // Add particles on beat
+        for (let i = 0; i < 10; i++) {
+          particleSystem.push(new Particle(
+            Math.random() * elements.canvas.width,
+            elements.canvas.height,
+            (Math.random() - 0.5) * 10,
+            -Math.random() * 15,
+            `hsl(${beatHue}, 100%, 60%)`,
+            60
+          ));
+        }
+      }
+      
+      beatIntensity *= 0.92;
+      
+      // Update particles
+      particleSystem = particleSystem.filter(p => {
+        p.update();
+        return p.life > 0;
+      });
+
+      // Clear or apply trails
+      if (elements.tracerToggle.checked) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.fillRect(0, 0, elements.canvas.width, elements.canvas.height);
+      } else {
+        ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+      }
+
+      // Draw main preset
+      drawPreset(mainPreset, 1 - crossfadeWeight, hueShift, t, bassLevel);
+      
+      // Draw crossfade preset
+      if (crossfadeWeight > 0) {
+        drawPreset(secondaryPreset, crossfadeWeight, hueShift, t, bassLevel);
+      }
+      
+      // Draw particles
+      particleSystem.forEach(p => p.draw());
     }
 
-    function drawNeon() {
-      // ORIGINAL NEON GRID LOGIC RESTORED
-      const barWidth = canvas.width / dataArray.length;
-      ctx.strokeStyle = '#0ff';
+    function drawPreset(preset, alpha, hueShift, t, bassLevel) {
+      const sensitivity = parseFloat(elements.sensSlider.value);
+      const bins = leftAnalyser.frequencyBinCount;
+      const barWidth = elements.canvas.width / bins;
+      
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      
+      const getMidValue = i => ((dataLeft[i] + dataRight[i]) / 2) / 255;
+      const getSideValue = i => Math.abs(dataLeft[i] - dataRight[i]) / 255;
+      
+      switch (preset) {
+        case 'synthwave':
+          drawSynthwave(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+        case 'cyberpunk':
+          drawCyberpunk(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+        case 'aurora':
+          drawAurora(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+        case 'vintage':
+          drawVintage(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+        case 'neon':
+          drawNeon(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+        case 'spectrum':
+          drawSpectrum(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+        case 'oscilloscope':
+          drawOscilloscope(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+        case 'waveform':
+          drawWaveform(bins, barWidth, getMidValue, getSideValue, hueShift, t, sensitivity, bassLevel);
+          break;
+      }
+      
+      ctx.restore();
+    }
+
+    function drawSynthwave(bins, barWidth, getMid, getSide, hueShift, t, sens, bassLevel) {
+      // Grid background
+      ctx.strokeStyle = `hsla(${300 + hueShift}, 100%, 60%, 0.3)`;
       ctx.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 50) {
+      for (let x = 0; x < elements.canvas.width; x += 60) {
         ctx.beginPath();
         ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
+        ctx.lineTo(x, elements.canvas.height);
         ctx.stroke();
       }
-      for (let y = 0; y < canvas.height; y += 50) {
+      for (let y = 0; y < elements.canvas.height; y += 40) {
         ctx.beginPath();
         ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
+        ctx.lineTo(elements.canvas.width, y);
         ctx.stroke();
       }
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        ctx.fillStyle = `hsl(180, 100%, 70%)`;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      
+      // Perspective lines
+      const horizon = elements.canvas.height * 0.6;
+      ctx.strokeStyle = `hsla(${300 + hueShift}, 100%, 70%, 0.8)`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i < bins; i++) {
+        const x = i * barWidth;
+        const amplitude = getMid(i) * sens;
+        const y = horizon - amplitude * 200 + Math.sin(x * 0.01 + t * 2) * 20;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      
+      // Glow effect
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = `hsl(${300 + hueShift}, 100%, 60%)`;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawCyberpunk(bins, barWidth, getMid, getSide, hueShift, t, sens, bassLevel) {
+      // Digital rain effect
+      ctx.fillStyle = `hsla(${120 + hueShift}, 100%, 60%, 0.1)`;
+      for (let i = 0; i < 50; i++) {
+        const x = (noise1D(i + t * 0.5) * elements.canvas.width) % elements.canvas.width;
+        const y = (noise1D(i * 1.3 + t * 2) * elements.canvas.height) % elements.canvas.height;
+        ctx.fillRect(x, y, 2, 20);
+      }
+      
+      // Main frequency bars with hexagonal pattern
+      for (let i = 0; i < bins; i++) {
+        const x = i * barWidth;
+        const amplitude = getMid(i) * sens;
+        const height = amplitude * elements.canvas.height;
+        const hue = (120 + hueShift + i * 2) % 360;
+        
+        // Hexagonal bars
+        ctx.fillStyle = `hsla(${hue}, 100%, 60%, 0.8)`;
+        ctx.beginPath();
+        const centerX = x + barWidth / 2;
+        const centerY = elements.canvas.height - height / 2;
+        for (let j = 0; j < 6; j++) {
+          const angle = (j * Math.PI) / 3;
+          const px = centerX + Math.cos(angle) * (barWidth / 3);
+          const py = centerY + Math.sin(angle) * (height / 4);
+          j === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
       }
     }
 
-    function drawAurora() {
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-        grad.addColorStop(0, 'purple');
-        grad.addColorStop(1, 'lime');
-        ctx.fillStyle = grad;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+    function drawAurora(bins, barWidth, getMid, getSide, hueShift, t, sens, bassLevel) {
+      // Aurora waves
+      const gradient = ctx.createLinearGradient(0, 0, 0, elements.canvas.height);
+      gradient.addColorStop(0, `hsla(${200 + hueShift}, 100%, 70%, 0.1)`);
+      gradient.addColorStop(0.5, `hsla(${120 + hueShift}, 100%, 60%, 0.8)`);
+      gradient.addColorStop(1, `hsla(${280 + hueShift}, 100%, 80%, 0.1)`);
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.moveTo(0, elements.canvas.height);
+      
+      for (let i = 0; i < bins; i++) {
+        const x = i * barWidth;
+        const amplitude = getMid(i) * sens;
+        const y = elements.canvas.height - amplitude * elements.canvas.height * 0.8;
+        const wave = Math.sin(x * 0.01 + t * 3) * 50 * amplitude;
+        ctx.lineTo(x, y + wave);
+      }
+      
+      ctx.lineTo(elements.canvas.width, elements.canvas.height);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Aurora particles
+      for (let i = 0; i < bins; i += 4) {
+        const x = i * barWidth;
+        const amplitude = getMid(i) * sens;
+        if (amplitude > 0.3) {
+          ctx.fillStyle = `hsla(${(120 + hueShift + i * 3) % 360}, 100%, 80%, ${amplitude})`;
+          ctx.beginPath();
+          ctx.arc(x, elements.canvas.height - amplitude * elements.canvas.height, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
     }
 
-    function drawSpectrum() {
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        const hue = (i / dataArray.length) * 360;
-        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+    function drawVintage(bins, barWidth, getMid, getSide, hueShift, t, sens, bassLevel) {
+      // VHS scanlines
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.lineWidth = 1;
+      for (let y = 0; y < elements.canvas.height; y += 3) {
+        const offset = Math.sin(y * 0.1 + t * 5) * 2;
+        ctx.beginPath();
+        ctx.moveTo(offset, y);
+        ctx.lineTo(elements.canvas.width + offset, y);
+        ctx.stroke();
+      }
+      
+      // VHS distortion effect
+      ctx.strokeStyle = 'rgba(255, 200, 100, 0.8)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i < bins; i++) {
+        const x = i * barWidth;
+        const amplitude = getMid(i) * sens;
+        const y = elements.canvas.height - amplitude * elements.canvas.height;
+        const glitch = Math.random() > 0.95 ? Math.random() * 20 - 10 : 0;
+        i === 0 ? ctx.moveTo(x + glitch, y) : ctx.lineTo(x + glitch, y);
+      }
+      ctx.stroke();
+      
+      // Color bleeding effect
+      ctx.globalCompositeOperation = 'screen';
+      ctx.strokeStyle = 'rgba(255, 0, 100, 0.3)';
+      ctx.beginPath();
+      for (let i = 0; i < bins; i++) {
+        const x = i * barWidth + 2;
+        const amplitude = getMid(i) * sens;
+        const y = elements.canvas.height - amplitude * elements.canvas.height;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    function drawNeon(bins, barWidth, getMid, getSide, hueShift, t, sens, bassLevel) {
+      // Neon grid
+      ctx.strokeStyle = `hsla(${180 + hueShift}, 100%, 60%, 0.5)`;
+      ctx.lineWidth = 1;
+      for (let x = 0; x < elements.canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, elements.canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < elements.canvas.height; y += 30) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(elements.canvas.width, y);
+        ctx.stroke();
+      }
+      
+      // Neon frequency curve
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = `hsl(${180 + hueShift}, 100%, 60%)`;
+      ctx.strokeStyle = `hsl(${180 + hueShift}, 100%, 80%)`;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      for (let i = 0; i < bins; i++) {
+        const x = i * barWidth;
+        const amplitude = getMid(i) * sens;
+        const y = elements.canvas.height - amplitude * elements.canvas.height;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    function drawSpectrum(bins, barWidth, getMid, getSide, hueShift, t, sens, bassLevel) {
+      for (let i = 0; i < bins; i++) {
+        const x = i * barWidth;
+        const amplitude = getMid(i) * sens;
+        const height = amplitude * elements.canvas.height;
+        const hue = (hueShift + (i / bins) * 360) % 360;
+        
+        // Gradient bars
+        const gradient = ctx.createLinearGradient(0, elements.canvas.height - height, 0, elements.canvas.height);
+        gradient.addColorStop(0, `hsl(${hue}, 100%, 80%)`);
+        gradient.addColorStop(1, `hsl(${hue}, 100%, 20%)`);
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(x, elements.canvas.height - height, barWidth - 1, height);
+        
+        // Peak indicators
+        if (amplitude > 0.8) {
+          ctx.fillStyle = 'white';
+          ctx.fillRect(x, elements.canvas.height - height - 5, barWidth - 1, 3);
+        }
       }
     }
 
-    function drawPultec() {
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        ctx.fillStyle = `#FFD700`;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+    function drawOscilloscope(bins, barWidth, getMid, getSide, hueShift, t, sens, bassLevel) {
+      // Oscilloscope grid
+      ctx.strokeStyle = 'rgba(0, 255, 100, 0.3)';
+      ctx.lineWidth = 1;
+      const centerY = elements.canvas.height / 2;
+      
+      // Horizontal lines
+      for (let y = 0; y < elements.canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(elements.canvas.width, y);
+        ctx.stroke();
       }
-    }
-
-    function drawNeve() {
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        ctx.fillStyle = `#3498db`;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      
+      // Vertical lines
+      for (let x = 0; x < elements.canvas.width; x += 60) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, elements.canvas.height);
+        ctx.stroke();
       }
-    }
-
-    function drawSSL() {
-      const barWidth = canvas.width / dataArray.length;
-      for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * parseFloat($("sensSlider").value);
-        ctx.fillStyle = `#ff00ff`;
-        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
-      }
-    }
-
-    function drawDbMeter() {
-      const rms = Math.sqrt(dataArray.reduce((sum, v) => sum + (v*v), 0) / dataArray.length);
-      const db = 20 * Math.log10(rms / 255);
-      $("dbReadout").textContent = `dB: ${db.toFixed(1)}`;
-    }
-
-    function drawBpmMeter() {
-      $("bpmReadout").textContent = `BPM: --`;
-    }
-
-    $("startBtn").onclick = start;
-    $("stopBtn").onclick = stop;
-    $("fftSelect").onchange = () => {
-      if (analyser) {
-        analyser.fftSize = parseInt($("fftSelect").value);
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-      }
-    }
-  </script>
-</body>
-</html>
+      
+      // Waveform
+      ctx.strokeStyle = `hsl(${120 + hueShift}, 100%, 70%)`;
+      ctx.lineWidth = 3;
+      ctx.beginPath
