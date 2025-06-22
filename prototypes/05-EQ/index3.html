@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visual EQ v1.14 - Extended</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; overflow: hidden;
+      background: #000; color: #fff;
+      font-family: sans-serif;
+      height: 100vh; width: 100vw;
+    }
+    #controls {
+      position: absolute; top: 10px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px; align-items: center;
+      z-index: 10; transition: opacity .5s;
+      background: rgba(0,0,0,0.7); padding: 8px; border-radius: 6px;
+      flex-wrap: wrap; justify-content: center;
+    }
+    select, button, label, input[type=range], input[type=color] {
+      background: #333; color: #fff;
+      border: 1px solid #666; padding: 4px 8px;
+      font-size: 14px; border-radius: 4px;
+    }
+    button:hover, select:hover {
+      background: #555;
+    }
+    label { display: flex; align-items: center; gap: 4px; }
+    input[type=range] { width: 100px; }
+    input[type=color] { width: 40px; height: 28px; padding: 2px; }
+    canvas {
+      position: absolute; top: 0; left: 0;
+      width: 100vw; height: 100vh;
+    }
+    #error {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,0,0,0.1); border: 1px solid #f00;
+      padding: 20px; border-radius: 8px; text-align: center;
+      display: none; z-index: 20;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <select id="deviceSelect">
+      <option value="">Default Microphone</option>
+    </select>
+    <button id="startBtn">Start</button>
+    <select id="fftSelect">
+      <option>256</option><option selected>512</option>
+      <option>1024</option><option>2048</option>
+      <option>4096</option><option>8192</option>
+      <option>16384</option><option>32768</option>
+    </select>
+    <select id="presetSelect">
+      <option value="synthwave">Synthwave</option>
+      <option value="cyberpunk">Cyberpunk</option>
+      <option value="vhs">VHS Drift</option>
+      <option value="tape">Tape Echo</option>
+      <option value="neon">Neon Grid</option>
+      <option value="aurora">Aurora</option>
+      <option value="spectrum">Spectrum Cascade</option>
+      <option value="oscilloscope">Oscilloscope</option>
+      <option value="retro70s">1970s Retro</option>
+      <option value="disco80s">1980s Disco</option>
+      <option value="rave90s">1990s Rave</option>
+      <option value="y2k2000s">Y2K 2000s</option>
+      <option value="alpine">Alpine Car Stereo</option>
+      <option value="rainbow">Rainbow Glitter</option>
+    </select>
+    <label>Sensitivity
+      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
+    </label>
+    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
+    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
+    <label><input type="checkbox" id="momentsToggle"> Moments</label>
+    <label><input type="checkbox" id="gridToggle" checked> Grid</label>
+    <label>Grid Color
+      <input type="color" id="gridColor" value="#666666">
+    </label>
+    <button id="fsBtn">Fullscreen</button>
+  </div>
+  
+  <div id="error">
+    <h3>Error</h3>
+    <p id="errorMsg"></p>
+    <button onclick="this.parentElement.style.display='none'">Close</button>
+  </div>
+  
+  <canvas id="vis"></canvas>
+
+  <script>
+    const deviceSelect   = document.getElementById('deviceSelect'),
+          startBtn        = document.getElementById('startBtn'),
+          fftSelect       = document.getElementById('fftSelect'),
+          presetSelect    = document.getElementById('presetSelect'),
+          sensSlider      = document.getElementById('sensSlider'),
+          tracerToggle    = document.getElementById('tracerToggle'),
+          crossfadeToggle = document.getElementById('crossfadeToggle'),
+          momentsToggle   = document.getElementById('momentsToggle'),
+          gridToggle      = document.getElementById('gridToggle'),
+          gridColor       = document.getElementById('gridColor'),
+          fsBtn           = document.getElementById('fsBtn'),
+          controls        = document.getElementById('controls'),
+          canvas          = document.getElementById('vis'),
+          ctx             = canvas.getContext('2d'),
+          errorDiv        = document.getElementById('error'),
+          errorMsg        = document.getElementById('errorMsg');
+
+    let audioContext, splitter, leftAnalyser, rightAnalyser, stream,
+        dataLeft, dataRight, startTime;
+    let mainPreset = presetSelect.value;
+    let xfadeActive=false, xfadeStart=0, xfadeDur=5, nextXfade=0,
+        secondaryPreset=mainPreset;
+    let lastBeatTime=0, momentHue=0, momentHueAlpha=0;
+
+    function showError(msg) {
+      console.error('Audio Visualizer Error:', msg);
+      errorMsg.textContent = msg;
+      errorDiv.style.display = 'block';
+    }
+
+    // 1D noise
+    function fract(x){ return x - Math.floor(x); }
+    function rand(n){ return fract(Math.sin(n)*43758.5453123); }
+    function noise1D(x){
+      const i=Math.floor(x), f=fract(x);
+      return rand(i)*(1-f)+rand(i+1)*f;
+    }
+
+    function resizeCanvas(){
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    document.addEventListener('fullscreenchange', resizeCanvas);
+    resizeCanvas();
+
+    async function populateDevices(){
+      try {
+        const devs = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devs.filter(d=>d.kind==='audioinput');
+        
+        // Clear existing options except default
+        while(deviceSelect.children.length > 1) {
+          deviceSelect.removeChild(deviceSelect.lastChild);
+        }
+        
+        audioInputs.forEach((d,i)=>{
+          const o=document.createElement('option');
+          o.value=d.deviceId; 
+          o.textContent=d.label||`Microphone ${i+1}`;
+          deviceSelect.appendChild(o);
+        });
+        
+        console.log(`Found ${audioInputs.length} audio input devices`);
+      } catch(e) {
+        showError('Failed to load devices: ' + e.message);
+      }
+    }
+
+    // Add event listener for start button
+    startBtn.addEventListener('click', startEQ);
+
+    // Add event listener for fullscreen button
+    fsBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(e => {
+          showError('Fullscreen failed: ' + e.message);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    async function startEQ(){
+      if(audioContext && audioContext.state !== 'closed') {
+        // Stop existing
+        if(stream) stream.getTracks().forEach(t=>t.stop());
+        await audioContext.close();
+        audioContext = null;
+        startBtn.textContent = 'Start';
+        console.log('Audio stopped');
+        return;
+      }
+      
+      try {
+        console.log('Requesting microphone access...');
+        const constraints = {
+          audio: {
+            deviceId: deviceSelect.value || undefined,
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
+          }
+        };
+        
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('Microphone access granted');
+        
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Resume context if suspended
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        
+        splitter = audioContext.createChannelSplitter(2);
+        leftAnalyser = audioContext.createAnalyser();
+        rightAnalyser = audioContext.createAnalyser();
+        
+        const fftSize = parseInt(fftSelect.value);
+        leftAnalyser.fftSize = rightAnalyser.fftSize = fftSize;
+        leftAnalyser.smoothingTimeConstant = rightAnalyser.smoothingTimeConstant = 0.8;
+        
+        dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+        dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+        
+        const src = audioContext.createMediaStreamSource(stream);
+        src.connect(splitter);
+        splitter.connect(leftAnalyser, 0);
+        splitter.connect(rightAnalyser, 1);
+        
+        startTime = performance.now();
+        nextXfade = startTime/1000 + 30 + Math.random()*30; // Shorter crossfade interval for testing
+        startBtn.textContent = 'Stop';
+        
+        console.log('Audio analysis started, FFT size:', fftSize, 'Bins:', leftAnalyser.frequencyBinCount);
+        draw();
+      } catch(e) {
+        console.error('Start error:', e);
+        showError('Failed to start audio: ' + e.message + '. Please check microphone permissions.');
+      }
+    }
+
+    fftSelect.addEventListener('change', ()=>{
+      if(!leftAnalyser) return;
+      const fftSize = parseInt(fftSelect.value);
+      leftAnalyser.fftSize = rightAnalyser.fftSize = fftSize;
+      dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+      dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+      console.log('FFT size changed to:', fftSize);
+    });
+
+    presetSelect.addEventListener('change', ()=>{ 
+      mainPreset = presetSelect.value; 
+      console.log('Preset changed to:', mainPreset);
+    });
+
+    function draw(){
+      if(!audioContext || audioContext.state === 'closed') return;
+      requestAnimationFrame(draw);
+      
+      leftAnalyser.getByteFrequencyData(dataLeft);
+      rightAnalyser.getByteFrequencyData(dataRight);
+
+      const t = (performance.now() - startTime)*0.001;
+      const hueOffset = (t*8) % 360;
+      const lfo = (Math.sin(Math.PI*0.2*t)+1)/2;
+      const noiseAmp = 0.02 * (0.5 + 0.5*lfo);
+
+      // crossfade
+      if(crossfadeToggle.checked){
+        if(!xfadeActive && t > nextXfade){
+          xfadeActive = true;
+          xfadeStart = t;
+          const all = ['synthwave','cyberpunk','vhs','tape','neon','aurora','spectrum','oscilloscope','retro70s','disco80s','rave90s','y2k2000s','alpine','rainbow'];
+          secondaryPreset = all.filter(p=>p!==mainPreset)[Math.floor(Math.random()*(all.length-1))];
+          console.log('Crossfade started:', mainPreset, '->', secondaryPreset);
+        }
+      } else xfadeActive = false;
+      
+      let w2=0;
+      if(xfadeActive){
+        w2 = Math.min((t - xfadeStart)/xfadeDur,1);
+        if(w2>=1){
+          mainPreset = secondaryPreset;
+          presetSelect.value = mainPreset;
+          xfadeActive=false;
+          nextXfade = t + 30 + Math.random()*30;
+          w2 = 0;
+          console.log('Crossfade completed to:', mainPreset);
+        }
+      }
+      const w1 = 1 - w2;
+
+      // moments
+      const bassAvg = dataLeft.length > 2 ? ((dataLeft[2]+dataRight[2])/2)/255 : 0;
+      if(momentsToggle.checked && bassAvg>0.7 && t - lastBeatTime>0.3){
+        lastBeatTime = t;
+        momentHue = Math.random()*360;
+        momentHueAlpha = 1;
+      }
+      momentHueAlpha *= 0.9;
+
+      // tracer
+      if(tracerToggle.checked){
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
+      } else {
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+      }
+
+      // draw presets
+      drawPreset(mainPreset, w1, hueOffset, t, noiseAmp);
+      if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmp);
+    }
+
+    function drawPreset(preset, alpha, hueOffset, t, noiseAmp){
+      const sens = parseFloat(sensSlider.value);
+      const bins  = leftAnalyser.frequencyBinCount;
+      const slice = canvas.width/bins;
+      const jitter = 1 + (Math.random()-0.5)*0.1* ((Math.sin(Math.PI*0.2*t)+1)/2);
+      ctx.globalAlpha = alpha;
+
+      const midVal  = i => (dataLeft[i]+dataRight[i])/2/255;
+      const sideVal = i => Math.abs(dataLeft[i]-dataRight[i])/255;
+
+      function drawCurve(getVal, color, dash=false){
+        ctx.beginPath();
+        for(let i=0;i<bins;i++){
+          let f = Math.min(getVal(i)*sens,1);
+          let x=i*slice, y=canvas.height-f*canvas.height;
+          y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
+          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.lineWidth = 2*jitter;
+        ctx.strokeStyle = color;
+        ctx.setLineDash(dash?[4,4]:[]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      const dynHue = base => (base + hueOffset + momentHue*momentHueAlpha)%360;
+
+      switch(preset){
+        case 'synthwave':
+          // Retro grid
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'4D'; ctx.lineWidth=1;
+            for(let x=0;x<canvas.width;x+=50){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+            for(let y=0;y<canvas.height;y+=30){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+          }
+          // Pink/cyan waveforms
+          ctx.shadowBlur=15; ctx.shadowColor='#ff00ff';
+          drawCurve(i=>midVal(i), `hsl(${dynHue(300)},100%,70%)`);
+          ctx.shadowColor='#00ffff';
+          drawCurve(i=>sideVal(i), `hsl(${dynHue(180)},100%,70%)`, true);
+          ctx.shadowBlur=0;
+          break;
+
+        case 'cyberpunk':
+          // Digital hexagons background
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'33'; ctx.lineWidth=1;
+            for(let x=0;x<canvas.width;x+=40){
+              for(let y=0;y<canvas.height;y+=40){
+                ctx.beginPath();
+                for(let j=0;j<6;j++){
+                  const a=j*Math.PI/3, px=x+Math.cos(a)*15, py=y+Math.sin(a)*15;
+                  j===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+                }
+                ctx.closePath(); ctx.stroke();
+              }
+            }
+          }
+          // Glowing green curves
+          ctx.shadowBlur=25; ctx.shadowColor='#00ff41';
+          drawCurve(i=>midVal(i), `hsl(${dynHue(120)},100%,60%)`);
+          ctx.shadowBlur=10;
+          drawCurve(i=>sideVal(i), `hsl(${dynHue(80)},100%,80%)`, true);
+          ctx.shadowBlur=0;
+          break;
+
+        case 'spectrum':
+          // Enhanced spectrum bars
+          for(let i=0;i<bins;i++){
+            let f = Math.min(midVal(i)*sens,1);
+            let x=i*slice, h=(dynHue(i/bins*360))%360, barH=f*canvas.height;
+            // Gradient bars
+            const barGrad=ctx.createLinearGradient(0,canvas.height-barH,0,canvas.height);
+            barGrad.addColorStop(0,`hsl(${h},100%,80%)`);
+            barGrad.addColorStop(1,`hsl(${h},100%,40%)`);
+            ctx.fillStyle=barGrad;
+            ctx.fillRect(x, canvas.height-barH, slice-1, barH);
+            // Peak indicators
+            if(f>0.8){
+              ctx.fillStyle='white';
+              ctx.fillRect(x, canvas.height-barH-3, slice-1, 2);
+            }
+          }
+          break;
+
+        case 'oscilloscope':
+          // Oscilloscope grid
+          if(gridToggle.checked) {
+            ctx.strokeStyle=gridColor.value+'4D'; ctx.lineWidth=1;
+            const centerY=canvas.height/2;
+            for(let y=0;y<canvas.height;y+=canvas.height/8){
+              ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+            }
+            for(let x=0;x<canvas.width;x+=canvas.width/10){
+              ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+            }
+          }
+          // Oscilloscope trace
+          const centerY=canvas.height/2;
+          ctx.strokeStyle=`hsl(${dynHue(120)},100%,70%)`;
+          ctx.lineWidth=3;
+          ctx.beginPath();
+          for(let i=0;i<bins;i++){
+            const x=i*slice;
+            const amp=(midVal(i)-0.5)*sens;
+            const y=centerY+amp*centerY*0.8;
+            i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+          }
+          ctx.stroke();
+          // Phosphor glow
+          ctx.shadowBlur=10; ctx.shadowColor=`hsl(${dynHue(120)},100%,70%)`;
+          ctx.stroke();
+          ctx.shadowBlur=0;
+          break;
+
+        default:
+          // Simple fallback visualization
+          ctx.strokeStyle = `hsl(${dynHue(180)},100%,70%)`;
+          ctx.lineWidth = 2;
+          drawCurve(i=>midVal(i), `hsl(${dynHue(180)},100%,70%)`);
+          break;
+      }
+      
+      // Reset global alpha
+      ctx.globalAlpha = 1;
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('Visual EQ loaded');
+      populateDevices();
+      
+      // Add demo mode for testing without audio
+      if (location.search.includes('demo')) {
+        console.log('Demo mode enabled');
+        // Create fake audio data for testing
+        dataLeft = new Uint8Array(256);
+        dataRight = new Uint8Array(256);
+        leftAnalyser = { frequencyBinCount: 256 };
+        startTime = performance.now();
+        
+        function demoData() {
+          const t = performance.now() * 0.001;
+          for(let i = 0; i < 256; i++) {
+            dataLeft[i] = Math.sin(t + i * 0.1) * 128 + 128;
+            dataRight[i] = Math.cos(t + i * 0.1) * 128 + 128;
+          }
+        }
+        
+        function demoDraw() {
+          demoData();
+          draw();
+          requestAnimationFrame(demoDraw);
+        }
+        
+        demoDraw();
+      }
+    });
+
+    // Handle visibility changes
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && audioContext) {
+        console.log('Page hidden, suspending audio context');
+        audioContext.suspend();
+      } else if (!document.hidden && audioContext && audioContext.state === 'suspended') {
+        console.log('Page visible, resuming audio context');
+        audioContext.resume();
+      }
+    });
+
+  </script>
+</body>
+</html>
