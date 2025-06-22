@@ -1,69 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prototype Index</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
-    <style>
-        body {
-            background-color: #ffffff;
-            color: #000000;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 14px;
-            line-height: 1.5;
-            margin: 0;
-            padding: 0;
-        }
-        .container, .panel {
-            border: 1px solid #000000;
-            background-color: #ffffff;
-            border-radius: 0px;
-            box-shadow: none;
-            margin: 8px;
-            padding: 16px;
-        }
-        .navbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px;
-            border-bottom: 1px solid #000000;
-        }
-        .toggle {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            border: 1px solid #000000;
-            background: #ffffff;
-            padding: 8px;
-            margin-bottom: 8px;
-            cursor: pointer;
-        }
-        a {
-            color: #000000;
-            text-decoration: none;
-            display: block;
-            margin: 4px 0;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        .ascii-header {
-            white-space: pre;
-            font-family: 'Roboto Mono', monospace;
-            font-size: 12px;
-            text-align: center;
-            margin: 20px 0;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prototype Index - Moonshot Interactive Version</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+<style>
+    body {
+        background-color: #ffffff;
+        color: #000000;
+        font-family: 'Roboto Mono', monospace;
+        font-size: 14px;
+        line-height: 1.5;
+        margin: 0;
+        padding: 0;
+    }
+    .ascii-header {
+        white-space: pre;
+        font-family: 'Roboto Mono', monospace;
+        font-size: 12px;
+        text-align: center;
+        margin: 20px 0;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+    .container {
+        border: 1px solid #000000;
+        background-color: #ffffff;
+        margin: 20px;
+        padding: 20px;
+        border-radius: 0px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .tile {
+        border: 1px solid #000000;
+        background-color: #f9f9f9;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+    .tile:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 15px rgba(0,0,0,0.3);
+    }
+    .panel {
+        margin-top: 10px;
+        display: none;
+        padding-left: 20px;
+        animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn {
+        from {opacity: 0;}
+        to {opacity: 1;}
+    }
+    a {
+        color: #000000;
+        text-decoration: none;
+        display: block;
+        margin: 5px 0;
+        transition: transform 0.2s;
+    }
+    a:hover {
+        transform: scale(1.1);
+        color: #ff0000;
+    }
+</style>
 </head>
 <body>
 
@@ -76,13 +82,9 @@
                     |___/                              
 </div>
 
-<h1 class="navbar">Prototype Index</h1>
-
 <div class="container">
-    <div class="toggle" onclick="toggleSection('designLabs')">
-        <span>Design Labs</span>
-    </div>
-    <div class="panel" id="designLabs" style="display: none;">
+    <div class="tile" onclick="toggleSection('designLabs')">Design Labs</div>
+    <div class="panel" id="designLabs">
         <a href="https://neight1000.github.io/designlabs/prototypes/01-dmt-emulator/index.html">01 - DMT Emulator</a>
         <a href="https://neight1000.github.io/designlabs/prototypes/02-delay/index.html">02 - Delay</a>
         <a href="https://neight1000.github.io/designlabs/prototypes/03-sp-1200/index.html">03 - SP-1200</a>
@@ -93,10 +95,8 @@
 </div>
 
 <div class="container">
-    <div class="toggle" onclick="toggleSection('grooves')">
-        <span>Grooves</span>
-    </div>
-    <div class="panel" id="grooves" style="display: none;">
+    <div class="tile" onclick="toggleSection('grooves')">Grooves</div>
+    <div class="panel" id="grooves">
         <a href="https://neight1000.github.io/Grooves/DMT.html">DMT</a>
         <a href="https://neight1000.github.io/Grooves/butterfly.html">butterfly</a>
         <a href="https://neight1000.github.io/Grooves/center.html">center</a>
@@ -104,24 +104,20 @@
         <a href="https://neight1000.github.io/Grooves/design.html">design</a>
         <a href="https://neight1000.github.io/Grooves/dub-mode.html">dub-mode</a>
         <a href="https://neight1000.github.io/Grooves/effects.html">effects</a>
-        <!-- The rest of the grooves list remains here, skipping for brevity -->
+        <!-- The rest of grooves can be extended same way -->
     </div>
 </div>
 
 <div class="container">
-    <div class="toggle" onclick="toggleSection('rareGemFinder')">
-        <span>Rare Record Finder</span>
-    </div>
-    <div class="panel" id="rareGemFinder" style="display: none;">
+    <div class="tile" onclick="toggleSection('rareGemFinder')">Rare Record Finder</div>
+    <div class="panel" id="rareGemFinder">
         <a href="https://rare-gem-finder.onrender.com/">Rare Gem Finder - Live</a>
     </div>
 </div>
 
 <div class="container">
-    <div class="toggle" onclick="toggleSection('plantastic')">
-        <span>Plantastic</span>
-    </div>
-    <div class="panel" id="plantastic" style="display: none;">
+    <div class="tile" onclick="toggleSection('plantastic')">Plantastic</div>
+    <div class="panel" id="plantastic">
         <a href="https://neight1000.github.io/plantastic/01-Initial-fix.html">01-Initial-fix</a>
         <a href="https://neight1000.github.io/plantastic/01-Initial.html">01-Initial</a>
         <a href="https://neight1000.github.io/plantastic/02-plantasia-Inspired.html">02-plantasia-Inspired</a>
@@ -137,15 +133,31 @@
     </div>
 </div>
 
+<audio id="hoverSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+<audio id="clickSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+
 <script>
 function toggleSection(id) {
     var section = document.getElementById(id);
+    var clickSound = document.getElementById('clickSound');
+    clickSound.play();
     if (section.style.display === "block") {
         section.style.display = "none";
     } else {
         section.style.display = "block";
     }
 }
+
+// Add hover sound effect to all links
+window.onload = function() {
+    var links = document.querySelectorAll('a');
+    links.forEach(function(link) {
+        link.addEventListener('mouseover', function() {
+            var hoverSound = document.getElementById('hoverSound');
+            hoverSound.play();
+        });
+    });
+};
 </script>
 
 </body>
