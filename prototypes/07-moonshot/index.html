@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moonshot Arcade</title>
+<title>Moonshot Arcade - Production</title>
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
 <style>
   body {
@@ -17,7 +17,7 @@
     display: block;
     margin: 0 auto;
     background: #111;
-    border: 1px solid #fff;
+    border: 2px solid #0f0;
   }
   #score {
     position: absolute;
@@ -25,24 +25,63 @@
     left: 10px;
     font-size: 18px;
   }
+  #titleScreen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-size: 24px;
+  }
+  button {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 18px;
+    margin-top: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    border: 1px solid #fff;
+    background: #000;
+    color: #fff;
+  }
+  button:hover {
+    background: #222;
+  }
 </style>
 </head>
 <body>
 
 <div id="score">Score: 0</div>
 <canvas id="gameCanvas" width="600" height="800"></canvas>
+<div id="titleScreen">
+  <div>Moonshot Arcade</div>
+  <button onclick="startGame()">Start Game</button>
+</div>
+
+<audio id="shootSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
+<audio id="hitSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
 
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+let player, bullets, enemies, score, gameRunning;
+let enemyDirection = 1;
+let enemySpeed = 0.5;
 
-let player = { x: 280, y: 750, width: 40, height: 20, speed: 5 };
-let bullets = [];
-let enemies = [];
-let score = 0;
+function initGame() {
+  player = { x: 280, y: 750, width: 40, height: 20, speed: 5 };
+  bullets = [];
+  enemies = [];
+  score = 0;
+  gameRunning = true;
+  document.getElementById('score').innerText = 'Score: 0';
+  spawnEnemies();
+  requestAnimationFrame(gameLoop);
+}
 
 function spawnEnemies() {
-  enemies = [];
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 4; j++) {
       enemies.push({ x: 60 + i * 80, y: 60 + j * 60, width: 40, height: 20, alive: true });
@@ -72,6 +111,20 @@ function updateBullets() {
   bullets.forEach(b => b.y -= 7);
 }
 
+function updateEnemies() {
+  let edgeHit = false;
+  enemies.forEach(e => {
+    if (e.alive) {
+      e.x += enemyDirection * enemySpeed;
+      if (e.x <= 0 || e.x + e.width >= canvas.width) edgeHit = true;
+    }
+  });
+  if (edgeHit) {
+    enemyDirection *= -1;
+    enemies.forEach(e => { if (e.alive) e.y += 20; });
+  }
+}
+
 function checkCollisions() {
   bullets.forEach(b => {
     enemies.forEach(e => {
@@ -80,31 +133,38 @@ function checkCollisions() {
         b.y = -10;
         score += 10;
         document.getElementById('score').innerText = 'Score: ' + score;
+        document.getElementById('hitSound').play();
       }
     });
   });
 }
 
 function gameLoop() {
+  if (!gameRunning) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawPlayer();
   drawBullets();
   drawEnemies();
   updateBullets();
+  updateEnemies();
   checkCollisions();
   requestAnimationFrame(gameLoop);
 }
 
-spawnEnemies();
-gameLoop();
-
 document.addEventListener('keydown', e => {
+  if (!gameRunning) return;
   if (e.key === 'ArrowLeft' && player.x > 0) player.x -= player.speed;
   if (e.key === 'ArrowRight' && player.x < canvas.width - player.width) player.x += player.speed;
   if (e.key === ' ' || e.key === 'Spacebar') {
     bullets.push({ x: player.x + player.width / 2 - 2, y: player.y });
+    document.getElementById('shootSound').play();
   }
 });
+
+function startGame() {
+  document.getElementById('titleScreen').style.display = 'none';
+  initGame();
+}
 </script>
 
 </body>
