@@ -1,106 +1,261 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Moonshot Arcade - Production</title>
-<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
-<style>
-  body {
-    margin: 0;
-    background: #000;
-    color: #fff;
-    font-family: 'Roboto Mono', monospace;
-    overflow: hidden;
-  }
-  #gameCanvas {
-    display: block;
-    margin: 0 auto;
-    background: #111;
-    border: 2px solid #0f0;
-  }
-  #score {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    font-size: 18px;
-  }
-  #titleScreen {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    font-size: 24px;
-  }
-  button {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 18px;
-    margin-top: 20px;
-    padding: 10px 20px;
-    cursor: pointer;
-    border: 1px solid #fff;
-    background: #000;
-    color: #fff;
-  }
-  button:hover {
-    background: #222;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moonshot Arcade - Production</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #000;
+      --fg: #fff;
+      --primary: #0f0;
+      --enemy: #f00;
+      --canvas-bg: #111;
+      --border: #0f0;
+      --button-hover: #222;
+      --explosion: #ff0;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Roboto Mono', monospace;
+      overflow: hidden;
+    }
+    #gameContainer {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      background: var(--canvas-bg);
+      border: 2px solid var(--border);
+      width: 100vw;
+      max-width: 600px;
+      height: 80vh;
+      max-height: 800px;
+      touch-action: none;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      pointer-events: none;
+      z-index: 10;
+    }
+    #score, #lives {
+      font-size: 18px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 4px;
+      padding: 2px 12px;
+      pointer-events: auto;
+    }
+    #muteBtn {
+      background: none;
+      border: 1px solid var(--fg);
+      color: var(--fg);
+      font-family: 'Roboto Mono', monospace;
+      font-size: 16px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      pointer-events: auto;
+      margin-left: 10px;
+    }
+    #muteBtn:focus, button:focus {
+      outline: 2px solid var(--primary);
+    }
+    #titleScreen, #gameOverScreen {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.94);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      font-size: 26px;
+      z-index: 20;
+    }
+    #gameOverScreen {
+      display: none;
+    }
+    button {
+      font-family: 'Roboto Mono', monospace;
+      font-size: 20px;
+      margin-top: 22px;
+      padding: 14px 34px;
+      cursor: pointer;
+      border: 2px solid var(--fg);
+      background: var(--bg);
+      color: var(--fg);
+      border-radius: 6px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:hover, button:focus {
+      background: var(--button-hover);
+      transform: scale(1.05);
+    }
+    /* Mobile controls */
+    #mobileControls {
+      display: none;
+      position: absolute;
+      bottom: 16px;
+      left: 0;
+      width: 100%;
+      justify-content: center;
+      gap: 16px;
+      z-index: 12;
+    }
+    .mobileBtn {
+      background: var(--primary);
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 30px;
+      color: var(--bg);
+      box-shadow: 0 2px 8px #000a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .mobileBtn:active {
+      background: var(--explosion);
+      color: var(--fg);
+    }
+
+    @media (max-width: 700px) {
+      #gameContainer {
+        max-width: 100vw;
+      }
+      #gameCanvas {
+        width: 100vw;
+        height: 65vh;
+        max-height: 400px;
+      }
+      #titleScreen, #gameOverScreen {
+        font-size: 18px;
+      }
+      #hud {
+        font-size: 14px;
+      }
+      #mobileControls {
+        display: flex;
+      }
+    }
+  </style>
 </head>
 <body>
-
-<div id="score">Score: 0</div>
-<canvas id="gameCanvas" width="600" height="800"></canvas>
-<div id="titleScreen">
-  <div>Moonshot Arcade</div>
-  <button onclick="startGame()">Start Game</button>
+<div id="gameContainer">
+  <div id="hud">
+    <div id="score">Score: 0</div>
+    <div id="lives">Lives: 3</div>
+    <button id="muteBtn" aria-label="Toggle mute">🔊</button>
+  </div>
+  <canvas id="gameCanvas" width="600" height="800" aria-label="Moonshot Arcade"></canvas>
+  <div id="titleScreen" aria-label="Game Start Screen">
+    <div>Moonshot Arcade</div>
+    <button onclick="startGame()" aria-label="Start Game">Start Game</button>
+    <div style="font-size:14px;margin-top:1em;opacity:0.7">Use ← → and Space or touch controls</div>
+  </div>
+  <div id="gameOverScreen" aria-label="Game Over Screen">
+    <div id="finalScore">Game Over</div>
+    <button onclick="restartGame()" aria-label="Restart Game">Restart</button>
+  </div>
+  <!-- Mobile controls -->
+  <div id="mobileControls">
+    <button class="mobileBtn" id="btnLeft" aria-label="Move left">←</button>
+    <button class="mobileBtn" id="btnShoot" aria-label="Shoot">⏺</button>
+    <button class="mobileBtn" id="btnRight" aria-label="Move right">→</button>
+  </div>
 </div>
-
 <audio id="shootSound" src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 <audio id="hitSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
-
+<audio id="music" src="https://cdn.pixabay.com/audio/2022/03/15/audio_115b9b5c7b.mp3" loop></audio>
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-let player, bullets, enemies, explosions, score, gameRunning;
-let enemyDirection = 1;
-let enemySpeed = 0.5;
+const scoreEl = document.getElementById('score');
+const livesEl = document.getElementById('lives');
+const muteBtn = document.getElementById('muteBtn');
+const shootSound = document.getElementById('shootSound');
+const hitSound = document.getElementById('hitSound');
+const music = document.getElementById('music');
+const titleScreen = document.getElementById('titleScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScoreEl = document.getElementById('finalScore');
+const mobileControls = document.getElementById('mobileControls');
+const btnLeft = document.getElementById('btnLeft');
+const btnRight = document.getElementById('btnRight');
+const btnShoot = document.getElementById('btnShoot');
+
+let player, bullets, enemies, explosions, score, gameRunning, lives, gameOver, powerUps;
+let enemyDirection = 1, enemySpeed, wave = 1, canShoot = true, multiShot = false, musicMuted = false;
 const colors = ['#ff0000', '#ffa500', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff'];
 
+function resizeCanvas() {
+  // Responsive canvas sizing
+  const ratio = 600 / 800;
+  let w = window.innerWidth, h = window.innerHeight;
+  if (w / h > ratio) { w = h * ratio; } else { h = w / ratio; }
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
 function initGame() {
-  player = { x: 280, y: 750, width: 40, height: 20, speed: 5 };
+  player = { x: 280, y: 750, width: 40, height: 20, speed: 6 };
   bullets = [];
   enemies = [];
   explosions = [];
+  powerUps = [];
   score = 0;
+  wave = 1;
+  lives = 3;
+  gameOver = false;
   gameRunning = true;
-  document.getElementById('score').innerText = 'Score: 0';
+  enemySpeed = 0.8;
+  multiShot = false;
+  scoreEl.innerText = 'Score: 0';
+  livesEl.innerText = 'Lives: 3';
   spawnEnemies();
+  music.volume = 0.3;
+  if (!musicMuted) music.play();
   requestAnimationFrame(gameLoop);
 }
-
 function spawnEnemies() {
+  enemies = [];
   for (let i = 0; i < 6; i++) {
     for (let j = 0; j < 4; j++) {
       enemies.push({ x: 60 + i * 80, y: 60 + j * 60, width: 40, height: 20, alive: true });
     }
   }
 }
-
 function drawPlayer() {
-  ctx.fillStyle = '#0f0';
+  ctx.save();
+  ctx.fillStyle = 'lime';
   ctx.beginPath();
   ctx.moveTo(player.x + 20, player.y);
   ctx.lineTo(player.x, player.y + 20);
   ctx.lineTo(player.x + 40, player.y + 20);
   ctx.closePath();
+  ctx.shadowColor = '#0f0';
+  ctx.shadowBlur = 12;
   ctx.fill();
+  ctx.restore();
 }
-
 function drawBullets() {
   bullets.forEach(b => {
     for (let i = 0; i < 7; i++) {
@@ -109,11 +264,10 @@ function drawBullets() {
     }
   });
 }
-
 function drawEnemies() {
   enemies.forEach(e => {
     if (e.alive) {
-      ctx.fillStyle = '#f00';
+      ctx.fillStyle = 'red';
       ctx.fillRect(e.x + 10, e.y, 20, 20);
       ctx.fillStyle = '#fff';
       ctx.fillRect(e.x + 15, e.y + 5, 2, 2);
@@ -122,21 +276,39 @@ function drawEnemies() {
     }
   });
 }
-
-function drawExplosions() {
-  explosions.forEach(ex => {
-    ctx.fillStyle = ex.color;
+function drawPowerUps() {
+  powerUps.forEach(pu => {
+    ctx.save();
     ctx.beginPath();
-    ctx.arc(ex.x, ex.y, ex.size, 0, 2 * Math.PI);
+    ctx.arc(pu.x, pu.y, 14, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ff0';
+    ctx.globalAlpha = 0.7;
     ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.font = "16px 'Roboto Mono', monospace";
+    ctx.fillStyle = '#000';
+    ctx.textAlign = 'center';
+    ctx.fillText('M', pu.x, pu.y + 6);
+    ctx.restore();
   });
 }
-
+function drawExplosions() {
+  explosions.forEach(ex => {
+    ctx.save();
+    ctx.fillStyle = ex.color;
+    ctx.globalAlpha = 1 - ex.size / 24;
+    ctx.beginPath();
+    ctx.arc(ex.x, ex.y, ex.size, 0, 2 * Math.PI);
+    ctx.shadowColor = ex.color;
+    ctx.shadowBlur = 12;
+    ctx.fill();
+    ctx.restore();
+  });
+}
 function updateBullets() {
   bullets = bullets.filter(b => b.y > 0);
-  bullets.forEach(b => b.y -= 7);
+  bullets.forEach(b => b.y -= 9);
 }
-
 function updateEnemies() {
   let edgeHit = false;
   enemies.forEach(e => {
@@ -149,13 +321,21 @@ function updateEnemies() {
     enemyDirection *= -1;
     enemies.forEach(e => { if (e.alive) e.y += 20; });
   }
+  // Check for enemy reaching player
+  enemies.forEach(e => {
+    if (e.alive && e.y + e.height > player.y) {
+      loseLife();
+    }
+  });
 }
-
 function updateExplosions() {
-  explosions.forEach(ex => ex.size += 1);
-  explosions = explosions.filter(ex => ex.size < 20);
+  explosions.forEach(ex => ex.size += 1.3);
+  explosions = explosions.filter(ex => ex.size < 22);
 }
-
+function updatePowerUps() {
+  powerUps.forEach(pu => pu.y += 2.1);
+  powerUps = powerUps.filter(pu => pu.y < canvas.height);
+}
 function checkCollisions() {
   bullets.forEach(b => {
     enemies.forEach(e => {
@@ -163,43 +343,135 @@ function checkCollisions() {
         e.alive = false;
         b.y = -10;
         score += 10;
-        document.getElementById('score').innerText = 'Score: ' + score;
-        document.getElementById('hitSound').play();
+        scoreEl.innerText = 'Score: ' + score;
+        hitSound.currentTime = 0;
+        hitSound.play();
         explosions.push({ x: e.x + 20, y: e.y + 10, size: 5, color: '#ff0' });
+        // randomly drop powerup
+        if (Math.random() < 0.08) {
+          powerUps.push({ x: e.x + 20, y: e.y + 10, type: 'multi' });
+        }
       }
     });
   });
+  // Player collects powerUp
+  powerUps.forEach((pu, idx) => {
+    if (pu.x > player.x && pu.x < player.x + player.width && pu.y > player.y && pu.y < player.y + player.height + 10) {
+      if (pu.type === 'multi') {
+        multiShot = true;
+        setTimeout(()=>multiShot = false, 7000); // 7s powerup
+      }
+      powerUps.splice(idx, 1);
+    }
+  });
 }
-
+function loseLife() {
+  if (!gameRunning) return;
+  lives--;
+  livesEl.innerText = 'Lives: ' + lives;
+  explosions.push({ x: player.x + 20, y: player.y + 10, size: 9, color: '#0cf' });
+  if (lives <= 0) endGame();
+  else {
+    player.x = 280;
+    player.y = 750;
+    bullets = [];
+  }
+}
+function checkWaveClear() {
+  if (enemies.every(e => !e.alive)) {
+    wave++;
+    enemySpeed += 0.45;
+    spawnEnemies();
+  }
+}
 function gameLoop() {
   if (!gameRunning) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawPlayer();
   drawBullets();
   drawEnemies();
+  drawPowerUps();
   drawExplosions();
   updateBullets();
   updateEnemies();
+  updatePowerUps();
   updateExplosions();
   checkCollisions();
+  checkWaveClear();
   requestAnimationFrame(gameLoop);
 }
-
-document.addEventListener('keydown', e => {
-  if (!gameRunning) return;
-  if (e.key === 'ArrowLeft' && player.x > 0) player.x -= player.speed;
-  if (e.key === 'ArrowRight' && player.x < canvas.width - player.width) player.x += player.speed;
-  if (e.key === ' ' || e.key === 'Spacebar') {
-    bullets.push({ x: player.x + player.width / 2 - 2, y: player.y });
-    document.getElementById('shootSound').play();
-  }
-});
-
+function endGame() {
+  gameRunning = false;
+  gameOver = true;
+  finalScoreEl.innerHTML = `Game Over<br>Score: ${score}`;
+  gameOverScreen.style.display = 'flex';
+  music.pause();
+}
 function startGame() {
-  document.getElementById('titleScreen').style.display = 'none';
+  titleScreen.style.display = 'none';
+  gameOverScreen.style.display = 'none';
   initGame();
 }
-</script>
+function restartGame() {
+  gameOverScreen.style.display = 'none';
+  startGame();
+}
+function handleShoot() {
+  if (!gameRunning || !canShoot) return;
+  canShoot = false;
+  setTimeout(() => canShoot = true, 220); // debounce
+  bullets.push({ x: player.x + player.width / 2 - 2, y: player.y });
+  if (multiShot) {
+    bullets.push({ x: player.x + player.width / 2 - 18, y: player.y });
+    bullets.push({ x: player.x + player.width / 2 + 14, y: player.y });
+  }
+  shootSound.currentTime = 0;
+  shootSound.play();
+}
+let keys = {};
+document.addEventListener('keydown', e => {
+  if (!gameRunning) return;
+  if (e.repeat) return;
+  keys[e.key] = true;
+  if ((e.key === ' ' || e.key === 'Spacebar') && canShoot) handleShoot();
+});
+document.addEventListener('keyup', e => {
+  keys[e.key] = false;
+});
+function movePlayer() {
+  if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+  if (keys['ArrowRight'] && player.x < canvas.width - player.width) player.x += player.speed;
+  requestAnimationFrame(movePlayer);
+}
+movePlayer();
 
+// Touch/mobile controls
+btnLeft.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowLeft'] = true; }, {passive:false});
+btnLeft.addEventListener('touchend', e => { e.preventDefault(); keys['ArrowLeft'] = false; }, {passive:false});
+btnRight.addEventListener('touchstart', e => { e.preventDefault(); keys['ArrowRight'] = true; }, {passive:false});
+btnRight.addEventListener('touchend', e => { e.preventDefault(); keys['ArrowRight'] = false; }, {passive:false});
+btnShoot.addEventListener('touchstart', e => { e.preventDefault(); handleShoot(); }, {passive:false});
+btnShoot.addEventListener('touchend', e => { e.preventDefault(); }, {passive:false});
+
+// Desktop controls for accessibility
+btnLeft.addEventListener('mousedown', () => keys['ArrowLeft'] = true);
+btnLeft.addEventListener('mouseup', () => keys['ArrowLeft'] = false);
+btnRight.addEventListener('mousedown', () => keys['ArrowRight'] = true);
+btnRight.addEventListener('mouseup', () => keys['ArrowRight'] = false);
+btnShoot.addEventListener('mousedown', handleShoot);
+
+muteBtn.addEventListener('click', () => {
+  musicMuted = !musicMuted;
+  music.muted = musicMuted;
+  muteBtn.innerText = musicMuted ? '🔇' : '🔊';
+  if (!musicMuted && gameRunning) music.play();
+  else music.pause();
+});
+muteBtn.innerText = '🔊';
+
+window.addEventListener('focus', () => { if (!musicMuted && gameRunning) music.play(); });
+window.addEventListener('blur', () => { music.pause(); });
+
+</script>
 </body>
 </html>
