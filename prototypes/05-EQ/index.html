@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visual EQ Pro - Stable Build</title>
+  <title>Visual EQ Pro</title>
   <style>
     html, body { margin:0; padding:0; background:#000; color:#fff; font-family:sans-serif; overflow:hidden; height:100vh; width:100vw; }
     #controls { position:absolute; top:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:6px; border-radius:4px; display:flex; flex-wrap:wrap; gap:8px; z-index:10; }
@@ -31,17 +31,13 @@
       <option value="pultec">Pultec EQ</option>
       <option value="neve">Neve EQ</option>
       <option value="ssl">SSL EQ</option>
-      <option value="graphic">Graphic EQ</option>
+      <option value="alpine">Alpine 86</option> <!-- New preset added -->
     </select></label>
     <label>Sensitivity <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15"></label>
     <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
     <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
     <label><input type="checkbox" id="momentsToggle"> Moments</label>
-    <label>Beat Thr <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7"></label>
-    <label>Cooldown <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3"></label>
     <button id="fsBtn">Fullscreen</button>
-    <span id="dbReadout">dB: --</span>
-    <span id="bpmReadout">BPM: --</span>
   </div>
 
   <canvas id="vis"></canvas>
@@ -51,13 +47,10 @@
     const deviceSelect = $('deviceSelect'), startBtn = $('startBtn'), fftSelect = $('fftSelect'),
           presetSelect = $('presetSelect'), sensSlider = $('sensSlider'),
           tracerToggle = $('tracerToggle'), crossfadeToggle = $('crossfadeToggle'),
-          momentsToggle = $('momentsToggle'), beatThreshold = $('beatThreshold'),
-          beatCooldown = $('beatCooldown'), fsBtn = $('fsBtn'),
-          dbReadout = $('dbReadout'), bpmReadout = $('bpmReadout'),
+          momentsToggle = $('momentsToggle'), fsBtn = $('fsBtn'),
           canvas = $('vis'), ctx = canvas.getContext('2d');
 
     let audioContext, splitter, analyserL, analyserR, dataL, dataR, dataMid;
-    let lastBeatTime = 0, beatTimes = [], bpm = 0, dbSmoothed = -60;
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -97,22 +90,9 @@
       draw();
     }
 
-    function updateDbMeter() {
-      const fft = new Float32Array(analyserL.fftSize);
-      analyserL.getFloatTimeDomainData(fft);
-      let sum = fft.reduce((a, b) => a + b * b, 0);
-      let rms = Math.sqrt(sum / fft.length);
-      let db = 20 * Math.log10(rms || 1e-8);
-      dbSmoothed = dbSmoothed * 0.85 + db * 0.15;
-      dbReadout.textContent = "dB: " + (dbSmoothed > -60 ? dbSmoothed.toFixed(1) : "--");
-    }
-
-    function updateBpm(t) {
-      bpmReadout.textContent = "BPM: " + (bpm > 0 ? Math.round(bpm) : "--");
-    }
-
     function draw() {
       requestAnimationFrame(draw);
+      if (!analyserL) return;
       analyserL.getByteFrequencyData(dataL);
       analyserR.getByteFrequencyData(dataR);
       for (let i = 0; i < dataL.length; i++) {
@@ -120,7 +100,7 @@
       }
 
       if (tracerToggle.checked) {
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillStyle = 'rgba(0,0,0,0.15)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
       } else {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -137,24 +117,6 @@
         ctx.fillStyle = `hsl(${h},100%,50%)`;
         ctx.fillRect(i * barW, canvas.height - height, barW, height);
       }
-
-      updateDbMeter();
-
-      // Beat detection
-      const t = performance.now() * 0.001;
-      let bass = (dataMid[2] + dataMid[3]) / 2 / 255;
-      if (momentsToggle.checked && bass > parseFloat(beatThreshold.value) && t - lastBeatTime > parseFloat(beatCooldown.value)) {
-        lastBeatTime = t;
-        beatTimes.push(t);
-        if (beatTimes.length > 8) beatTimes.shift();
-        if (beatTimes.length >= 2) {
-          let intervals = [];
-          for (let i = 1; i < beatTimes.length; i++) intervals.push(beatTimes[i] - beatTimes[i - 1]);
-          let avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-          bpm = 60 / avgInterval;
-        }
-      }
-      updateBpm(t);
     }
 
     startBtn.onclick = startEQ;
@@ -172,3 +134,4 @@
   </script>
 </body>
 </html>
+
