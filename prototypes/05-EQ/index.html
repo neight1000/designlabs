@@ -3,35 +3,40 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro - Presets Unified</title>
+  <title>Visual EQ Pro</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
       position: absolute; top: 10px; left: 50%;
       transform: translateX(-50%);
       display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-      z-index: 10; background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
+      z-index: 10; transition: opacity .5s;
+      background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
     }
     select, button, label, input[type=range] {
       background: #000; color: #fff;
-      border: 1px solid #fff; padding: 4px 8px; font-size: 1rem;
+      border: 1px solid #fff; padding: 4px 8px;
+      font-size: 1rem;
     }
     label { display: flex; align-items: center; gap: 4px; }
     input[type=range] { width: 80px; }
-    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; }
+    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
   </style>
 </head>
 <body>
   <div id="controls">
-    <label>Input</label>
+    <label for="deviceSelect">Input</label>
+    <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
-    <label>FFT <select id="fftSelect">
+    <label for="fftSelect">FFT</label>
+    <select id="fftSelect">
       <option>256</option><option selected>512</option>
       <option>1024</option><option>2048</option>
       <option>4096</option><option>8192</option>
       <option>16384</option><option>32768</option>
-    </select></label>
-    <label>Preset <select id="presetSelect">
+    </select>
+    <label for="presetSelect">Preset</label>
+    <select id="presetSelect">
       <option value="vhs">VHS Drift</option>
       <option value="tape">Tape Echo</option>
       <option value="neon">Neon Grid</option>
@@ -41,100 +46,80 @@
       <option value="neve">Neve EQ</option>
       <option value="ssl">SSL EQ</option>
       <option value="alpine">Alpine 86</option>
-    </select></label>
+    </select>
     <label>Sensitivity <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15"></label>
     <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
     <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
     <label><input type="checkbox" id="momentsToggle"> Moments</label>
+    <label>Beat Thr <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7"></label>
+    <label>Cooldown <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3"></label>
     <button id="fsBtn">Fullscreen</button>
+    <span id="dbReadout">dB: --</span>
+    <span id="bpmReadout">BPM: --</span>
   </div>
   <canvas id="vis"></canvas>
-
   <script>
     const $ = id => document.getElementById(id);
     const ctx = $("vis").getContext("2d");
-    const canvas = $("vis");
-    let audioContext, analyser, dataArray;
-
-    function resize() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener("resize", resize);
-    resize();
-
-    const presets = {
-      vhs: { type: "waveform", color: "#FFF", dash: true, sensitivity: 1.15 },
-      tape: { type: "waveform", color: "#FFD700", dash: false, sensitivity: 1.2 },
-      neon: { type: "waveform", color: "#00FFFF", dash: false, sensitivity: 1.1 },
-      aurora: { type: "waveform", color: "#90EE90", dash: false, sensitivity: 1.0 },
-      spectrum: { type: "bars", sensitivity: 1.2 },
-      pultec: { type: "waveform", color: "#FFA500", dash: false, sensitivity: 1.2 },
-      neve: { type: "waveform", color: "#87CEEB", dash: false, sensitivity: 1.2 },
-      ssl: { type: "waveform", color: "#FF69B4", dash: false, sensitivity: 1.2 },
-      alpine: { type: "bars", sensitivity: 1.0 }
-    };
+    let audioContext, analyser, dataArray, source;
 
     async function start() {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const source = audioContext.createMediaStreamSource(stream);
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = parseInt($("fftSelect").value);
-      dataArray = new Uint8Array(analyser.frequencyBinCount);
-      source.connect(analyser);
-      draw();
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        source = audioContext.createMediaStreamSource(stream);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = parseInt($("fftSelect").value);
+        source.connect(analyser);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        requestAnimationFrame(draw);
+      }
     }
 
     function draw() {
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
       ctx.fillStyle = tracerToggle.checked ? 'rgba(0,0,0,0.1)' : '#000';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      const preset = $("presetSelect").value;
 
-      const preset = presets[$("presetSelect").value];
-      const sensitivity = parseFloat($("sensSlider").value) * preset.sensitivity;
-
-      if (preset.type === "waveform") {
-        ctx.beginPath();
-        const sliceWidth = canvas.width / dataArray.length;
-        for (let i = 0; i < dataArray.length; i++) {
-          const value = dataArray[i] / 255 * sensitivity;
-          const y = canvas.height - value * canvas.height;
-          const x = i * sliceWidth;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.strokeStyle = preset.color;
-        ctx.lineWidth = 2;
-        if (preset.dash) ctx.setLineDash([5,5]); else ctx.setLineDash([]);
-        ctx.stroke();
+      if (preset === 'alpine') {
+        drawAlpine();
+      } else {
+        drawDefault();
       }
+    }
 
-      if (preset.type === "bars") {
-        const barWidth = canvas.width / 10;
-        for (let i = 0; i < 10; i++) {
-          const bin = Math.floor(i * dataArray.length / 10);
-          const value = dataArray[bin] / 255 * sensitivity;
-          const barHeight = value * canvas.height * 0.9;
-          ctx.fillStyle = `rgba(0, 255, 128, 0.8)`;
-          ctx.fillRect(i * barWidth + barWidth * 0.1, canvas.height - barHeight, barWidth * 0.8, barHeight);
-          // classic alpine grid lines
-          ctx.strokeStyle = "rgba(255,255,255,0.2)";
-          for (let j = 0; j <= 10; j++) {
-            ctx.beginPath();
-            ctx.moveTo(0, j * canvas.height / 10);
-            ctx.lineTo(canvas.width, j * canvas.height / 10);
-            ctx.stroke();
-          }
-        }
+    function drawDefault() {
+      const barWidth = canvas.width / dataArray.length;
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * sensSlider.value;
+        const hue = 120 - (i / dataArray.length) * 120;
+        ctx.fillStyle = `hsl(${hue},100%,50%)`;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
+
+    function drawAlpine() {
+      const bins = 10;
+      const binSize = Math.floor(dataArray.length / bins);
+      for (let i = 0; i < bins; i++) {
+        let sum = 0;
+        for (let j = 0; j < binSize; j++) sum += dataArray[i * binSize + j];
+        let avg = sum / binSize;
+        let barHeight = avg * 2;
+        ctx.fillStyle = 'lime';
+        ctx.fillRect(i * 40 + 60, canvas.height - barHeight - 60, 30, barHeight);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(i * 40 + 60, canvas.height - barHeight - 60, 30, barHeight);
       }
     }
 
     $("startBtn").onclick = start;
-    $("fftSelect").onchange = () => { if (analyser) { analyser.fftSize = parseInt($("fftSelect").value); dataArray = new Uint8Array(analyser.frequencyBinCount); } }
-    const tracerToggle = $("tracerToggle");
+    $("fftSelect").onchange = () => { if (analyser) { analyser.fftSize = parseInt($("fftSelect").value); dataArray = new Uint8Array(analyser.frequencyBinCount); } };
   </script>
 </body>
 </html>
+
 
