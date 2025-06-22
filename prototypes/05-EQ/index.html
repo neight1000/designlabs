@@ -3,20 +3,16 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro</title>
+  <title>Visual EQ Pro - Stable Build</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
-      position: absolute; top: 10px; left: 50%;
-      transform: translateX(-50%);
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-      z-index: 10; transition: opacity .5s;
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center; z-index: 10; transition: opacity .5s;
       background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
     }
     select, button, label, input[type=range] {
-      background: #000; color: #fff;
-      border: 1px solid #fff; padding: 4px 8px;
-      font-size: 1rem;
+      background: #000; color: #fff; border: 1px solid #fff; padding: 4px 8px; font-size: 1rem;
     }
     label { display: flex; align-items: center; gap: 4px; }
     input[type=range] { width: 80px; }
@@ -57,11 +53,23 @@
     <span id="dbReadout">dB: --</span>
     <span id="bpmReadout">BPM: --</span>
   </div>
+
   <canvas id="vis"></canvas>
+
   <script>
     const $ = id => document.getElementById(id);
-    const ctx = $("vis").getContext("2d");
-    let audioContext, analyser, dataArray, source;
+    const canvas = $("vis");
+    const ctx = canvas.getContext("2d");
+
+    let audioContext, analyser, source;
+    let dataArray;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
     async function start() {
       if (!audioContext) {
@@ -79,8 +87,9 @@
     function draw() {
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
-      ctx.fillStyle = tracerToggle.checked ? 'rgba(0,0,0,0.1)' : '#000';
+      ctx.fillStyle = $("tracerToggle").checked ? 'rgba(0,0,0,0.1)' : '#000';
       ctx.fillRect(0,0,canvas.width,canvas.height);
+
       const preset = $("presetSelect").value;
 
       if (preset === 'alpine') {
@@ -88,32 +97,46 @@
       } else {
         drawDefault();
       }
+
+      drawDbMeter();
+      drawBpmMeter();
     }
 
     function drawDefault() {
       const barWidth = canvas.width / dataArray.length;
       for (let i = 0; i < dataArray.length; i++) {
-        const value = dataArray[i] * sensSlider.value;
-        const hue = 120 - (i / dataArray.length) * 120;
-        ctx.fillStyle = `hsl(${hue},100%,50%)`;
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        const hue = 200 - (i / dataArray.length) * 200;
+        ctx.fillStyle = `hsl(${hue},100%,60%)`;
         ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
       }
     }
 
     function drawAlpine() {
-      const bins = 10;
+      const bins = 12;
       const binSize = Math.floor(dataArray.length / bins);
       for (let i = 0; i < bins; i++) {
         let sum = 0;
         for (let j = 0; j < binSize; j++) sum += dataArray[i * binSize + j];
         let avg = sum / binSize;
-        let barHeight = avg * 2;
-        ctx.fillStyle = 'lime';
-        ctx.fillRect(i * 40 + 60, canvas.height - barHeight - 60, 30, barHeight);
+        let barHeight = avg * 2.5;
+        ctx.fillStyle = '#00FFAA';
+        ctx.fillRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
         ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(i * 40 + 60, canvas.height - barHeight - 60, 30, barHeight);
+        ctx.strokeRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
       }
+    }
+
+    function drawDbMeter() {
+      const rms = Math.sqrt(dataArray.reduce((sum, v) => sum + (v*v), 0) / dataArray.length);
+      const db = 20 * Math.log10(rms / 255);
+      $("dbReadout").textContent = `dB: ${db.toFixed(1)}`;
+    }
+
+    function drawBpmMeter() {
+      // Placeholder BPM calculation (not implemented fully)
+      $("bpmReadout").textContent = `BPM: --`;
     }
 
     $("startBtn").onclick = start;
@@ -121,5 +144,3 @@
   </script>
 </body>
 </html>
-
-
