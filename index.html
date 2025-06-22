@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro v1.19</title>
+  <title>Visual EQ Pro</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
@@ -21,26 +21,27 @@
     label { display: flex; align-items: center; gap: 4px; }
     input[type=range] { width: 80px; }
     canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
-    @media (max-width:700px) {
+    @media (max-width: 700px) {
       #controls { flex-direction: column; gap: 4px; }
       select, button, label, input[type=range] { font-size: 0.9rem; }
     }
+    .readout { min-width: 70px; display: inline-block; text-align: right; font-family: monospace; }
   </style>
 </head>
 <body>
   <div id="controls" role="form" aria-label="EQ Controls">
     <label for="deviceSelect">Input</label>
-    <select id="deviceSelect"></select>
-    <button id="startBtn">Start</button>
+    <select id="deviceSelect" aria-label="Audio input device"></select>
+    <button id="startBtn" aria-label="Start visualization">Start</button>
     <label for="fftSelect">FFT</label>
-    <select id="fftSelect">
+    <select id="fftSelect" aria-label="FFT size">
       <option>256</option><option selected>512</option>
       <option>1024</option><option>2048</option>
       <option>4096</option><option>8192</option>
       <option>16384</option><option>32768</option>
     </select>
     <label for="presetSelect">Preset</label>
-    <select id="presetSelect">
+    <select id="presetSelect" aria-label="EQ preset">
       <option value="vhs">VHS Drift</option>
       <option value="tape">Tape Echo</option>
       <option value="neon">Neon Grid</option>
@@ -51,310 +52,625 @@
       <option value="ssl">SSL EQ</option>
     </select>
     <label for="sensSlider">Sensitivity
-      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
+      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15" aria-label="Sensitivity">
     </label>
-    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
-    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
-    <label><input type="checkbox" id="momentsToggle"> Moments</label>
+    <label for="tracerToggle">
+      <input type="checkbox" id="tracerToggle" checked aria-checked="true"> Tracers
+    </label>
+    <label for="crossfadeToggle">
+      <input type="checkbox" id="crossfadeToggle" aria-checked="false"> Crossfade
+    </label>
+    <label for="momentsToggle">
+      <input type="checkbox" id="momentsToggle" aria-checked="false"> Moments
+    </label>
     <label for="beatThreshold">Beat Thr
-      <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7">
+      <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7" aria-label="Beat threshold">
     </label>
     <label for="beatCooldown">Cooldown
-      <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3">
+      <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3" aria-label="Beat cooldown">
     </label>
-    <button id="fsBtn">Fullscreen</button>
+    <button id="fsBtn" aria-label="Fullscreen">Fullscreen</button>
+    <span class="readout" id="dbReadout">dB: --</span>
+    <span class="readout" id="bpmReadout">BPM: --</span>
   </div>
   <canvas id="vis" aria-label="Audio visualizer"></canvas>
   <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#f43;font-size:1.1em;background:#222;padding:1em 2em;border-radius:6px;"></div>
   <script>
-    // DOM & state
+    // Shortcuts
     const $ = id => document.getElementById(id);
-    const deviceSelect   = $('deviceSelect'),
-          startBtn        = $('startBtn'),
-          fftSelect       = $('fftSelect'),
-          presetSelect    = $('presetSelect'),
-          sensSlider      = $('sensSlider'),
-          tracerToggle    = $('tracerToggle'),
-          crossfadeToggle = $('crossfadeToggle'),
-          momentsToggle   = $('momentsToggle'),
-          beatThreshold   = $('beatThreshold'),
-          beatCooldown    = $('beatCooldown'),
-          fsBtn           = $('fsBtn'),
-          controls        = $('controls'),
-          canvas          = $('vis'),
-          fallback        = $('fallback'),
-          ctx             = canvas.getContext('2d');
+    const deviceSelect = $('deviceSelect'), startBtn = $('startBtn'), fftSelect = $('fftSelect'),
+      presetSelect = $('presetSelect'), sensSlider = $('sensSlider'), tracerToggle = $('tracerToggle'),
+      crossfadeToggle = $('crossfadeToggle'), momentsToggle = $('momentsToggle'),
+      beatThreshold = $('beatThreshold'), beatCooldown = $('beatCooldown'), fsBtn = $('fsBtn'),
+      controls = $('controls'), canvas = $('vis'), fallback = $('fallback'), ctx = canvas.getContext('2d'),
+      dbReadout = $('dbReadout'), bpmReadout = $('bpmReadout');
     const state = {
-      audioContext: null,
-      splitter: null,
-      leftAnalyser: null,
-      rightAnalyser: null,
-      dataLeft: null,
-      dataRight: null,
-      dataMid: null,
-      startTime: 0,
-      mainPreset: presetSelect.value,
-      xfadeActive: false,
-      xfadeStart: 0,
-      xfadeDur: 5,
-      nextXfade: 0,
-      secondaryPreset: presetSelect.value,
-      lastBeatTime: 0,
-      momentHue: 0,
-      momentHueAlpha: 0,
-      spectrumTrails: [],
-      dbSmoothed: -60,
-      beatTimes: [],
-      bpm: 0
+      audioContext: null, splitter: null, leftAnalyser: null, rightAnalyser: null,
+      dataLeft: null, dataRight: null, dataMid: null, startTime: 0,
+      mainPreset: presetSelect.value, xfadeActive: false, xfadeStart: 0, xfadeDur: 5, nextXfade: 0,
+      secondaryPreset: presetSelect.value, lastBeatTime: 0, momentHue: 0, momentHueAlpha: 0,
+      spectrumTrails: [], dbSmoothed: -60, beatTimes: [], bpm: 0
     };
 
     // Helpers
-    function fract(x){ return x - Math.floor(x); }
-    function rand(n){ return fract(Math.sin(n)*43758.5453123); }
-    function noise1D(x){
-      const i = Math.floor(x), f = fract(x);
-      return rand(i)*(1-f) + rand(i+1)*f;
-    }
-    function resizeCanvas(){
+    const fract = x => x - Math.floor(x);
+    const rand = n => fract(Math.sin(n)*43758.5453123);
+    function noise1D(x){ const i=Math.floor(x), f=fract(x); return rand(i)*(1-f)+rand(i+1)*f; }
+    function resizeCanvas() {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
       state.spectrumTrails = [];
     }
-    window.addEventListener('resize', ()=>setTimeout(resizeCanvas,100));
+    let resizeT;
+    window.addEventListener('resize', ()=>{
+      clearTimeout(resizeT);
+      resizeT = setTimeout(resizeCanvas, 100);
+    });
     document.addEventListener('fullscreenchange', resizeCanvas);
     resizeCanvas();
 
-    async function populateDevices(){
+    async function populateDevices() {
       try {
         const devs = await navigator.mediaDevices.enumerateDevices();
         deviceSelect.innerHTML = '';
         devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
-          const o = document.createElement('option');
-          o.value = d.deviceId;
-          o.textContent = d.label || `Mic ${i+1}`;
+          const o=document.createElement('option');
+          o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
           deviceSelect.append(o);
         });
-      } catch(e){
-        showFallback('Could not enumerate audio devices.');
-      }
+      } catch (e) { showFallback('Could not enumerate audio devices.'); }
     }
-    function showFallback(msg){
+    function showFallback(msg) {
       fallback.style.display = 'block';
       fallback.textContent = msg;
       controls.style.display = 'none';
       canvas.style.display = 'none';
     }
 
-    // dB meter via analyser
-    function updateDbMeter(){
-      if(!state.leftAnalyser) return;
-      const buf = new Float32Array(state.leftAnalyser.fftSize);
-      state.leftAnalyser.getFloatTimeDomainData(buf);
+    // Decibel meter, updates the UI control
+    function updateDbMeter() {
+      if (!state.leftAnalyser) return;
+      const fft = new Float32Array(state.leftAnalyser.fftSize);
+      state.leftAnalyser.getFloatTimeDomainData(fft);
       let sum = 0;
-      for(let i=0;i<buf.length;i++) sum += buf[i]*buf[i];
-      let rms = Math.sqrt(sum/buf.length);
-      let db  = 20 * Math.log10(rms || 1e-8);
-      if(!isFinite(db)) db = -60;
+      for (let i=0;i<fft.length;i++) sum += fft[i]*fft[i];
+      let rms = Math.sqrt(sum / fft.length);
+      let db = 20 * Math.log10(rms || 1e-8);
+      if (!isFinite(state.dbSmoothed)) state.dbSmoothed = db;
       state.dbSmoothed = state.dbSmoothed*0.85 + db*0.15;
+      dbReadout.textContent = "dB: " + (db > -60 ? db.toFixed(1) : "--");
     }
 
-    async function startEQ(){
+    // BPM meter, updates the UI control
+    function updateBpmMeter(bpm) {
+      bpmReadout.textContent = "BPM: " + (bpm > 0 ? Math.round(bpm) : "--");
+    }
+
+    async function startEQ() {
       if(state.audioContext) return;
-      if(!navigator.mediaDevices?.getUserMedia){
-        showFallback('Web Audio API not supported.');
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showFallback('Web Audio API not supported in this browser.');
         return;
       }
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          audio: { deviceId: deviceSelect.value||undefined }
+          audio: { deviceId: deviceSelect.value || undefined }
         });
-        const ac = new (window.AudioContext||window.webkitAudioContext)();
-        state.audioContext = ac;
-        state.splitter = ac.createChannelSplitter(2);
-        state.leftAnalyser = ac.createAnalyser();
-        state.rightAnalyser = ac.createAnalyser();
-        [state.leftAnalyser, state.rightAnalyser].forEach(a=>{
-          a.fftSize = parseInt(fftSelect.value);
-          a.smoothingTimeConstant = 0.8;
-        });
-        state.dataLeft  = new Uint8Array(state.leftAnalyser.frequencyBinCount);
+        state.audioContext = new (window.AudioContext||window.webkitAudioContext)();
+        state.splitter = state.audioContext.createChannelSplitter(2);
+        state.leftAnalyser = state.audioContext.createAnalyser();
+        state.rightAnalyser = state.audioContext.createAnalyser();
+        state.leftAnalyser.fftSize = state.rightAnalyser.fftSize = parseInt(fftSelect.value);
+        state.leftAnalyser.smoothingTimeConstant = state.rightAnalyser.smoothingTimeConstant = 0.8;
+        state.dataLeft = new Uint8Array(state.leftAnalyser.frequencyBinCount);
         state.dataRight = new Uint8Array(state.rightAnalyser.frequencyBinCount);
-        state.dataMid   = new Uint8Array(state.leftAnalyser.frequencyBinCount);
-        const src = ac.createMediaStreamSource(stream);
+        state.dataMid = new Uint8Array(state.leftAnalyser.frequencyBinCount);
+        const src = state.audioContext.createMediaStreamSource(stream);
         src.connect(state.splitter);
-        state.splitter.connect(state.leftAnalyser,  0);
+        state.splitter.connect(state.leftAnalyser, 0);
         state.splitter.connect(state.rightAnalyser, 1);
         state.startTime = performance.now();
         state.nextXfade = state.startTime/1000 + 300 + Math.random()*300;
         state.spectrumTrails = [];
         draw();
-      } catch(e){
+      } catch (e) {
         showFallback('Permission denied or no input device found.');
       }
     }
     fftSelect.addEventListener('change', ()=>{
       if(!state.leftAnalyser) return;
-      [state.leftAnalyser, state.rightAnalyser].forEach(a=>{
-        a.fftSize = parseInt(fftSelect.value);
-      });
-      state.dataLeft  = new Uint8Array(state.leftAnalyser.frequencyBinCount);
+      state.leftAnalyser.fftSize = state.rightAnalyser.fftSize = parseInt(fftSelect.value);
+      state.dataLeft = new Uint8Array(state.leftAnalyser.frequencyBinCount);
       state.dataRight = new Uint8Array(state.rightAnalyser.frequencyBinCount);
-      state.dataMid   = new Uint8Array(state.leftAnalyser.frequencyBinCount);
+      state.dataMid = new Uint8Array(state.leftAnalyser.frequencyBinCount);
       state.spectrumTrails = [];
     });
-    presetSelect.addEventListener('change', ()=>state.mainPreset = presetSelect.value);
+    presetSelect.addEventListener('change', ()=> state.mainPreset = presetSelect.value);
 
-    // Color utilities
-    function dynamicHSB(hue, sat, bri, shift=0, alpha=1){
+    // Color helpers
+    function dynamicHSB(hue, sat, bri, shift=0, alpha=1) {
       return `hsla(${(hue+shift)%360},${sat}%,${bri}%,${alpha})`;
     }
-    function baseHue(t){
-      return ((t*30) + state.momentHue*state.momentHueAlpha)%360;
+    function baseHue(t) {
+      return ((t*30) + state.momentHue*state.momentHueAlpha) % 360;
     }
 
-    // --- [Your EQ_PRESETS object here, unchanged v1.17] ---
+    // Presets with unique vintage effects (see beforeDraw/customDraw for each)
+    const EQ_PRESETS = {
+      vhs: {
+        sensitivity: 1.15,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 80),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 55, 30),
+        curveDash: true,
+        beforeDraw: (ctx, state, options) => {
+          // VHS scan lines
+          ctx.save();
+          ctx.globalAlpha = 0.10;
+          for (let y = 0; y < canvas.height; y += 4) {
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, y, canvas.width, 2);
+          }
+          ctx.globalAlpha = 1;
 
-    // drawPreset with vertical frequency axis
-    function drawPreset(presetKey, alpha, hueOffset, t, noiseAmp, lfo){
-      const preset = EQ_PRESETS[presetKey]; if(!preset) return;
-      const sens = parseFloat(sensSlider.value)*(preset.sensitivity||1);
-      const bins   = state.dataMid.length;
-      const sliceY = canvas.height/bins;
-      const opts   = {sens, t, lfo, alpha};
+          // VHS timecode (bottom right)
+          ctx.font = "bold 16px monospace";
+          ctx.fillStyle = "rgba(255,255,255,0.7)";
+          ctx.textAlign = "right";
+          ctx.fillText(new Date().toISOString().slice(11,19), canvas.width-20, canvas.height-20);
 
-      ctx.globalAlpha = alpha*(preset.alpha||1);
-      if(preset.customDraw){
-        preset.customDraw(ctx, state, {...opts, hueOffset});
-        ctx.globalAlpha=1; return;
+          // Ghosting (chromatic aberration)
+          ctx.globalAlpha = 0.2;
+          ctx.drawImage(canvas, 4, 0, canvas.width, canvas.height);
+          ctx.globalAlpha = 1;
+
+          // Random tape dropout bar
+          if (Math.random() < 0.008) {
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            const barY = Math.random() * canvas.height;
+            ctx.fillRect(0, barY, canvas.width, 12 + Math.random()*24);
+          }
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      tape: {
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 90, 72, 200),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t), 80, 35, 220),
+        beforeDraw: (ctx, state, options) => {
+          // Tape reels (left/right)
+          ctx.save();
+          let r = 34 + 8 * Math.sin(options.t);
+          ctx.globalAlpha = 0.22;
+          ctx.beginPath();
+          ctx.arc(60, 60, r, 0, 2 * Math.PI);
+          ctx.arc(canvas.width-60, 60, r, 0, 2 * Math.PI);
+          ctx.strokeStyle = "#bcbcbc";
+          ctx.lineWidth = 8;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+          // Tape counter (top center)
+          ctx.font = "bold 14px monospace";
+          ctx.fillStyle = "#ffd";
+          ctx.textAlign = "center";
+          ctx.fillText("TAPE " + String(Math.floor(options.t*5)%10000).padStart(4, '0'), canvas.width/2, 30);
+
+          // Wow & flutter: vertical jitter
+          ctx.transform(1, 0.008 * Math.sin(options.t * 1.3), 0, 1, 0, 0);
+
+          // Tape grain (semi-transparent texture overlay)
+          ctx.globalAlpha = 0.04;
+          for(let i=0;i<30;i++) {
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1 + Math.random()*2);
+          }
+          ctx.globalAlpha = 1;
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      neon: {
+        sensitivity: 1.1,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 90),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 120),
+        beforeDraw: (ctx, state, options) => {
+          // Neon glowing grid
+          ctx.save();
+          let rows = 18, cols = 22, gridH = canvas.height * 0.75;
+          ctx.strokeStyle = dynamicHSB(baseHue(options.t), 100, 80, 0, 0.7);
+          ctx.lineWidth = 1.4;
+          for (let y = 0; y < rows; y++) {
+            let py = gridH - (y / (rows - 1)) * gridH;
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height - py);
+            ctx.lineTo(canvas.width, canvas.height - py);
+            ctx.stroke();
+          }
+          for (let x = 0; x < cols; x++) {
+            let px = (x / (cols - 1)) * canvas.width;
+            ctx.beginPath();
+            ctx.moveTo(px, canvas.height);
+            ctx.lineTo(canvas.width / 2 + (px - canvas.width / 2) * 0.12, canvas.height - gridH);
+            ctx.stroke();
+          }
+          // Neon flicker
+          ctx.shadowBlur = 22 + 14 * Math.abs(Math.sin(options.t * 2));
+          ctx.shadowColor = dynamicHSB(baseHue(options.t), 100, 100, 0, 1);
+
+          // Laser lines (moving)
+          for(let i=0;i<2;i++) {
+            ctx.globalAlpha = 0.4;
+            ctx.fillStyle = dynamicHSB(baseHue(options.t)+i*80,100,100,0,1);
+            ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, canvas.width, 2);
+          }
+          ctx.globalAlpha = 1;
+
+          // Starfield
+          for(let i=0;i<12;i++) {
+            ctx.fillStyle = "#fff";
+            ctx.globalAlpha = 0.25 + 0.5*Math.random();
+            ctx.fillRect(Math.random()*canvas.width,Math.random()*canvas.height*0.6,1,1);
+          }
+          ctx.globalAlpha = 1;
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      aurora: {
+        sensitivity: 1.0,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 60),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t) + 120, 100, 60),
+        alpha: 0.5,
+        beforeDraw: (ctx, state, options) => {
+          // Aurora ribbons (animated, color-shifting)
+          ctx.save();
+          for (let k = 0; k < 3; k++) {
+            ctx.beginPath();
+            for (let y = 0; y < canvas.height; y += 7) {
+              let x =
+                180 +
+                120 * Math.sin(options.t * 0.7 + y * 0.014 + k * 2) +
+                40 * Math.sin(options.t * 0.3 + y * 0.021 + k * 3);
+              if (y === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = dynamicHSB(baseHue(options.t) + 40 * k, 100, 60 + 15 * k, 0, 0.32 + 0.17 * k + 0.25 * state.momentHueAlpha);
+            ctx.lineWidth = 3 + 2 * k;
+            ctx.stroke();
+          }
+
+          // Analog static
+          ctx.globalAlpha = 0.07;
+          for(let i=0;i<80;i++) {
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(Math.random()*canvas.width, Math.random()*canvas.height, 1, 1);
+          }
+          ctx.globalAlpha = 1;
+
+          // Full-screen soft glow on beat
+          if (state.momentHueAlpha > 0.2) {
+            ctx.globalAlpha = 0.10 * state.momentHueAlpha;
+            ctx.fillStyle = dynamicHSB(baseHue(options.t) + 180, 100, 80, 0, 1);
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.globalAlpha = 1;
+          }
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      spectrum: {
+        sensitivity: 1.2,
+        customDraw: (ctx, state, options) => {
+          // LED dot matrix spectrum (vertical axis, left-to-right)
+          const bins = state.dataMid.length, slice = canvas.height / bins, sens = options.sens, t = options.t;
+          if (state.spectrumTrails.length !== bins) state.spectrumTrails = Array(bins).fill(0);
+          const hue = baseHue(t);
+          for (let i = 0; i < bins; i++) {
+            let f = Math.min(state.dataMid[i] / 255 * sens, 1);
+            let y = i * slice, dotW = f * canvas.width;
+            // "LED" dots
+            let dotCount = Math.round(dotW / 16);
+            for (let d = 0; d < dotCount; d++) {
+              ctx.beginPath();
+              ctx.arc(d*16+10, y+slice/2, 7, 0, 2*Math.PI);
+              ctx.fillStyle = d % 8 === 0 ? "#fff" : dynamicHSB(hue + d*7, 100, 70, 0, 0.85);
+              ctx.globalAlpha = 0.38 + 0.5*Math.sin(t*2+i*0.2+d);
+              ctx.fill();
+            }
+            ctx.globalAlpha = 1;
+            // Reflection at bottom
+            ctx.save();
+            ctx.globalAlpha = 0.10;
+            ctx.scale(1, -1);
+            ctx.arc(dotW, -(canvas.height-y - slice/2), 7, 0, 2*Math.PI);
+            ctx.restore();
+          }
+          ctx.globalAlpha = 1;
+          // Reflection line
+          ctx.globalAlpha = 0.12;
+          ctx.fillStyle = "#fff";
+          ctx.fillRect(0, canvas.height-16, canvas.width, 6);
+          ctx.globalAlpha = 1;
+        }
+      },
+      pultec: {
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t) + 30, 100, 70),
+        beforeDraw: (ctx, state, options) => {
+          // Knob UI overlay
+          ctx.save();
+          let nKnobs = 3, knobR = 17, spacing = 60;
+          for (let i = 0; i < nKnobs; i++) {
+            let y = canvas.height/2 - spacing + i*spacing, x = 60;
+            ctx.beginPath();
+            ctx.arc(x, y, knobR, 0, 2 * Math.PI);
+            ctx.fillStyle = dynamicHSB(baseHue(options.t) + 20 * i, 100, 55 + 8 * i, 0, 0.66);
+            ctx.fill();
+            ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+            // Knob position: linked to average amplitude
+            let avg = state.dataMid.reduce((a, b) => a + b, 0) / state.dataMid.length;
+            let angle = Math.PI * 1.2 * (avg / 255) - Math.PI * 0.6;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(
+              x + Math.cos(angle + i * 0.15) * knobR * 0.85,
+              y + Math.sin(angle + i * 0.15) * knobR * 0.85
+            );
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+          }
+          // Brushed metal vignette
+          let grad = ctx.createRadialGradient(
+            60, canvas.height/2, 30,
+            60, canvas.height/2, 150
+          );
+          grad.addColorStop(0, "rgba(255,220,120,0.15)");
+          grad.addColorStop(1, "rgba(0,0,0,0.0)");
+          ctx.globalAlpha = 0.4;
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, canvas.height/2-180, 180, 360);
+          ctx.globalAlpha = 1;
+          // Glowing pilot light
+          ctx.beginPath();
+          ctx.arc(60, 50, 7, 0, 2*Math.PI);
+          ctx.fillStyle = "#ff0";
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = "#ff8";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      neve: {
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t) + 15, 100, 55),
+        beforeDraw: (ctx, state, options) => {
+          // Blue/Gray faceplate
+          ctx.save();
+          ctx.globalAlpha = 0.13;
+          ctx.fillStyle = "#1b2a39";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.globalAlpha = 1;
+          // Backlit buttons (bottom)
+          for(let i=0;i<5;i++) {
+            ctx.fillStyle = "#3498db";
+            ctx.globalAlpha = 0.2 + 0.16*Math.sin(options.t+i);
+            ctx.fillRect(canvas.width-150+i*28, canvas.height-38, 18, 28);
+          }
+          ctx.globalAlpha = 1;
+          // Analog VU meter
+          ctx.save();
+          ctx.translate(canvas.width-70, 80);
+          ctx.rotate(-0.5 + 1.2*state.dbSmoothed/60);
+          ctx.beginPath();
+          ctx.moveTo(0,0);
+          ctx.lineTo(44,0);
+          ctx.strokeStyle = "#ffe";
+          ctx.lineWidth = 6;
+          ctx.stroke();
+          ctx.restore();
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      ssl: {
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t) + 200, 100, 65),
+        beforeDraw: (ctx, state, options) => {
+          // LED bar graphs
+          ctx.save();
+          let n = 8;
+          for (let i = 0; i < n; i++) {
+            let y = 52 + i*22;
+            let val = state.dataMid[Math.floor(state.dataMid.length*(i+1)/(n+1))]/255;
+            ctx.fillStyle = "lime";
+            ctx.globalAlpha = 0.14 + 0.8*val;
+            ctx.fillRect(canvas.width-120, y, 90*val, 16);
+          }
+          ctx.globalAlpha = 1;
+          // Digital numeric readout
+          ctx.font = "bold 19px monospace";
+          ctx.fillStyle = "#0ff";
+          ctx.textAlign = "right";
+          ctx.fillText((state.dbSmoothed> -60 ? state.dbSmoothed.toFixed(1) + " dB" : "--"), canvas.width-20, 42);
+
+          // LED line display
+          ctx.fillStyle = "#ff0";
+          let ledY = canvas.height-44;
+          for(let i=0;i<12;i++) {
+            ctx.globalAlpha = 0.35 + 0.5*Math.sin(options.t*2+i);
+            ctx.fillRect(canvas.width-160 + i*12, ledY, 8, 8);
+          }
+          ctx.globalAlpha = 1;
+        },
+        afterDraw: ctx => ctx.restore()
       }
-      if(preset.beforeDraw) preset.beforeDraw(ctx, state, {...opts, hueOffset});
+    };
 
-      const midVal  = i=>state.dataMid[i]/255;
-      const sideVal = i=>Math.abs(state.dataLeft[i]-state.dataRight[i])/255;
+    // Draw a vertical EQ curve (left-to-right axis)
+    function drawPreset(presetKey, alpha, hueOffset, t, noiseAmp, lfo){
+      const preset = EQ_PRESETS[presetKey];
+      if (!preset) return;
+      const sens = parseFloat(sensSlider.value) * (preset.sensitivity || 1);
+      const bins  = state.dataMid.length;
+      const slice = canvas.height/bins;
+      const options = {sens, t, lfo, alpha};
+      ctx.globalAlpha = alpha * (preset.alpha || 1);
+
+      if (preset.customDraw) {
+        preset.customDraw(ctx, state, {...options, hueOffset});
+        ctx.globalAlpha = 1;
+        return;
+      }
+
+      if (preset.beforeDraw) preset.beforeDraw(ctx, state, {...options, hueOffset});
+      const midVal  = i => state.dataMid[i]/255;
+      const sideVal = i => Math.abs(state.dataLeft[i]-state.dataRight[i])/255;
 
       function drawCurve(getVal, color, dash=false){
         ctx.beginPath();
         for(let i=0;i<bins;i++){
           let f = Math.min(getVal(i)*sens,1);
-          let y = canvas.height - i*sliceY;
-          let x = f*canvas.width;
-          x += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.width;
+          let y = i*slice, x = f*canvas.width;
+          y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
           i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
         }
-        ctx.lineWidth = 2*(1+(Math.random()-0.5)*0.1*lfo);
-        ctx.strokeStyle = typeof color==='function'?color(ctx,t):color;
+        ctx.lineWidth = 2 * (1 + (Math.random()-0.5)*0.1*lfo);
+        ctx.strokeStyle = typeof color === 'function' ? color(ctx, t) : color;
         ctx.setLineDash(dash?[4,4]:[]);
         ctx.stroke(); ctx.setLineDash([]);
       }
-
-      if(preset.mainColor) drawCurve(midVal, preset.mainColor, preset.curveDash);
-      if(preset.sideColor) drawCurve(sideVal, preset.sideColor, true);
-      if(preset.afterDraw) preset.afterDraw(ctx);
-      ctx.globalAlpha =1;
+      if (preset.mainColor)
+        drawCurve(midVal, preset.mainColor, preset.curveDash);
+      if (preset.sideColor)
+        drawCurve(sideVal, preset.sideColor, true);
+      if (preset.afterDraw) preset.afterDraw(ctx);
+      ctx.globalAlpha = 1;
     }
 
-    // Draw dB meter below controls
-    function drawDbMeter(offsetY){
-      const barX = 12, barY = offsetY+12, barW = 18, barH = canvas.height-barY-12;
-      const minDb=-60, maxDb=0;
+    function drawDbMeter() {
+      // (Still draw overlay bar on canvas for legacy look)
+      const barX = 12, barY = 32, barW = 18, barH = canvas.height - 64;
+      const minDb = -60, maxDb = 0;
       const db = Math.max(minDb, Math.min(state.dbSmoothed, maxDb));
-      const norm = (db-minDb)/(maxDb-minDb);
-      ctx.save(); ctx.globalAlpha=0.8;
-      ctx.fillStyle='#222'; ctx.fillRect(barX-3,barY-3,barW+6,barH+6);
-      const grad=ctx.createLinearGradient(barX,barY+barH,barX,barY);
-      grad.addColorStop(0,'#0f0'); grad.addColorStop(0.7,'#ff0'); grad.addColorStop(1,'#f00');
-      ctx.fillStyle=grad; ctx.fillRect(barX,barY+barH*(1-norm),barW,barH*norm);
-      ctx.strokeStyle='#fff'; ctx.lineWidth=1;
-      ctx.strokeRect(barX-1,barY-1,barW+2,barH+2);
-      ctx.font='bold 15px sans-serif'; ctx.fillStyle='#fff';
-      ctx.textAlign='left'; ctx.textBaseline='middle';
-      ctx.fillText((db>-59?db.toFixed(1):'--')+' dB', barX+barW+10, barY+barH*(1-norm));
-      ctx.restore();
-    }
-
-    // Draw BPM below controls
-    function drawBpmMeter(offsetY){
+      const norm = (db - minDb) / (maxDb - minDb);
       ctx.save();
-      ctx.font='bold 18px sans-serif'; ctx.fillStyle='#fff';
-      ctx.textAlign='right'; ctx.textBaseline='top';
-      ctx.shadowColor='#000'; ctx.shadowBlur=5;
-      ctx.fillText(`BPM: ${state.bpm>0?Math.round(state.bpm):'--'}`, canvas.width-24, offsetY+4);
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = "#222";
+      ctx.fillRect(barX-3, barY-3, barW+6, barH+6);
+      const grad = ctx.createLinearGradient(barX, barY+barH, barX, barY);
+      grad.addColorStop(0.0, "#0f0");
+      grad.addColorStop(0.7, "#ff0");
+      grad.addColorStop(1.0, "#f00");
+      ctx.fillStyle = grad;
+      ctx.fillRect(barX, barY + barH*(1-norm), barW, barH*norm);
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(barX-1, barY-1, barW+2, barH+2);
       ctx.restore();
     }
 
-    // Main draw loop
-    function draw(){
+    function drawBpmMeter(ctx, bpm) {
+      // (Still draw overlay on canvas for legacy look)
+      ctx.save();
+      ctx.font = "bold 18px sans-serif";
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.shadowColor = "#000"; ctx.shadowBlur = 5;
+      ctx.fillText(`BPM: ${bpm > 0 ? Math.round(bpm) : '--'}`, canvas.width - 24, 24);
+      ctx.restore();
+    }
+
+    function draw() {
       requestAnimationFrame(draw);
       state.leftAnalyser.getByteFrequencyData(state.dataLeft);
       state.rightAnalyser.getByteFrequencyData(state.dataRight);
-      const bins = state.dataLeft.length;
-      for(let i=0;i<bins;i++) state.dataMid[i] = (state.dataLeft[i]+state.dataRight[i])*0.5;
-
-      const t = (performance.now()-state.startTime)*0.001;
+      const binCount = state.dataLeft.length;
+      for(let i=0; i<binCount; i++) {
+        state.dataMid[i] = (state.dataLeft[i] + state.dataRight[i]) * 0.5;
+      }
+      const t = (performance.now() - state.startTime)*0.001;
+      const hueOffset = (t*5) % 360;
       const lfo = (Math.sin(Math.PI*0.2*t)+1)/2;
-      const noiseAmp = 0.02*(0.5+0.5*lfo);
-
+      const noiseAmp = 0.02 * (0.5 + 0.5*lfo);
       updateDbMeter();
 
-      // Crossfade logic...
-      if(crossfadeToggle.checked && !state.xfadeActive && t>state.nextXfade){
-        state.xfadeActive=true; state.xfadeStart=t;
-        const all=Object.keys(EQ_PRESETS);
-        state.secondaryPreset = all.filter(p=>p!==state.mainPreset)[Math.floor(Math.random()*(all.length-1))];
+      // Crossfade logic
+      if(crossfadeToggle.checked) {
+        if(!state.xfadeActive && t > state.nextXfade){
+          state.xfadeActive = true; state.xfadeStart = t;
+          const all=Object.keys(EQ_PRESETS);
+          state.secondaryPreset = all.filter(p=>p!==state.mainPreset)[Math.floor(Math.random()*(all.length-1))];
+        }
+      } else state.xfadeActive=false;
+      let w2=0;
+      if(state.xfadeActive) {
+        w2=Math.min((t-state.xfadeStart)/state.xfadeDur,1);
+        if(w2>=1){
+          state.mainPreset=state.secondaryPreset; presetSelect.value=state.mainPreset;
+          state.xfadeActive=false;
+          state.nextXfade=t+300+Math.random()*300;
+          w2=0;
+        }
       }
-      let w2 = state.xfadeActive?Math.min((t-state.xfadeStart)/state.xfadeDur,1):0;
-      if(w2>=1){
-        state.mainPreset=state.secondaryPreset; presetSelect.value=state.mainPreset;
-        state.xfadeActive=false; state.nextXfade=t+300+Math.random()*300; w2=0;
-      }
-      const w1 = 1-w2;
+      const w1=1-w2;
 
-      // Beat detection & BPM
-      const threshold=parseFloat(beatThreshold.value),
-            cooldown=parseFloat(beatCooldown.value),
-            bassAvg=((state.dataLeft[2]+state.dataRight[2])/2)/255;
-      if(momentsToggle.checked && bassAvg>threshold && t-state.lastBeatTime>cooldown){
-        state.lastBeatTime=t; state.momentHue=Math.random()*360; state.momentHueAlpha=1;
-        state.beatTimes.push(t); if(state.beatTimes.length>8) state.beatTimes.shift();
-        if(state.beatTimes.length>=2){
-          const iv=state.beatTimes.slice(1).map((v,i)=>v-state.beatTimes[i]);
-          const avg=iv.reduce((a,b)=>a+b)/iv.length;
-          state.bpm = 60/avg;
-        } else state.bpm=0;
+      // Beat detection and BPM
+      const threshold = parseFloat(beatThreshold.value);
+      const cooldown  = parseFloat(beatCooldown.value);
+      const bassAvg = ((state.dataLeft[2]+state.dataRight[2])/2)/255;
+      if(momentsToggle.checked && bassAvg>threshold && t - state.lastBeatTime>cooldown){
+        state.lastBeatTime = t;
+        state.momentHue = Math.random()*360;
+        state.momentHueAlpha = 1;
+        state.beatTimes.push(t);
+        if (state.beatTimes.length > 8) state.beatTimes.shift();
+        if (state.beatTimes.length >= 2) {
+          let intervals = [];
+          for (let i = 1; i < state.beatTimes.length; i++)
+            intervals.push(state.beatTimes[i] - state.beatTimes[i-1]);
+          const avgInterval = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+          state.bpm = 60 / avgInterval;
+        } else {
+          state.bpm = 0;
+        }
       }
-      state.momentHueAlpha*=0.9;
+      state.momentHueAlpha *= 0.9;
+      updateBpmMeter(state.bpm);
 
-      // Tracer / clear
-      if(tracerToggle.checked){
-        ctx.fillStyle='rgba(0,0,0,0.15)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      // Tracer or clear
+      if(tracerToggle.checked) {
+        ctx.fillStyle='rgba(0,0,0,0.15)';
+        ctx.fillRect(0,0,canvas.width,canvas.height);
       } else {
         ctx.clearRect(0,0,canvas.width,canvas.height);
       }
 
-      // Band markers: horizontal lines at each freq
-      const freqs=[60,250,1000,4000,16000], nyq=state.audioContext.sampleRate/2;
+      // Band markers (Hz) as horizontal lines, vertical text
+      const freqs=[60,250,1000,4000,16000];
+      const nyq=state.audioContext.sampleRate/2;
+      const slice=canvas.height/binCount;
       ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1;
       ctx.font='12px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.22)';
-      ctx.textAlign='right';
       freqs.forEach(f=>{
-        const y=canvas.height - (f/nyq)*canvas.height;
+        const b=Math.round(f/nyq*binCount);
+        const y = b * slice;
         ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
-        ctx.fillText(f+'Hz', canvas.width-4, y-4);
+        ctx.save();
+        ctx.translate(2, y-2);
+        ctx.rotate(-Math.PI/2);
+        ctx.fillText(f+'Hz', 0, 0);
+        ctx.restore();
       });
-      ctx.textAlign='left';
 
-      // Draw EQ curves
-      drawPreset(state.mainPreset, w1, (t*5)%360, t, noiseAmp, lfo);
-      if(w2>0) drawPreset(state.secondaryPreset, w2, (t*5)%360, t, noiseAmp, lfo);
+      drawPreset(state.mainPreset, w1, hueOffset, t, noiseAmp, lfo);
+      if(w2>0) drawPreset(state.secondaryPreset, w2, hueOffset, t, noiseAmp, lfo);
 
-      // Draw meters below UI
-      const ctrlH = controls.getBoundingClientRect().height + 8;
-      drawDbMeter(ctrlH);
-      drawBpmMeter(ctrlH);
+      drawDbMeter();
+      drawBpmMeter(ctx, state.bpm);
     }
 
     fsBtn.onclick = ()=> {
-      document.fullscreenElement ? document.exitFullscreen() : canvas.requestFullscreen();
+      document.fullscreenElement
+        ? document.exitFullscreen()
+        : canvas.requestFullscreen();
     };
     let hideT;
     ['pointermove','touchstart','keydown'].forEach(evt=>
