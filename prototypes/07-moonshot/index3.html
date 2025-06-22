@@ -6,179 +6,80 @@
 <title>Moonshot Hybrid - Nexus Edition</title>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
-  /* your full CSS from previous code here (unchanged) */
-  /* I'm skipping re-pasting to save space */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: radial-gradient(circle at center, #1a0033, #000011); color: #fff; font-family: 'Orbitron', monospace; overflow: hidden; min-height: 100vh; display: flex; justify-content: center; align-items: center; }
+  #gameContainer { position: relative; border-radius: 20px; box-shadow: 0 0 50px rgba(0, 255, 255, 0.3); overflow: hidden; }
+  #gameCanvas { display: block; background: linear-gradient(180deg, #001122 0%, #000511 50%, #110022 100%); border: 3px solid #00ffff; border-radius: 15px; }
+  #ui { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; align-items: flex-start; font-weight: 700; text-shadow: 0 0 10px #00ffff; }
+  #leftUI, #rightUI { display: flex; flex-direction: column; gap: 10px; }
+  .ui-element { background: rgba(0, 0, 0, 0.8); padding: 8px 15px; border-radius: 10px; border: 2px solid #00ffff; font-size: 14px; backdrop-filter: blur(5px); }
+  #weaponDisplay { display: flex; align-items: center; gap: 10px; }
+  #weaponBar { width: 100px; height: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 4px; overflow: hidden; }
+  #weaponProgress { height: 100%; background: linear-gradient(90deg, #ff6600, #ffff00); transition: width 0.3s ease; }
+  #titleScreen, #gameOverScreen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; flex-direction: column; border-radius: 15px; }
+  #titleScreen { background: linear-gradient(45deg, rgba(0, 0, 0, 0.95), rgba(26, 0, 51, 0.95)); }
+  #gameOverScreen { background: linear-gradient(45deg, rgba(0, 0, 0, 0.95), rgba(51, 0, 0, 0.95)); display: none; }
+  #gameTitle { font-size: 48px; font-weight: 900; background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 20px; animation: glow 2s ease-in-out infinite alternate; }
+  @keyframes glow { from { filter: drop-shadow(0 0 20px #00ffff); } to { filter: drop-shadow(0 0 30px #ff00ff); } }
+  .button { font-family: 'Orbitron', monospace; font-size: 18px; font-weight: 700; margin: 10px; padding: 15px 30px; cursor: pointer; border: 3px solid #00ffff; background: linear-gradient(45deg, #001122, #002244); color: #00ffff; border-radius: 10px; transition: all 0.3s ease; text-transform: uppercase; }
+  .button:hover { background: linear-gradient(45deg, #002244, #004488); box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); transform: translateY(-2px); }
+  #finalScore { font-size: 36px; font-weight: 700; color: #ff4444; margin: 20px 0; }
+  #instructions { text-align: center; margin: 20px 0; font-size: 14px; line-height: 1.6; color: #aaaaff; }
 </style>
 </head>
 <body>
 <div id="gameContainer">
   <canvas id="gameCanvas" width="900" height="700"></canvas>
-  <!-- your UI and overlay screens from previous code -->
-  <!-- also skipping here since you have this already -->
+  <div id="ui">
+    <div id="leftUI">
+      <div class="ui-element" id="score">Score: 0</div>
+      <div class="ui-element" id="level">Wave: 1</div>
+      <div class="ui-element" id="combo">Combo: x1</div>
+    </div>
+    <div id="rightUI">
+      <div class="ui-element" id="lives">Hull: ❤️❤️❤️</div>
+      <div class="ui-element" id="weaponDisplay">
+        <span id="weaponName">Standard</span>
+        <div id="weaponBar"><div id="weaponProgress"></div></div>
+      </div>
+    </div>
+  </div>
+  <div id="titleScreen">
+    <div id="gameTitle">🌙 MOONSHOT NEXUS</div>
+    <div id="instructions">
+      Use ARROW KEYS to move • SPACE to shoot • SHIFT to boost<br>
+      Collect power-ups • Survive waves of cosmic invaders!
+    </div>
+    <button class="button" onclick="startGame()">Start Mission</button>
+  </div>
+  <div id="gameOverScreen">
+    <div style="font-size: 48px; color: #ff4444;">MISSION FAILED</div>
+    <div id="finalScore">Final Score: 0</div>
+    <button class="button" onclick="restartGame()">Retry Mission</button>
+    <button class="button" onclick="goToTitle()">Main Menu</button>
+  </div>
 </div>
-
 <script>
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
-// full gameState object (same as your previous code)
-// full ENEMY_TYPES object (same as your previous code)
-
-// (all your existing functions stay unchanged up to checkCollisions)
-
-function checkCollisions() {
-  // Player bullets vs enemies
-  gameState.bullets.forEach((bullet, bulletIndex) => {
-    if (bullet.owner !== 'player') return;
-    gameState.enemies.forEach((enemy, enemyIndex) => {
-      if (bullet.x < enemy.x + enemy.width &&
-          bullet.x + bullet.width > enemy.x &&
-          bullet.y < enemy.y + enemy.height &&
-          bullet.y + bullet.height > enemy.y) {
-        enemy.health -= bullet.damage;
-        gameState.bullets.splice(bulletIndex, 1);
-        createParticle(enemy.x + enemy.width/2, enemy.y + enemy.height/2, '#ffff00');
-        if (enemy.health <= 0) {
-          gameState.score += enemy.points * gameState.combo;
-          gameState.combo = Math.min(gameState.combo + 0.1, 5);
-          createExplosion(enemy.x + enemy.width/2, enemy.y + enemy.height/2, enemy.width);
-          if (Math.random() < 0.3) {
-            spawnPowerUp(enemy.x + enemy.width/2, enemy.y + enemy.height/2);
-          }
-          gameState.enemies.splice(enemyIndex, 1);
-          playSound(300 + Math.random() * 200, 0.3, 'sawtooth', 0.1);
-        }
-      }
-    });
-  });
-  
-  // Enemy bullets vs player
-  gameState.bullets.forEach((bullet, bulletIndex) => {
-    if (bullet.owner !== 'enemy') return;
-    const p = gameState.player;
-    if (bullet.x < p.x + p.width && bullet.x + bullet.width > p.x &&
-        bullet.y < p.y + p.height && bullet.y + bullet.height > p.y) {
-      if (p.invulnerable <= 0) {
-        p.health--;
-        p.invulnerable = 60;
-        gameState.combo = 1;
-        if (p.health <= 0) {
-          gameState.lives--;
-          if (gameState.lives <= 0) {
-            endGame();
-          } else {
-            p.health = p.maxHealth;
-          }
-        }
-        playSound(100, 0.2, 'sine', 0.2);
-      }
-      gameState.bullets.splice(bulletIndex, 1);
-    }
-  });
-  
-  // Powerups vs player
-  gameState.powerUps.forEach((powerUp, powerIndex) => {
-    const p = gameState.player;
-    if (powerUp.x + 20 > p.x && powerUp.x < p.x + p.width &&
-        powerUp.y + 20 > p.y && powerUp.y < p.y + p.height) {
-      switch (powerUp.type) {
-        case 'multishot':
-        case 'rapid':
-        case 'laser':
-          p.weapon = powerUp.type;
-          p.weaponTimer = 300;
-          break;
-        case 'health':
-          if (p.health < p.maxHealth) p.health++;
-          break;
-      }
-      gameState.powerUps.splice(powerIndex, 1);
-      playSound(600, 0.2, 'triangle', 0.2);
-    }
-  });
-}
-
-function gameLoop() {
-  if (!gameState.gameRunning) return;
-
-  gameState.time++;
-  updateBackground();
-  updatePlayer();
-  updateEnemies();
-  updateBullets();
-  updatePowerUps();
-  updateParticles();
-  updateExplosions();
-  checkCollisions();
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawStars();
-  drawPlayer();
-  drawEnemies();
-  drawBullets();
-  drawPowerUps();
-  drawParticles();
-  drawExplosions();
-
-  if (gameState.enemies.length === 0 && gameState.waveComplete === false) {
-    gameState.waveComplete = true;
-    setTimeout(() => {
-      gameState.currentWave++;
-      spawnWave();
-      updateUI();
-    }, 1500);
-  }
-
-  if (gameState.player.weaponTimer === 0) {
-    gameState.player.weapon = 'normal';
-  }
-
-  updateUI();
-
-  if (gameState.screenShake > 0) {
-    gameState.screenShake--;
-    const shakeX = (Math.random() - 0.5) * 10;
-    const shakeY = (Math.random() - 0.5) * 10;
-    canvas.style.transform = `translate(${shakeX}px, ${shakeY}px)`;
-  } else {
-    canvas.style.transform = 'translate(0, 0)';
-  }
-
-  requestAnimationFrame(gameLoop);
-}
-
-function startGame() {
-  document.getElementById('titleScreen').style.display = 'none';
-  document.getElementById('gameOverScreen').style.display = 'none';
-  initGame();
-  gameState.gameRunning = true;
-  spawnWave();
-  requestAnimationFrame(gameLoop);
-}
-
-function endGame() {
-  gameState.gameRunning = false;
-  document.getElementById('finalScore').textContent = `Final Score: ${gameState.score}`;
-  document.getElementById('gameOverScreen').style.display = 'flex';
-}
-
-function restartGame() {
-  startGame();
-}
-
-function goToTitle() {
-  document.getElementById('titleScreen').style.display = 'flex';
-  document.getElementById('gameOverScreen').style.display = 'none';
-}
-
-document.addEventListener('keydown', e => {
-  gameState.keys[e.key] = true;
-});
-
-document.addEventListener('keyup', e => {
-  gameState.keys[e.key] = false;
-});
-
+let gameState = { player:null,enemies:[],bullets:[],powerUps:[],particles:[],explosions:[],stars:[],score:0,level:1,lives:3,combo:1,gameRunning:false,keys:{},enemySpawnTimer:0,powerUpTimer:0,backgroundOffset:0,waveTimer:0,currentWave:1,enemiesInWave:0,waveComplete:false,screenShake:0,time:0 };
+const ENEMY_TYPES = { scout:{health:1,speed:3,points:10,color:'#ff6666',width:30,height:20}, fighter:{health:2,speed:2,points:25,color:'#ff9966',width:35,height:25}, heavy:{health:4,speed:1,points:50,color:'#ffff66',width:45,height:35}, boss:{health:15,speed:0.8,points:200,color:'#ff66ff',width:80,height:60} };
+function playSound(frequency, duration, type='sine', volume=0.1){try{const audioContext=new (window.AudioContext||window.webkitAudioContext)();const oscillator=audioContext.createOscillator();const gainNode=audioContext.createGain();oscillator.connect(gainNode);gainNode.connect(audioContext.destination);oscillator.frequency.value=frequency;oscillator.type=type;gainNode.gain.setValueAtTime(volume,audioContext.currentTime);gainNode.gain.exponentialRampToValueAtTime(0.01,audioContext.currentTime+duration);oscillator.start(audioContext.currentTime);oscillator.stop(audioContext.currentTime+duration);}catch(e){} }
+function initGame(){
+gameState.player={x:canvas.width/2-30,y:canvas.height-80,width:60,height:40,health:3,maxHealth:3,weapon:'normal',weaponTimer:0,speed:8,isBoosting:false,boostEnergy:100,maxBoostEnergy:100,invulnerable:0};
+gameState.enemies=[];gameState.bullets=[];gameState.powerUps=[];gameState.particles=[];gameState.explosions=[];gameState.stars=[];gameState.score=0;gameState.level=1;gameState.lives=3;gameState.combo=1;gameState.enemySpawnTimer=0;gameState.powerUpTimer=0;gameState.backgroundOffset=0;gameState.waveTimer=0;gameState.currentWave=1;gameState.enemiesInWave=0;gameState.waveComplete=false;gameState.screenShake=0;gameState.time=0;
+for (let i=0;i<150;i++){gameState.stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,size:Math.random()*3+1,speed:Math.random()*3+1,opacity:Math.random()*0.8+0.2,twinkle:Math.random()*100});}
+updateUI();}
+function updateUI(){document.getElementById('score').textContent=`Score: ${gameState.score}`;document.getElementById('level').textContent=`Wave: ${gameState.currentWave}`;document.getElementById('combo').textContent=`Combo: x${gameState.combo.toFixed(1)}`;document.getElementById('lives').textContent=`Hull: ${'❤️'.repeat(gameState.player.health)}`;document.getElementById('weaponName').textContent=gameState.player.weapon==='normal'?'Standard':gameState.player.weapon;document.getElementById('weaponProgress').style.width=(gameState.player.weaponTimer/300*100)+'%';}
+function spawnWave(){const waveSize=5+gameState.currentWave*2;const types=Object.keys(ENEMY_TYPES);for (let i=0;i<waveSize;i++){setTimeout(()=>{let type=types[Math.floor(Math.random()*Math.min(types.length,2+Math.floor(gameState.currentWave/3)))];if (gameState.currentWave%5===0&&i===waveSize-1){type='boss';}spawnEnemy(type);},i*500);}gameState.enemiesInWave=waveSize;gameState.waveComplete=false;}
+function spawnEnemy(type){const enemyType=ENEMY_TYPES[type];const enemy={x:Math.random()*(canvas.width-enemyType.width),y:-enemyType.height,width:enemyType.width,height:enemyType.height,type:type,health:enemyType.health,maxHealth:enemyType.health,speed:enemyType.speed*(0.8+gameState.currentWave*0.1),points:enemyType.points,color:enemyType.color,shootTimer:Math.random()*120,movePattern:Math.random()<0.3?'zigzag':'straight',zigzagOffset:0};gameState.enemies.push(enemy);}
+function checkCollisions(){gameState.bullets.forEach((bullet,bulletIndex)=>{if(bullet.owner!=='player')return;gameState.enemies.forEach((enemy,enemyIndex)=>{if(bullet.x<enemy.x+enemy.width&&bullet.x+bullet.width>enemy.x&&bullet.y<enemy.y+enemy.height&&bullet.y+bullet.height>enemy.y){enemy.health-=bullet.damage;gameState.bullets.splice(bulletIndex,1);if(enemy.health<=0){gameState.score+=enemy.points*gameState.combo;gameState.combo=Math.min(gameState.combo+0.1,5);gameState.enemies.splice(enemyIndex,1);}}});});}
+function gameLoop(){if(!gameState.gameRunning)return;gameState.time++;ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#fff';gameState.stars.forEach(star=>{ctx.globalAlpha=star.opacity;ctx.fillRect(star.x,star.y,star.size,star.size);star.y+=star.speed;if(star.y>canvas.height){star.y=0;}});ctx.globalAlpha=1;ctx.fillRect(gameState.player.x,gameState.player.y,gameState.player.width,gameState.player.height);gameState.bullets.forEach(b=>{b.y-=b.speed;ctx.fillRect(b.x,b.y,b.width,b.height);});checkCollisions();updateUI();requestAnimationFrame(gameLoop);}
+function startGame(){document.getElementById('titleScreen').style.display='none';document.getElementById('gameOverScreen').style.display='none';initGame();gameState.gameRunning=true;spawnWave();gameLoop();}
+function restartGame(){startGame();}
+function goToTitle(){document.getElementById('titleScreen').style.display='flex';document.getElementById('gameOverScreen').style.display='none';}
+document.addEventListener('keydown',e=>{gameState.keys[e.key]=true;if(e.key===' '){gameState.bullets.push({x:gameState.player.x+gameState.player.width/2-2,y:gameState.player.y,width:4,height:12,speed:15,owner:'player',color:'#fff',damage:1});}});
+document.addEventListener('keyup',e=>{gameState.keys[e.key]=false;});
 </script>
 </body>
 </html>
