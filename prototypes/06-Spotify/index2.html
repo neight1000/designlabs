@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Music Discovery Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1DB954;
+            --primary-dark: #1ed760;
+            --dark: #191414;
+            --dark-light: #282828;
+            --text: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.7);
+            --glass: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--dark) 50%, #8b5cf6 100%);
+            min-height: 100vh;
+            color: var(--text);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.3; }
+            50% { transform: translateX(-50%) scale(1.2); opacity: 0.1; }
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            background: linear-gradient(45deg, var(--primary), #8b5cf6, var(--primary));
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .header p {
+            font-size: 1.3rem;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        .glass-panel {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 25px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .nav-tab {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 20px;
+            background: var(--glass);
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-tab.active {
+            background: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(29, 185, 84, 0.3);
+        }
+
+        .nav-tab:hover:not(.active) {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 20px;
+            border: none;
+            border-radius: 15px;
+            background: var(--glass);
+            color: var(--text);
+            font-size: 16px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .input-group label {
+            position: absolute;
+            top: -10px;
+            left: 20px;
+            background: linear-gradient(45deg, var(--primary), #8b5cf6);
+            padding: 5px 15px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            padding: 15px 35px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(29, 185, 84, 0.4);
+        }
+
+        .search-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            align-items: center;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 18px 25px;
+            border: none;
+            border-radius: 25px;
+            background: var(--glass);
+            color: var(--text);
+            font-size: 16px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.15);
+            border-color: var(--primary);
+            transform: scale(1.02);
+        }
+
+        .search-filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass);
+            color: var(--text);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .visualizer {
+            height: 150px;
+            background: var(--glass);
+            border-radius: 20px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .visualizer-bars {
+            display: flex;
+            align-items: end;
+            gap: 3px;
+            height: 80px;
+        }
+
+        .visualizer-bar {
+            width: 4px;
+            background: linear-gradient(to top, var(--primary), #8b5cf6);
+            border-radius: 2px;
+            transition: height 0.1s ease;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .track-card {
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 25px;
+            border: 1px solid var(--glass-border);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .track-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), #8b5cf6, var(--primary));
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .track-card:hover::before {
+            opacity: 1;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .track-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .track-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .track-card:hover .track-image {
+            transform: scale(1.05);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .track-info h3 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, var(--primary), #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .track-info p {
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+
+        .audio-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+
+        .feature-bar {
+            width: 60px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .feature-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), #8b5cf6);
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .artist-profile {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+            padding: 30px;
+            background: var(--glass);
+            border-radius: 20px;
+        }
+
+        .artist-image {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--primary);
+        }
+
+        .artist-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--glass-border);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error, .success {
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #fca5a5;
+        }
+
+        .success {
+            background: rgba(29, 185, 84, 0.2);
+            border: 1px solid rgba(29, 185, 84, 0.5);
+            color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .header h1 { font-size: 2.5rem; }
+            .search-container { flex-direction: column; }
+            .results-grid { grid-template-columns: 1fr; }
+            .artist-profile { grid-template-columns: 1fr; text-align: center; }
+            .nav-tabs { justify-content: center; }
+            .audio-features { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 AI Music Studio</h1>
+            <p>Discover, Visualize & Explore Music with AI Intelligence</p>
+        </div>
+
+        <div class="glass-panel" id="authSection">
+            <h2 style="text-align: center; margin-bottom: 30px;">🚀 Connect to Spotify</h2>
+            <div class="auth-form">
+                <div class="input-group">
+                    <label>Client ID</label>
+                    <input type="text" id="clientId" placeholder="Enter your Spotify Client ID">
+                </div>
+                <div class="input-group">
+                    <label>Client Secret</label>
+                    <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret">
+                </div>
+                <button class="btn btn-primary" onclick="authenticate()">Launch Studio</button>
+            </div>
+            <div id="authStatus"></div>
+        </div>
+
+        <div class="glass-panel" id="mainApp" style="display: none;">
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('search')">🔍 Smart Search</button>
+                <button class="nav-tab" onclick="switchTab('artist')">🎤 Artist Deep Dive</button>
+                <button class="nav-tab" onclick="switchTab('recommendations')">🤖 AI Recommendations</button>
+                <button class="nav-tab" onclick="switchTab('visualizer')">🎨 Audio Visualizer</button>
+            </div>
+
+            <div id="searchTab" class="tab-content active">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="searchQuery" placeholder="Search for tracks, artists, albums... AI will enhance your results">
+                    <button class="btn btn-primary" onclick="smartSearch()">Search</button>
+                </div>
+                
+                <div class="search-filters">
+                    <button class="filter-btn active" data-type="track">🎵 Tracks</button>
+                    <button class="filter-btn" data-type="artist">🎤 Artists</button>
+                    <button class="filter-btn" data-type="album">💿 Albums</button>
+                </div>
+
+                <div id="searchResults"></div>
+            </div>
+
+            <div id="artistTab" class="tab-content">
+                <div class="search-container">
+                    <input type="text" class="search-input" id="artistQuery" placeholder="Enter artist name for deep dive analysis">
+                    <button class="btn btn-primary" onclick="artistDeepDive()">Explore Artist</button>
+                </div>
+                <div id="artistResults"></div>
+            </div>
+
+            <div id="recommendationsTab" class="tab-content">
+                <h3 style="margin-bottom: 20px;">🤖 AI-Powered Music Discovery</h3>
+                <div class="search-container">
+                    <input type="text" class="search-input" id="seedQuery" placeholder="Enter a song or artist to get AI recommendations">
+                    <button class="btn btn-primary" onclick="getRecommendations()">Get Recommendations</button>
+                </div>
+                <div id="recommendationResults"></div>
+            </div>
+
+            <div id="visualizerTab" class="tab-content">
+                <h3 style="margin-bottom: 20px;">🎨 Audio Visualizer</h3>
+                <div class="visualizer" id="audioVisualizer">
+                    <div class="visualizer-bars" id="visualizerBars"></div>
+                </div>
+                <p style="text-align: center; opacity: 0.7;">Play any track preview to see the visualization</p>
+                <div id="currentlyPlaying"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let accessToken = null;
+        let currentAudio = null;
+        let visualizerContext = null;
+        let analyser = null;
+        let currentSearchType = 'track';
+
+        // Initialize visualizer
+        function initVisualizer() {
+            const bars = document.getElementById('visualizerBars');
+            for (let i = 0; i < 64; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'visualizer-bar';
+                bar.style.height = '10px';
+                bars.appendChild(bar);
+            }
+        }
+
+        // Authentication
+        async function authenticate() {
+            const clientId = document.getElementById('clientId').value.trim();
+            const clientSecret = document.getElementById('clientSecret').value.trim();
+            const authStatus = document.getElementById('authStatus');
+
+            if (!clientId || !clientSecret) {
+                authStatus.innerHTML = '<div class="error">Please enter both Client ID and Client Secret</div>';
+                return;
+            }
+
+            authStatus.innerHTML = '<div class="loading">Connecting to Spotify...</div>';
+
+            try {
+                const response = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': 'Basic ' + btoa(clientId + ':' + clientSecret)
+                    },
+                    body: 'grant_type=client_credentials'
+                });
+
+                if (!response.ok) throw new Error('Authentication failed');
+
+                const data = await response.json();
+                accessToken = data.access_token;
+
+                authStatus.innerHTML = '<div class="success">🚀 Successfully connected! Welcome to AI Music Studio</div>';
+                
+                setTimeout(() => {
+                    document.getElementById('authSection').style.display = 'none';
+                    document.getElementById('mainApp').style.display = 'block';
+                    initVisualizer();
+                }, 1500);
+
+            } catch (error) {
+                authStatus.innerHTML = '<div class="error">Authentication failed. Please check your credentials.</div>';
+                console.error('Auth error:', error);
+            }
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+        }
+
+        // Filter buttons
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('filter-btn')) {
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                e.target.classList.add('active');
+                currentSearchType = e.target.dataset.type;
+            }
+        });
+
+        // Smart Search with AI enhancement
+        async function smartSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (!query) {
+                resultsDiv.innerHTML = '<div class="error">Please enter a search query</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">AI is analyzing and searching...</div>';
+
+            try {
+                const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=${currentSearchType}&limit=20`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                if (!response.ok) throw new Error('Search failed');
+
+                const data = await response.json();
+                
+                if (currentSearchType === 'track') {
+                    await displayTracksWithFeatures(data.tracks.items);
+                } else if (currentSearchType === 'artist') {
+                    displayArtists(data.artists.items);
+                } else {
+                    displayAlbums(data.albums.items);
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="error">Search failed. Please try again.</div>';
+                console.error('Search error:', error);
+            }
+        }
+
+        // Display tracks with audio features
+        async function displayTracksWithFeatures(tracks) {
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (tracks.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">No tracks found</div>';
+                return;
+            }
+
+            // Get audio features for all tracks
+            const trackIds = tracks.map(track => track.id).join(',');
+            let audioFeatures = [];
+            
+            try {
+                const featuresResponse = await fetch(`https://api.spotify.com/v1/audio-features?ids=${trackIds}`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+                if (featuresResponse.ok) {
+                    const featuresData = await featuresResponse.json();
+                    audioFeatures = featuresData.audio_features;
+                }
+            } catch (error) {
+                console.log('Could not fetch audio features');
+            }
+
+            let html = '<div class="results-grid">';
+            
+            tracks.forEach((track, index) => {
+                const imageUrl = track.album.images[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image';
+                const artistNames = track.artists.map(artist => artist.name).join(', ');
+                const duration = Math.floor(track.duration_ms / 60000) + ':' + 
+                               String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0');
+                
+                const features = audioFeatures[index];
+                let featuresHtml = '';
+                
+                if (features) {
+                    featuresHtml = `
+                        <div class="audio-features">
+                            <div class="feature-item">
+                                <span>Energy</span>
+                                <div class="feature-bar">
+                                    <div class="feature-bar-fill" style="width: ${features.energy * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <span>Dance</span>
+                                <div class="feature-bar">
+                                    <div class="feature-bar-fill" style="width: ${features.danceability * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <span>Valence</span>
+                                <div class="feature-bar">
+                                    <div class="feature-bar-fill" style="width: ${features.valence * 100}%"></div>
+                                </div>
+                            </div>
+                            <div class="feature-item">
+                                <span>Tempo: ${Math.round(features.tempo)} BPM</span>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                    <div class="track-card" onclick="openSpotifyTrack('${track.external_urls.spotify}')">
+                        <img src="${imageUrl}" alt="${track.name}" class="track-image">
+                        <div class="track-info">
+                            <h3>${track.name}</h3>
+                            <p><strong>Artist:</strong> ${artistNames}</p>
+                            <p><strong>Album:</strong> ${track.album.name}</p>
+                            <p><strong>Duration:</strong> ${duration}</p>
+                            <p><strong>Popularity:</strong> ${track.popularity}/100</p>
+                        </div>
+                        ${featuresHtml}
+                        ${track.preview_url ? `
+                            <div class="track-preview">
+                                <audio controls onplay="startVisualization(this, '${track.name}', '${artistNames}')">
+                                    <source src="${track.preview_url}" type="audio/mpeg">
+                                </audio>
+                            </div>
+                        ` : '<p style="opacity: 0.6; font-style: italic;">No preview available</p>'}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        // Artist Deep Dive
+        async function artistDeepDive() {
+            const query = document.getElementById('artistQuery').value.trim();
+            const resultsDiv = document.getElementById('artistResults');
+
+            if (!query) {
+                resultsDiv.innerHTML = '<div class="error">Please enter an artist name</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">Diving deep into artist data...</div>';
+
+            try {
+                // Search for artist
+                const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=artist&limit=1`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                if (!searchResponse.ok) throw new Error('Artist search failed');
+
+                const searchData = await searchResponse.json();
+                const artist = searchData.artists.items[0];
+
+                if (!artist) {
+                    resultsDiv.innerHTML = '<div class="error">Artist not found</div>';
+                    return;
+                }
+
+                // Get artist's top tracks
+                const topTracksResponse = await fetch(`https://api.spotify.com/v1/artists/${artist.id}/top-tracks?market=US`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                const topTracksData = await topTracksResponse.json();
+
+                // Get related artists
+                const relatedResponse = await fetch(`https://api.spotify.com/v1/artists/${artist.id}/related-artists`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                const relatedData = await relatedResponse.json();
+
+                displayArtistProfile(artist, topTracksData.tracks, relatedData.artists);
+
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="error">Failed to load artist data</div>';
+                console.error('Artist error:', error);
+            }
+        }
+
+        function displayArtistProfile(artist, topTracks, relatedArtists) {
+            const resultsDiv = document.getElementById('artistResults');
+            const imageUrl = artist.images[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image';
+
+            let html = `
+                <div class="artist-profile">
+                    <img src="${imageUrl}" alt="${artist.name}" class="artist-image">
+                    <div>
+                        <h2>${artist.name}</h2>
+                        <p>Genres: ${artist.genres.join(', ') || 'Not specified'}</p>
+                        <div class="artist-stats">
+                            <div class="stat-item">
+                                <div class="stat-value">${artist.followers.total.toLocaleString()}</div>
+                                <div>Followers</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${artist.popularity}</div>
+                                <div>Popularity</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${topTracks.length}</div>
+                                <div>Top Tracks</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3>🔥 Top Tracks</h3>
+                <div class="results-grid">
+            `;
+
+            topTracks.slice(0, 6).forEach(track => {
+                const imageUrl = track.album.images[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image';
+                const duration = Math.floor(track.duration_ms / 60000) + ':' + 
+                               String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0');
+                
+                html += `
+                    <div class="track-card" onclick="openSpotifyTrack('${track.external_urls.spotify}')">
+                        <img src="${imageUrl}" alt="${track.name}" class="track-image">
+                        <div class="track-info">
+                            <h3>${track.name}</h3>
+                            <p><strong>Album:</strong> ${track.album.name}</p>
+                            <p><strong>Duration:</strong> ${duration}</p>
+                            <p><strong>Popularity:</strong> ${track.popularity}/100</p>
+                        </div>
+                        ${track.preview_url ? `
+                            <div class="track-preview">
+                                <audio controls onplay="startVisualization(this, '${track.name}', '${artist.name}')">
+                                    <source src="${track.preview_url}" type="audio/mpeg">
+                                </audio>
+                            </div>
+                        ` : '<p style="opacity: 0.6; font-style: italic;">No preview available</p>'}
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+                
+                <h3 style="margin-top: 40px;">🎭 Related Artists</h3>
+                <div class="recommendations-grid">
+            `;
+
+            relatedArtists.slice(0, 8).forEach(relatedArtist => {
+                const imageUrl = relatedArtist.images[0]?.url || 'https://via.placeholder.com/200x200?text=No+Image';
+                
+                html += `
+                    <div class="track-card" onclick="loadArtist('${relatedArtist.name}')" style="text-align: center;">
+                        <img src="${imageUrl}" alt="${relatedArtist.name}" class="track-image" style="border-radius: 50%; height: 150px;">
+                        <div class="track-info">
+                            <h3>${relatedArtist.name}</h3>
+                            <p><strong>Popularity:</strong> ${relatedArtist.popularity}/100</p>
+                            <p><strong>Followers:</strong> ${relatedArtist.followers.total.toLocaleString()}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        // AI Recommendations
+        async function getRecommendations() {
+            const query = document.getElementById('seedQuery').value.trim();
+            const resultsDiv = document.getElementById('recommendationResults');
+
+            if (!query) {
+                resultsDiv.innerHTML = '<div class="error">Please enter a song or artist for recommendations</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">AI is analyzing your taste and finding perfect matches...</div>';
+
+            try {
+                // First, search for the seed track/artist
+                const searchResponse = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=1`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                if (!searchResponse.ok) throw new Error('Search failed');
+
+                const searchData = await searchResponse.json();
+                const seedTrack = searchData.tracks.items[0];
+
+                if (!seedTrack) {
+                    resultsDiv.innerHTML = '<div class="error">No matching track found for recommendations</div>';
+                    return;
+                }
+
+                // Get audio features for the seed track
+                const featuresResponse = await fetch(`https://api.spotify.com/v1/audio-features/${seedTrack.id}`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                let recommendationParams = `seed_tracks=${seedTrack.id}&limit=20`;
+
+                if (featuresResponse.ok) {
+                    const features = await featuresResponse.json();
+                    // Use audio features to enhance recommendations
+                    recommendationParams += `&target_energy=${features.energy}&target_danceability=${features.danceability}&target_valence=${features.valence}`;
+                }
+
+                // Get recommendations
+                const recommendationsResponse = await fetch(`https://api.spotify.com/v1/recommendations?${recommendationParams}`, {
+                    headers: { 'Authorization': 'Bearer ' + accessToken }
+                });
+
+                if (!recommendationsResponse.ok) throw new Error('Recommendations failed');
+
+                const recommendationsData = await recommendationsResponse.json();
+                displayRecommendations(seedTrack, recommendationsData.tracks);
+
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="error">Failed to get recommendations. Please try again.</div>';
+                console.error('Recommendations error:', error);
+            }
+        }
+
+        function displayRecommendations(seedTrack, recommendations) {
+            const resultsDiv = document.getElementById('recommendationResults');
+            
+            let html = `
+                <div class="glass-panel" style="margin-bottom: 30px;">
+                    <h3>🎯 Based on: "${seedTrack.name}" by ${seedTrack.artists[0].name}</h3>
+                    <p style="opacity: 0.8;">AI found ${recommendations.length} tracks that match your vibe</p>
+                </div>
+                
+                <div class="results-grid">
+            `;
+
+            recommendations.forEach(track => {
+                const imageUrl = track.album.images[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image';
+                const artistNames = track.artists.map(artist => artist.name).join(', ');
+                const duration = Math.floor(track.duration_ms / 60000) + ':' + 
+                               String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0');
+                
+                html += `
+                    <div class="track-card" onclick="openSpotifyTrack('${track.external_urls.spotify}')">
+                        <img src="${imageUrl}" alt="${track.name}" class="track-image">
+                        <div class="track-info">
+                            <h3>${track.name}</h3>
+                            <p><strong>Artist:</strong> ${artistNames}</p>
+                            <p><strong>Album:</strong> ${track.album.name}</p>
+                            <p><strong>Duration:</strong> ${duration}</p>
+                            <p><strong>Popularity:</strong> ${track.popularity}/100</p>
+                        </div>
+                        ${track.preview_url ? `
+                            <div class="track-preview">
+                                <audio controls onplay="startVisualization(this, '${track.name}', '${artistNames}')">
+                                    <source src="${track.preview_url}" type="audio/mpeg">
+                                </audio>
+                            </div>
+                        ` : '<p style="opacity: 0.6; font-style: italic;">No preview available</p>'}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        // Audio Visualization
+        function startVisualization(audioElement, trackName, artistName) {
+            // Stop any currently playing audio
+            if (currentAudio && currentAudio !== audioElement) {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+            }
+            
+            currentAudio = audioElement;
+            
+            // Update currently playing display
+            document.getElementById('currentlyPlaying').innerHTML = `
+                <div class="glass-panel" style="text-align: center; margin-top: 20px;">
+                    <h3>🎵 Now Playing</h3>
+                    <p><strong>${trackName}</strong> by ${artistName}</p>
+                </div>
+            `;
+
+            // Create audio context for visualization
+            if (!visualizerContext) {
+                visualizerContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = visualizerContext.createAnalyser();
+                analyser.fftSize = 128;
+                
+                const source = visualizerContext.createMediaElementSource(audioElement);
+                source.connect(analyser);
+                analyser.connect(visualizerContext.destination);
+            }
+
+            // Start visualization loop
+            visualize();
+        }
+
+        function visualize() {
+            if (!analyser || !currentAudio || currentAudio.paused) {
+                return;
+            }
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            const bars = document.querySelectorAll('.visualizer-bar');
+            
+            for (let i = 0; i < bars.length && i < bufferLength; i++) {
+                const height = (dataArray[i] / 255) * 80;
+                bars[i].style.height = Math.max(height, 2) + 'px';
+            }
+
+            requestAnimationFrame(visualize);
+        }
+
+        // Helper functions
+        function displayArtists(artists) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (artists.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">No artists found</div>';
+                return;
+            }
+
+            let html = '<div class="results-grid">';
+            
+            artists.forEach(artist => {
+                const imageUrl = artist.images[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image';
+                
+                html += `
+                    <div class="track-card" onclick="loadArtist('${artist.name}')" style="text-align: center;">
+                        <img src="${imageUrl}" alt="${artist.name}" class="track-image" style="border-radius: 50%;">
+                        <div class="track-info">
+                            <h3>${artist.name}</h3>
+                            <p><strong>Genres:</strong> ${artist.genres.slice(0, 3).join(', ') || 'Various'}</p>
+                            <p><strong>Popularity:</strong> ${artist.popularity}/100</p>
+                            <p><strong>Followers:</strong> ${artist.followers.total.toLocaleString()}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function displayAlbums(albums) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (albums.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">No albums found</div>';
+                return;
+            }
+
+            let html = '<div class="results-grid">';
+            
+            albums.forEach(album => {
+                const imageUrl = album.images[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image';
+                const artistNames = album.artists.map(artist => artist.name).join(', ');
+                
+                html += `
+                    <div class="track-card" onclick="openSpotifyTrack('${album.external_urls.spotify}')">
+                        <img src="${imageUrl}" alt="${album.name}" class="track-image">
+                        <div class="track-info">
+                            <h3>${album.name}</h3>
+                            <p><strong>Artist:</strong> ${artistNames}</p>
+                            <p><strong>Release:</strong> ${album.release_date}</p>
+                            <p><strong>Tracks:</strong> ${album.total_tracks}</p>
+                            <p><strong>Type:</strong> ${album.album_type.charAt(0).toUpperCase() + album.album_type.slice(1)}</p>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function loadArtist(artistName) {
+            document.getElementById('artistQuery').value = artistName;
+            switchTab('artist');
+            document.querySelector('[onclick="switchTab(\'artist\')"]').classList.add('active');
+            artistDeepDive();
+        }
+
+        function openSpotifyTrack(url) {
+            window.open(url, '_blank');
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Allow search on Enter key
+            document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') smartSearch();
+            });
+
+            document.getElementById('artistQuery').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') artistDeepDive();
+            });
+
+            document.getElementById('seedQuery').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') getRecommendations();
+            });
+
+            document.getElementById('clientSecret').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') authenticate();
+            });
+
+            // Stop audio when switching tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    if (currentAudio) {
+                        currentAudio.pause();
+                        currentAudio.currentTime = 0;
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
