@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Music Discovery</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1DB954 0%, #191414 100%);
+            min-height: 100vh;
+            color: white;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 40px 0;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .auth-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .input-group input {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .input-group input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: #1DB954;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1ed760;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(29, 185, 84, 0.3);
+        }
+
+        .search-section {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-size: 16px;
+        }
+
+        .search-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .track-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .track-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        .track-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .track-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            color: #1DB954;
+        }
+
+        .track-info p {
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .track-preview {
+            margin-top: 15px;
+        }
+
+        .track-preview audio {
+            width: 100%;
+            border-radius: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+        }
+
+        .error {
+            background: rgba(255, 0, 0, 0.2);
+            border: 1px solid rgba(255, 0, 0, 0.5);
+            color: #ff6b6b;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .success {
+            background: rgba(29, 185, 84, 0.2);
+            border: 1px solid rgba(29, 185, 84, 0.5);
+            color: #1DB954;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .search-form {
+                flex-direction: column;
+            }
+            
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Spotify Discovery</h1>
+            <p>Discover amazing music with the Spotify API</p>
+        </div>
+
+        <div class="auth-section" id="authSection">
+            <h2 style="text-align: center; margin-bottom: 20px;">Connect to Spotify</h2>
+            <div class="auth-form">
+                <div class="input-group">
+                    <label for="clientId">Client ID</label>
+                    <input type="text" id="clientId" placeholder="Enter your Spotify Client ID">
+                </div>
+                <div class="input-group">
+                    <label for="clientSecret">Client Secret</label>
+                    <input type="password" id="clientSecret" placeholder="Enter your Spotify Client Secret">
+                </div>
+                <button class="btn btn-primary" onclick="authenticate()">Connect to Spotify</button>
+            </div>
+            <div id="authStatus"></div>
+        </div>
+
+        <div class="search-section" id="searchSection">
+            <h2 style="text-align: center; margin-bottom: 20px;">Search Music</h2>
+            <div class="search-form">
+                <input type="text" class="search-input" id="searchQuery" placeholder="Search for tracks, artists, or albums...">
+                <button class="btn btn-primary" onclick="searchTracks()">Search</button>
+            </div>
+            <div id="searchResults"></div>
+        </div>
+    </div>
+
+    <script>
+        let accessToken = null;
+
+        async function authenticate() {
+            const clientId = document.getElementById('clientId').value.trim();
+            const clientSecret = document.getElementById('clientSecret').value.trim();
+            const authStatus = document.getElementById('authStatus');
+
+            if (!clientId || !clientSecret) {
+                authStatus.innerHTML = '<div class="error">Please enter both Client ID and Client Secret</div>';
+                return;
+            }
+
+            authStatus.innerHTML = '<div class="loading">Authenticating...</div>';
+
+            try {
+                const response = await fetch('https://accounts.spotify.com/api/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Authorization': 'Basic ' + btoa(clientId + ':' + clientSecret)
+                    },
+                    body: 'grant_type=client_credentials'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Authentication failed');
+                }
+
+                const data = await response.json();
+                accessToken = data.access_token;
+
+                authStatus.innerHTML = '<div class="success">Successfully connected to Spotify!</div>';
+                document.getElementById('authSection').style.display = 'none';
+                document.getElementById('searchSection').style.display = 'block';
+
+            } catch (error) {
+                authStatus.innerHTML = '<div class="error">Authentication failed. Please check your credentials.</div>';
+                console.error('Auth error:', error);
+            }
+        }
+
+        async function searchTracks() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (!query) {
+                resultsDiv.innerHTML = '<div class="error">Please enter a search query</div>';
+                return;
+            }
+
+            if (!accessToken) {
+                resultsDiv.innerHTML = '<div class="error">Please authenticate first</div>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<div class="loading">Searching...</div>';
+
+            try {
+                const response = await fetch(`https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=track&limit=12`, {
+                    headers: {
+                        'Authorization': 'Bearer ' + accessToken
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Search failed');
+                }
+
+                const data = await response.json();
+                displayResults(data.tracks.items);
+
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="error">Search failed. Please try again.</div>';
+                console.error('Search error:', error);
+            }
+        }
+
+        function displayResults(tracks) {
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (tracks.length === 0) {
+                resultsDiv.innerHTML = '<div class="error">No tracks found</div>';
+                return;
+            }
+
+            let html = '<div class="results-grid">';
+            
+            tracks.forEach(track => {
+                const imageUrl = track.album.images[0]?.url || 'https://via.placeholder.com/300x300?text=No+Image';
+                const artistNames = track.artists.map(artist => artist.name).join(', ');
+                const duration = Math.floor(track.duration_ms / 60000) + ':' + 
+                               String(Math.floor((track.duration_ms % 60000) / 1000)).padStart(2, '0');
+                
+                html += `
+                    <div class="track-card" onclick="openSpotifyTrack('${track.external_urls.spotify}')">
+                        <img src="${imageUrl}" alt="${track.name}" class="track-image">
+                        <div class="track-info">
+                            <h3>${track.name}</h3>
+                            <p><strong>Artist:</strong> ${artistNames}</p>
+                            <p><strong>Album:</strong> ${track.album.name}</p>
+                            <p><strong>Duration:</strong> ${duration}</p>
+                            <p><strong>Popularity:</strong> ${track.popularity}/100</p>
+                        </div>
+                        ${track.preview_url ? `
+                            <div class="track-preview">
+                                <audio controls>
+                                    <source src="${track.preview_url}" type="audio/mpeg">
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        ` : '<p style="opacity: 0.6; font-style: italic;">No preview available</p>'}
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        function openSpotifyTrack(url) {
+            window.open(url, '_blank');
+        }
+
+        // Allow search on Enter key
+        document.getElementById('searchQuery').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchTracks();
+            }
+        });
+
+        // Allow auth on Enter key
+        document.getElementById('clientSecret').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                authenticate();
+            }
+        });
+    </script>
+</body>
+</html>
