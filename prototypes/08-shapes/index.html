@@ -153,72 +153,80 @@
         let clickCount = 0;
         let shapes = [];
         const PHI = 1.618033988749895; // Golden ratio
+        let grid = [];
+        const GRID_SIZE = 20; // Size of each grid cell for spatial optimization
         
         // Resize canvas to fill available space
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight - rect.top - 40; // Account for footer
+            
+            // Recreate grid based on new canvas size
+            createGrid();
             redrawShapes();
+        }
+        
+        // Create spatial grid for efficient collision detection
+        function createGrid() {
+            const cols = Math.ceil(canvas.width / GRID_SIZE);
+            const rows = Math.ceil(canvas.height / GRID_SIZE);
+            grid = Array(rows).fill(null).map(() => Array(cols).fill(false));
         }
         
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
         
-        // Generate size based on golden ratio and available space
-        function generateGoldenSize(clickX, clickY) {
-            const maxWidth = canvas.width - clickX;
-            const maxHeight = canvas.height - clickY;
-            const maxSize = Math.min(maxWidth, maxHeight, 200);
+        // Generate adaptive size based on available space and golden ratio
+        function generateOptimalSize(x, y, shapeType, preferredSize = null) {
+            const minSize = 15;
+            const maxSize = Math.min(canvas.width, canvas.height) * 0.15;
             
-            // Use golden ratio for size relationships
-            const baseSize = Math.max(20, maxSize / PHI);
-            const variation = Math.sin(clickCount * 0.1) * 0.3 + 1;
+            let testSize = preferredSize || (minSize * PHI);
+            let bestSize = minSize;
             
-            return baseSize * variation;
-        }
-        
-        // Check if position has enough space for shape
-        function hasSpace(x, y, size, shapeType) {
-            const buffer = 5;
-            const testPoints = [];
-            
-            switch(shapeType) {
-                case 'square':
-                    testPoints.push(
-                        {x: x, y: y},
-                        {x: x + size, y: y},
-                        {x: x, y: y + size},
-                        {x: x + size, y: y + size}
-                    );
+            // Test sizes from small to large to find the optimal fit
+            for (let size = minSize; size <= maxSize; size += 5) {
+                if (canPlaceShape(x, y, size, shapeType)) {
+                    bestSize = size;
+                } else {
                     break;
-                case 'triangle':
-                    testPoints.push(
-                        {x: x, y: y + size},
-                        {x: x + size/2, y: y},
-                        {x: x + size, y: y + size}
-                    );
-                    break;
-                case 'circle':
-                    const radius = size / 2;
-                    for(let angle = 0; angle < 2 * Math.PI; angle += Math.PI/4) {
-                        testPoints.push({
-                            x: x + radius + Math.cos(angle) * radius,
-                            y: y + radius + Math.sin(angle) * radius
-                        });
-                    }
-                    break;
+                }
             }
             
-            // Check if any test point overlaps with existing shapes
-            for(let point of testPoints) {
-                if(point.x < 0 || point.y < 0 || point.x > canvas.width || point.y > canvas.height) {
-                    return false;
-                }
-                
-                for(let shape of shapes) {
-                    if(isPointInShape(point.x, point.y, shape)) {
-                        return false;
+            return Math.max(bestSize, minSize);
+        }
+        
+        // Check if shape can be placed at position without overlap
+        function canPlaceShape(x, y, size, shapeType) {
+            const buffer = 3;
+            let bounds = getShapeBounds(x, y, size, shapeType);
+            
+            // Check canvas boundaries
+            if (bounds.left < 0 || bounds.top < 0 || 
+                bounds.right > canvas.width || bounds.bottom > canvas.height) {
+                return false;
+            }
+            
+            // Check overlap with existing shapes using spatial grid
+            const gridLeft = Math.floor((bounds.left - buffer) / GRID_SIZE);
+            const gridTop = Math.floor((bounds.top - buffer) / GRID_SIZE);
+            const gridRight = Math.ceil((bounds.right + buffer) / GRID_SIZE);
+            const gridBottom = Math.ceil((bounds.bottom + buffer) / GRID_SIZE);
+            
+            for (let row = Math.max(0, gridTop); row < Math.min(grid.length, gridBottom); row++) {
+                for (let col = Math.max(0, gridLeft); col < Math.min(grid[0].length, gridRight); col++) {
+                    if (grid[row][col]) {
+                        // Check precise collision with shapes in this grid cell
+                        for (let shape of shapes) {
+                            if (shapesOverlap(
+                                {x, y, size, type: shapeType}, 
+                                shape, 
+                                buffer
+                            )) {
+                                return false;
+                            }
+                        }
                     }
                 }
             }
@@ -226,51 +234,114 @@
             return true;
         }
         
-        // Check if point is inside a shape
-        function isPointInShape(x, y, shape) {
-            const buffer = 10;
-            switch(shape.type) {
+        // Get bounding box for a shape
+        function getShapeBounds(x, y, size, shapeType) {
+            switch (shapeType) {
                 case 'square':
-                    return x >= shape.x - buffer && x <= shape.x + shape.size + buffer &&
-                           y >= shape.y - buffer && y <= shape.y + shape.size + buffer;
+                    return {
+                        left: x,
+                        top: y,
+                        right: x + size,
+                        bottom: y + size
+                    };
                 case 'triangle':
-                    // Simple triangle bounds check
-                    return x >= shape.x - buffer && x <= shape.x + shape.size + buffer &&
-                           y >= shape.y - buffer && y <= shape.y + shape.size + buffer;
+                    return {
+                        left: x,
+                        top: y,
+                        right: x + size,
+                        bottom: y + size
+                    };
                 case 'circle':
-                    const centerX = shape.x + shape.size/2;
-                    const centerY = shape.y + shape.size/2;
-                    const distance = Math.sqrt((x - centerX)**2 + (y - centerY)**2);
-                    return distance <= shape.size/2 + buffer;
+                    const radius = size / 2;
+                    return {
+                        left: x,
+                        top: y,
+                        right: x + size,
+                        bottom: y + size
+                    };
                 default:
-                    return false;
+                    return { left: x, top: y, right: x, bottom: y };
             }
         }
         
-        // Find optimal position using golden ratio
-        function findOptimalPosition(clickX, clickY, size, shapeType) {
-            // Try the clicked position first
-            if(hasSpace(clickX, clickY, size, shapeType)) {
-                return {x: clickX, y: clickY};
+        // Check if two shapes overlap
+        function shapesOverlap(shape1, shape2, buffer = 0) {
+            const bounds1 = getShapeBounds(shape1.x, shape1.y, shape1.size, shape1.type);
+            const bounds2 = getShapeBounds(shape2.x, shape2.y, shape2.size, shape2.type);
+            
+            return !(bounds1.right + buffer < bounds2.left ||
+                    bounds1.left - buffer > bounds2.right ||
+                    bounds1.bottom + buffer < bounds2.top ||
+                    bounds1.top - buffer > bounds2.bottom);
+        }
+        
+        // Mark grid cells as occupied by a shape
+        function markGridCells(x, y, size, shapeType, occupied = true) {
+            const bounds = getShapeBounds(x, y, size, shapeType);
+            const gridLeft = Math.floor(bounds.left / GRID_SIZE);
+            const gridTop = Math.floor(bounds.top / GRID_SIZE);
+            const gridRight = Math.ceil(bounds.right / GRID_SIZE);
+            const gridBottom = Math.ceil(bounds.bottom / GRID_SIZE);
+            
+            for (let row = Math.max(0, gridTop); row < Math.min(grid.length, gridBottom); row++) {
+                for (let col = Math.max(0, gridLeft); col < Math.min(grid[0].length, gridRight); col++) {
+                    grid[row][col] = occupied;
+                }
+            }
+        }
+        
+        // Find optimal position using liquid placement algorithm
+        function findLiquidPosition(preferredX, preferredY, size, shapeType) {
+            // Try preferred position first
+            if (canPlaceShape(preferredX, preferredY, size, shapeType)) {
+                return { x: preferredX, y: preferredY };
             }
             
-            // Use golden ratio spiral to find alternative positions
-            const attempts = 50;
-            for(let i = 0; i < attempts; i++) {
-                const angle = i * 2.39996; // Golden angle in radians
-                const radius = Math.sqrt(i) * 20;
+            // Use expanding search pattern for liquid placement
+            const maxSearchRadius = Math.min(canvas.width, canvas.height) / 2;
+            const searchStep = 10;
+            
+            for (let radius = searchStep; radius <= maxSearchRadius; radius += searchStep) {
+                // Search in expanding circles around the preferred position
+                const points = generateCirclePoints(preferredX, preferredY, radius, 16);
                 
-                const x = clickX + Math.cos(angle) * radius;
-                const y = clickY + Math.sin(angle) * radius;
-                
-                if(x >= 0 && y >= 0 && x + size <= canvas.width && y + size <= canvas.height) {
-                    if(hasSpace(x, y, size, shapeType)) {
-                        return {x: x, y: y};
+                for (let point of points) {
+                    // Adaptive size based on position
+                    const adaptiveSize = generateOptimalSize(point.x, point.y, shapeType, size);
+                    
+                    if (canPlaceShape(point.x, point.y, adaptiveSize, shapeType)) {
+                        return { x: point.x, y: point.y, size: adaptiveSize };
                     }
                 }
             }
             
-            return null; // No space found
+            // If no space found in circles, try systematic grid search
+            const step = Math.max(5, Math.floor(size / 4));
+            for (let y = 0; y < canvas.height - size; y += step) {
+                for (let x = 0; x < canvas.width - size; x += step) {
+                    const adaptiveSize = generateOptimalSize(x, y, shapeType, size);
+                    if (canPlaceShape(x, y, adaptiveSize, shapeType)) {
+                        return { x, y, size: adaptiveSize };
+                    }
+                }
+            }
+            
+            return null; // No space available
+        }
+        
+        // Generate points in a circle for search pattern
+        function generateCirclePoints(centerX, centerY, radius, numPoints) {
+            const points = [];
+            for (let i = 0; i < numPoints; i++) {
+                const angle = (i / numPoints) * 2 * Math.PI;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                if (x >= 0 && y >= 0 && x < canvas.width && y < canvas.height) {
+                    points.push({ x, y });
+                }
+            }
+            return points;
         }
         
         function drawSquare(x, y, size) {
@@ -317,8 +388,12 @@
         function redrawShapes() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            for(let shape of shapes) {
-                switch(shape.type) {
+            // Reset grid
+            createGrid();
+            
+            // Redraw all shapes and update grid
+            for (let shape of shapes) {
+                switch (shape.type) {
                     case 'square':
                         drawSquare(shape.x, shape.y, shape.size);
                         break;
@@ -329,6 +404,9 @@
                         drawCircle(shape.x, shape.y, shape.size);
                         break;
                 }
+                
+                // Mark grid cells as occupied
+                markGridCells(shape.x, shape.y, shape.size, shape.type, true);
             }
         }
         
@@ -340,25 +418,45 @@
             clickCount++;
             clickCounter.textContent = `Clicks: ${clickCount}`;
             
+            // Determine shape type based on click count
             let shapeType;
             const clickMod = clickCount % 3;
-            if(clickMod === 1) shapeType = 'square';
-            else if(clickMod === 2) shapeType = 'triangle';
+            if (clickMod === 1) shapeType = 'square';
+            else if (clickMod === 2) shapeType = 'triangle';
             else shapeType = 'circle';
             
-            const size = generateGoldenSize(clickX, clickY);
-            const position = findOptimalPosition(clickX, clickY, size, shapeType);
+            // Calculate initial size using golden ratio
+            const baseSize = 30 + (Math.sin(clickCount * 0.1) * 20);
+            const goldenSize = baseSize * (1 + (clickCount % 5) * 0.2);
             
-            if(position) {
+            // Find optimal position using liquid placement
+            const result = findLiquidPosition(clickX, clickY, goldenSize, shapeType);
+            
+            if (result) {
                 const shape = {
                     type: shapeType,
-                    x: position.x,
-                    y: position.y,
-                    size: size
+                    x: result.x,
+                    y: result.y,
+                    size: result.size || goldenSize
                 };
                 
                 shapes.push(shape);
-                redrawShapes();
+                
+                // Mark grid cells as occupied
+                markGridCells(shape.x, shape.y, shape.size, shape.type, true);
+                
+                // Draw the new shape
+                switch (shape.type) {
+                    case 'square':
+                        drawSquare(shape.x, shape.y, shape.size);
+                        break;
+                    case 'triangle':
+                        drawTriangle(shape.x, shape.y, shape.size);
+                        break;
+                    case 'circle':
+                        drawCircle(shape.x, shape.y, shape.size);
+                        break;
+                }
             }
         });
         
@@ -367,6 +465,7 @@
             clickCount = 0;
             clickCounter.textContent = 'Clicks: 0';
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            createGrid(); // Reset grid
         }
         
         function saveImage() {
