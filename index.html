@@ -2,128 +2,103 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro v1.21</title>
+  <title>EQ Axis Flip + UI BPM/dB</title>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
-    #controls {
-      position: absolute; top: 10px; left: 50%;
-      transform: translateX(-50%);
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-      z-index: 10; transition: opacity .5s;
-      background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
-    }
-    select, button, label, input[type=range] {
-      background: #000; color: #fff;
-      border: 1px solid #fff; padding: 4px 8px;
-      font-size: 1rem;
-    }
-    label { display: flex; align-items: center; gap: 4px; }
-    input[type=range] { width: 80px; }
-    .readout { min-width: 70px; display: inline-block; text-align: right; font-family: monospace; }
-    .version { margin-left: 12px; font-size: 0.9rem; color: #aaa; }
-    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
-    @media (max-width:700px) {
-      #controls { flex-direction: column; gap: 4px; }
-      select, button, label, input[type=range] { font-size: 0.9rem; }
-    }
+    html, body { margin: 0; padding: 0; background: #000; color: #fff; font-family: sans-serif; height: 100vh; }
+    #controls { position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 8px; z-index: 10; display: flex; gap: 1em; align-items: center; }
+    .readout { min-width:70px; display:inline-block; text-align:right; font-family:monospace; }
+    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display:block; }
   </style>
 </head>
 <body>
   <div id="controls">
-    <!-- ... other controls ... -->
-    <button id="fsBtn">Fullscreen</button>
+    <button id="startBtn">Start</button>
     <span class="readout" id="dbReadout">dB: --</span>
     <span class="readout" id="bpmReadout">BPM: --</span>
-    <span class="version">v1.21</span>
   </div>
   <canvas id="vis"></canvas>
-  <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;
-       transform:translate(-50%,-50%);color:#f43;font-size:1.1em;
-       background:#222;padding:1em 2em;border-radius:6px;"></div>
   <script>
-    // [DOM refs & state same as v1.20...]
+    // DOM
+    const vis = document.getElementById('vis');
+    const ctx = vis.getContext('2d');
+    const dbReadout = document.getElementById('dbReadout');
+    const bpmReadout = document.getElementById('bpmReadout');
+    let audioCtx, analyser, data, startTime=0, dbSmoothed=-60, beatTimes=[], bpm=0, lastBeat=0;
 
-    // *** FIXED drawCurve mapping: ***
-    function drawPreset(key, alpha, hueOffset, t, noiseAmp, lfo){
-      const p = EQ_PRESETS[key];
-      if(!p) return;
-      const sens = parseFloat(sensSlider.value)*(p.sensitivity||1);
-      const bins = state.dataMid.length;
-      const slice = canvas.height/bins;
-      ctx.globalAlpha = alpha*(p.alpha||1);
+    function resize() {
+      vis.width = window.innerWidth;
+      vis.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
 
-      // beforeDraw/customDraw unchanged...
+    function updateDbMeter(arr) {
+      let sum=0; for(let i=0;i<arr.length;i++) sum+=arr[i]*arr[i];
+      let rms=Math.sqrt(sum/arr.length);
+      let db=20*Math.log10(rms||1e-8);
+      dbSmoothed=dbSmoothed*0.85+db*0.15;
+      dbReadout.textContent = "dB: " + (db>-60?db.toFixed(1):"--");
+      return db;
+    }
 
-      function curve(fn,color,dash=false){
-        ctx.beginPath();
-        for(let i=0;i<bins;i++){
-          const amp = Math.min(fn(i)*sens,1);
-          // ** Y runs bottom→top **
-          const y = canvas.height - i*slice;
-          // ** X = amplitude **
-          let x = amp*canvas.width;
-          x += (noise1D(i*0.05+t*0.3)-0.5)*noiseAmp*canvas.width;
-          i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+    function detectBpm(arr, time) {
+      // Use bass bin for beat detection
+      let bass = arr[2]/255;
+      let threshold = 0.5, cooldown = 0.3;
+      if (bass > threshold && time - lastBeat > cooldown) {
+        lastBeat = time;
+        beatTimes.push(time);
+        if (beatTimes.length > 8) beatTimes.shift();
+        if (beatTimes.length >= 2) {
+          let intervals = [];
+          for (let i=1;i<beatTimes.length;i++) intervals.push(beatTimes[i]-beatTimes[i-1]);
+          let avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+          bpm = 60/avg;
         }
-        ctx.lineWidth = 2*(1+(Math.random()-0.5)*0.1*lfo);
-        ctx.strokeStyle = typeof color==='function'?color(ctx,t):color;
-        ctx.setLineDash(dash?[4,4]:[]);
-        ctx.stroke(); ctx.setLineDash([]);
       }
-
-      if(p.mainColor) curve(i=>state.dataMid[i]/255, p.mainColor, p.curveDash);
-      if(p.sideColor) curve(i=>Math.abs(state.dataLeft[i]-state.dataRight[i])/255, p.sideColor, true);
-
-      // afterDraw unchanged...
-      ctx.globalAlpha = 1;
+      bpmReadout.textContent = "BPM: " + (bpm>0?Math.round(bpm):"--");
     }
 
-    // *** FIXED band markers mapping bottom→top ***
-    function drawBandMarkers(){
-      const freqs=[60,250,1000,4000,16000];
-      const nyq = state.audioContext.sampleRate/2;
-      ctx.strokeStyle='rgba(255,255,255,0.18)';
-      ctx.lineWidth=1;
-      ctx.font='12px sans-serif';
-      ctx.fillStyle='rgba(255,255,255,0.22)';
-      ctx.textAlign='right';
-      freqs.forEach(f=>{
-        const y = canvas.height - (f/nyq)*canvas.height;
-        ctx.beginPath();
-        ctx.moveTo(0,y);
-        ctx.lineTo(canvas.width,y);
-        ctx.stroke();
-        ctx.save();
-        ctx.translate(4, y-4);
-        ctx.rotate(-Math.PI/2);
-        ctx.fillText(f+'Hz', 0, 0);
-        ctx.restore();
-      });
-      ctx.textAlign='left';
-    }
-
-    function draw(){
+    function draw() {
       requestAnimationFrame(draw);
-      // [FFT read, db/bpm update, crossfade, beat detect...]
+      analyser.getByteFrequencyData(data);
+      ctx.clearRect(0,0,vis.width,vis.height);
 
-      // clear or tracer…
-      // …
+      // BARS: vertical, grow top-to-bottom, X is frequency
+      let bins=data.length, slice=vis.width/bins;
+      for(let i=0;i<bins;i++) {
+        let amp=data[i]/255, x=i*slice, h=amp*vis.height;
+        ctx.fillStyle="#0ff";
+        ctx.fillRect(x, 0, slice-1, h);
+      }
+      // Hz grid lines (vertical)
+      let freqs=[60,250,1000,4000,16000], nyq=audioCtx.sampleRate/2;
+      ctx.strokeStyle="#fff8"; ctx.font="12px monospace"; ctx.fillStyle="#fff8";
+      freqs.forEach(f=>{
+        let b=Math.round(f/nyq*bins), x=b*slice;
+        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,vis.height); ctx.stroke();
+        ctx.save(); ctx.translate(x+2, vis.height-10); ctx.rotate(-Math.PI/8); ctx.fillText(f+"Hz",0,0); ctx.restore();
+      });
 
-      // draw markers & curves
-      drawBandMarkers();
-      const w2 = state.xfadeActive
-        ? Math.min((t-state.xfadeStart)/state.xfadeDur,1)
-        : 0;
-      const w1 = 1-w2;
-      drawPreset(state.mainPreset, w1, 0, t, noiseAmp, lfo);
-      if(w2>0) drawPreset(state.secondaryPreset, w2, 0, t, noiseAmp, lfo);
+      // dB and BPM meters update in UI
+      let db = updateDbMeter(data);
+      let time = (performance.now()-startTime)/1000;
+      detectBpm(data, time);
     }
 
-    // [rest of code same as v1.20: startEQ, event listeners...]
-
-    startBtn.addEventListener('click', startEQ);
-    populateDevices();
+    startBtn.onclick = async () => {
+      if(audioCtx) return;
+      vis.width=window.innerWidth; vis.height=window.innerHeight;
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser(); analyser.fftSize=512;
+      data = new Uint8Array(analyser.frequencyBinCount);
+      let stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      let src = audioCtx.createMediaStreamSource(stream);
+      src.connect(analyser);
+      startTime = performance.now();
+      draw();
+    };
   </script>
 </body>
 </html>
