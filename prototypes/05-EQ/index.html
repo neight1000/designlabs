@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro - Stable Build</title>
+  <title>Visual EQ Pro - Fully Restored Build</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
@@ -95,19 +95,30 @@
       if (preset === 'alpine') {
         drawAlpine();
       } else {
-        drawDefault();
+        drawClassicPreset(preset);
       }
 
       drawDbMeter();
       drawBpmMeter();
     }
 
-    function drawDefault() {
+    function drawClassicPreset(preset) {
       const barWidth = canvas.width / dataArray.length;
       for (let i = 0; i < dataArray.length; i++) {
         const value = dataArray[i] * parseFloat($("sensSlider").value);
-        const hue = 200 - (i / dataArray.length) * 200;
-        ctx.fillStyle = `hsl(${hue},100%,60%)`;
+        let color;
+        switch(preset) {
+          case 'vhs': color = `hsl(${(i/dataArray.length)*60}, 100%, 80%)`; break;
+          case 'tape': color = `hsl(${(i/dataArray.length)*40 + 200}, 80%, 65%)`; break;
+          case 'neon': color = `hsl(${(i/dataArray.length)*360}, 100%, 60%)`; break;
+          case 'aurora': color = `hsl(${(i/dataArray.length)*100}, 90%, 70%)`; break;
+          case 'spectrum': color = `hsl(${(i/dataArray.length)*180}, 100%, 50%)`; break;
+          case 'pultec': color = `hsl(${(i/dataArray.length)*120}, 80%, 70%)`; break;
+          case 'neve': color = `hsl(${(i/dataArray.length)*30 + 220}, 90%, 60%)`; break;
+          case 'ssl': color = `hsl(${(i/dataArray.length)*45 + 160}, 90%, 70%)`; break;
+          default: color = '#00FFAA';
+        }
+        ctx.fillStyle = color;
         ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
       }
     }
@@ -115,22 +126,16 @@
     function drawAlpine() {
       const bins = 12;
       const binSize = Math.floor(dataArray.length / bins);
-      const spacing = 40;
-      const barWidth = 20;
-      const offsetX = (canvas.width - (bins * spacing)) / 2;
-      const offsetY = 80;
       for (let i = 0; i < bins; i++) {
         let sum = 0;
         for (let j = 0; j < binSize; j++) sum += dataArray[i * binSize + j];
         let avg = sum / binSize;
-        let barHeight = avg * 2.2;
-        const x = offsetX + i * spacing;
-        const y = canvas.height - barHeight - offsetY;
-        ctx.fillStyle = 'rgba(0,255,150,0.9)';
-        ctx.fillRect(x, y, barWidth, barHeight);
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        let barHeight = avg * 2.5;
+        ctx.fillStyle = '#00FFAA';
+        ctx.fillRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
+        ctx.strokeStyle = '#fff';
         ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, barWidth, barHeight);
+        ctx.strokeRect(i * 50 + 60, canvas.height - barHeight - 60, 30, barHeight);
       }
     }
 
@@ -147,6 +152,3 @@
     $("startBtn").onclick = start;
     $("fftSelect").onchange = () => { if (analyser) { analyser.fftSize = parseInt($("fftSelect").value); dataArray = new Uint8Array(analyser.frequencyBinCount); } };
   </script>
-</body>
-</html>
-
