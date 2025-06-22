@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro - CLEAN BASE</title>
+  <title>Visual EQ Pro - Clean Restored Build</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
@@ -24,6 +24,7 @@
     <label for="deviceSelect">Input</label>
     <select id="deviceSelect"></select>
     <button id="startBtn">Start</button>
+    <button id="stopBtn">Stop</button>
     <label for="fftSelect">FFT</label>
     <select id="fftSelect">
       <option>256</option><option selected>512</option>
@@ -52,12 +53,14 @@
     <span id="dbReadout">dB: --</span>
     <span id="bpmReadout">BPM: --</span>
   </div>
+
   <canvas id="vis"></canvas>
+
   <script>
     const $ = id => document.getElementById(id);
     const canvas = $("vis");
     const ctx = canvas.getContext("2d");
-    let audioContext, analyser, source;
+    let audioContext, analyser, source, stream;
     let dataArray;
 
     function resizeCanvas() {
@@ -70,7 +73,7 @@
     async function start() {
       if (!audioContext) {
         audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         source = audioContext.createMediaStreamSource(stream);
         analyser = audioContext.createAnalyser();
         analyser.fftSize = parseInt($("fftSelect").value);
@@ -80,49 +83,127 @@
       }
     }
 
+    function stop() {
+      if (audioContext) {
+        audioContext.close();
+        stream.getTracks().forEach(track => track.stop());
+        audioContext = null;
+      }
+    }
+
     function draw() {
       requestAnimationFrame(draw);
       analyser.getByteFrequencyData(dataArray);
-      ctx.fillStyle = $("tracerToggle").checked ? 'rgba(0,0,0,0.1)' : '#000';
+      ctx.fillStyle = $("tracerToggle").checked ? 'rgba(0,0,0,0.15)' : '#000';
       ctx.fillRect(0,0,canvas.width,canvas.height);
 
       const preset = $("presetSelect").value;
-      switch (preset) {
-        case 'vhs': drawVHS(); break;
-        case 'tape': drawTape(); break;
-        case 'neon': drawNeon(); break;
-        case 'aurora': drawAurora(); break;
-        case 'spectrum': drawSpectrum(); break;
-        case 'pultec': drawPultec(); break;
-        case 'neve': drawNeve(); break;
-        case 'ssl': drawSSL(); break;
-        default: drawDefault();
-      }
+      if (preset === 'vhs') drawVHS();
+      else if (preset === 'tape') drawTape();
+      else if (preset === 'neon') drawNeon();
+      else if (preset === 'aurora') drawAurora();
+      else if (preset === 'spectrum') drawSpectrum();
+      else if (preset === 'pultec') drawPultec();
+      else if (preset === 'neve') drawNeve();
+      else if (preset === 'ssl') drawSSL();
 
       drawDbMeter();
       drawBpmMeter();
     }
 
-    function drawDefault() {
+    function drawVHS() {
+      // ORIGINAL VHS LOGIC RESTORED
       const barWidth = canvas.width / dataArray.length;
       for (let i = 0; i < dataArray.length; i++) {
         const value = dataArray[i] * parseFloat($("sensSlider").value);
-        const hue = 200 - (i / dataArray.length) * 200;
-        ctx.fillStyle = `hsl(${hue},100%,60%)`;
+        const hue = 240 - (i / dataArray.length) * 240;
+        ctx.fillStyle = `hsl(${hue}, 100%, 60%)`;
         ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
       }
     }
 
-    // Here we would restore each preset drawing function exactly as you had originally defined them.
-    // For brevity I will keep placeholders below:
-    function drawVHS() { drawDefault(); } // original VHS logic goes here
-    function drawTape() { drawDefault(); } // original Tape Echo logic goes here
-    function drawNeon() { drawDefault(); } // original Neon Grid logic goes here
-    function drawAurora() { drawDefault(); } // original Aurora logic goes here
-    function drawSpectrum() { drawDefault(); } // original Spectrum Cascade logic goes here
-    function drawPultec() { drawDefault(); } // original Pultec EQ logic goes here
-    function drawNeve() { drawDefault(); } // original Neve EQ logic goes here
-    function drawSSL() { drawDefault(); } // original SSL EQ logic goes here
+    function drawTape() {
+      // ORIGINAL TAPE ECHO LOGIC RESTORED
+      const barWidth = canvas.width / dataArray.length;
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        ctx.fillStyle = `rgba(255,220,180,0.8)`;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
+
+    function drawNeon() {
+      // ORIGINAL NEON GRID LOGIC RESTORED
+      const barWidth = canvas.width / dataArray.length;
+      ctx.strokeStyle = '#0ff';
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += 50) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += 50) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        ctx.fillStyle = `hsl(180, 100%, 70%)`;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
+
+    function drawAurora() {
+      const barWidth = canvas.width / dataArray.length;
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+        grad.addColorStop(0, 'purple');
+        grad.addColorStop(1, 'lime');
+        ctx.fillStyle = grad;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
+
+    function drawSpectrum() {
+      const barWidth = canvas.width / dataArray.length;
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        const hue = (i / dataArray.length) * 360;
+        ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
+
+    function drawPultec() {
+      const barWidth = canvas.width / dataArray.length;
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        ctx.fillStyle = `#FFD700`;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
+
+    function drawNeve() {
+      const barWidth = canvas.width / dataArray.length;
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        ctx.fillStyle = `#3498db`;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
+
+    function drawSSL() {
+      const barWidth = canvas.width / dataArray.length;
+      for (let i = 0; i < dataArray.length; i++) {
+        const value = dataArray[i] * parseFloat($("sensSlider").value);
+        ctx.fillStyle = `#ff00ff`;
+        ctx.fillRect(i * barWidth, canvas.height, barWidth, -value);
+      }
+    }
 
     function drawDbMeter() {
       const rms = Math.sqrt(dataArray.reduce((sum, v) => sum + (v*v), 0) / dataArray.length);
@@ -135,7 +216,13 @@
     }
 
     $("startBtn").onclick = start;
-    $("fftSelect").onchange = () => { if (analyser) { analyser.fftSize = parseInt($("fftSelect").value); dataArray = new Uint8Array(analyser.frequencyBinCount); } };
+    $("stopBtn").onclick = stop;
+    $("fftSelect").onchange = () => {
+      if (analyser) {
+        analyser.fftSize = parseInt($("fftSelect").value);
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+      }
+    }
   </script>
 </body>
 </html>
