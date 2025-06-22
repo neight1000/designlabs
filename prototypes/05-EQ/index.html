@@ -1,23 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro - Full Build with Alpine 86</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visual EQ Pro - Stable Build</title>
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
-    #controls {
-      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
-      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-      z-index: 10; transition: opacity .5s;
-      background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
-    }
-    select, button, label, input[type=range] {
-      background: #000; color: #fff; border: 1px solid #fff; padding: 4px 8px; font-size: 1rem;
-    }
-    label { display: flex; align-items: center; gap: 4px; }
-    input[type=range] { width: 80px; }
-    canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
+    html, body { margin:0; padding:0; background:#000; color:#fff; font-family:sans-serif; overflow:hidden; height:100vh; width:100vw; }
+    #controls { position:absolute; top:10px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.5); padding:6px; border-radius:4px; display:flex; flex-wrap:wrap; gap:8px; z-index:10; }
+    select, button, label, input[type=range] { background:#000; color:#fff; border:1px solid #fff; padding:4px 8px; font-size:1rem; }
+    label { display:flex; align-items:center; gap:4px; }
+    input[type=range] { width:80px; }
+    canvas { position:absolute; top:0; left:0; width:100vw; height:100vh; display:block; }
   </style>
 </head>
 <body>
@@ -25,9 +18,8 @@
     <label>Input <select id="deviceSelect"></select></label>
     <button id="startBtn">Start</button>
     <label>FFT <select id="fftSelect">
-      <option>256</option><option selected>512</option>
-      <option>1024</option><option>2048</option>
-      <option>4096</option><option>8192</option>
+      <option>256</option><option selected>512</option><option>1024</option>
+      <option>2048</option><option>4096</option><option>8192</option>
       <option>16384</option><option>32768</option>
     </select></label>
     <label>Preset <select id="presetSelect">
@@ -36,16 +28,36 @@
       <option value="neon">Neon Grid</option>
       <option value="aurora">Aurora</option>
       <option value="spectrum">Spectrum Cascade</option>
-      <option value="alpine86">Alpine 86</option>
+      <option value="pultec">Pultec EQ</option>
+      <option value="neve">Neve EQ</option>
+      <option value="ssl">SSL EQ</option>
+      <option value="graphic">Graphic EQ</option>
     </select></label>
+    <label>Sensitivity <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15"></label>
+    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
+    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
+    <label><input type="checkbox" id="momentsToggle"> Moments</label>
+    <label>Beat Thr <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7"></label>
+    <label>Cooldown <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3"></label>
+    <button id="fsBtn">Fullscreen</button>
+    <span id="dbReadout">dB: --</span>
+    <span id="bpmReadout">BPM: --</span>
   </div>
+
   <canvas id="vis"></canvas>
-  <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#f43;font-size:1.1em;background:#222;padding:1em 2em;border-radius:6px;"></div>
+
   <script>
     const $ = id => document.getElementById(id);
-    const deviceSelect = $('deviceSelect'), startBtn = $('startBtn'), fftSelect = $('fftSelect'), presetSelect = $('presetSelect');
-    const canvas = $('vis'), fallback = $('fallback'), ctx = canvas.getContext('2d');
+    const deviceSelect = $('deviceSelect'), startBtn = $('startBtn'), fftSelect = $('fftSelect'),
+          presetSelect = $('presetSelect'), sensSlider = $('sensSlider'),
+          tracerToggle = $('tracerToggle'), crossfadeToggle = $('crossfadeToggle'),
+          momentsToggle = $('momentsToggle'), beatThreshold = $('beatThreshold'),
+          beatCooldown = $('beatCooldown'), fsBtn = $('fsBtn'),
+          dbReadout = $('dbReadout'), bpmReadout = $('bpmReadout'),
+          canvas = $('vis'), ctx = canvas.getContext('2d');
+
     let audioContext, splitter, analyserL, analyserR, dataL, dataR, dataMid;
+    let lastBeatTime = 0, beatTimes = [], bpm = 0, dbSmoothed = -60;
 
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -55,46 +67,48 @@
     resizeCanvas();
 
     async function populateDevices() {
-      try {
-        const devices = await navigator.mediaDevices.enumerateDevices();
-        deviceSelect.innerHTML = '';
-        devices.filter(d => d.kind === 'audioinput').forEach((d, i) => {
-          const o = document.createElement('option');
-          o.value = d.deviceId; o.textContent = d.label || `Mic ${i+1}`;
-          deviceSelect.append(o);
-        });
-      } catch (e) {
-        showFallback('Could not enumerate devices.');
-      }
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      deviceSelect.innerHTML = '';
+      devices.filter(d => d.kind === 'audioinput').forEach((d, i) => {
+        const o = document.createElement('option');
+        o.value = d.deviceId;
+        o.textContent = d.label || `Mic ${i+1}`;
+        deviceSelect.append(o);
+      });
     }
 
-    function showFallback(msg) {
-      fallback.style.display = 'block';
-      fallback.textContent = msg;
-    }
-
-    async function start() {
+    async function startEQ() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showFallback('Web Audio API not supported.'); return;
+        alert("Web Audio API not supported"); return;
       }
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: deviceSelect.value || undefined }});
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        splitter = audioContext.createChannelSplitter(2);
-        analyserL = audioContext.createAnalyser();
-        analyserR = audioContext.createAnalyser();
-        analyserL.fftSize = analyserR.fftSize = parseInt(fftSelect.value);
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(splitter);
-        splitter.connect(analyserL, 0);
-        splitter.connect(analyserR, 1);
-        dataL = new Uint8Array(analyserL.frequencyBinCount);
-        dataR = new Uint8Array(analyserR.frequencyBinCount);
-        dataMid = new Uint8Array(analyserL.frequencyBinCount);
-        draw();
-      } catch (e) {
-        showFallback('Permission denied or no input device found.');
-      }
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: deviceSelect.value || undefined } });
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      splitter = audioContext.createChannelSplitter(2);
+      analyserL = audioContext.createAnalyser();
+      analyserR = audioContext.createAnalyser();
+      analyserL.fftSize = analyserR.fftSize = parseInt(fftSelect.value);
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(splitter);
+      splitter.connect(analyserL, 0);
+      splitter.connect(analyserR, 1);
+      dataL = new Uint8Array(analyserL.frequencyBinCount);
+      dataR = new Uint8Array(analyserR.frequencyBinCount);
+      dataMid = new Uint8Array(analyserL.frequencyBinCount);
+      draw();
+    }
+
+    function updateDbMeter() {
+      const fft = new Float32Array(analyserL.fftSize);
+      analyserL.getFloatTimeDomainData(fft);
+      let sum = fft.reduce((a, b) => a + b * b, 0);
+      let rms = Math.sqrt(sum / fft.length);
+      let db = 20 * Math.log10(rms || 1e-8);
+      dbSmoothed = dbSmoothed * 0.85 + db * 0.15;
+      dbReadout.textContent = "dB: " + (dbSmoothed > -60 ? dbSmoothed.toFixed(1) : "--");
+    }
+
+    function updateBpm(t) {
+      bpmReadout.textContent = "BPM: " + (bpm > 0 ? Math.round(bpm) : "--");
     }
 
     function draw() {
@@ -104,52 +118,56 @@
       for (let i = 0; i < dataL.length; i++) {
         dataMid[i] = (dataL[i] + dataR[i]) / 2;
       }
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      const preset = presetSelect.value;
-      if (preset === 'alpine86') drawAlpine86();
-      else drawDefault();
-    }
 
-    function drawDefault() {
-      const barHeight = canvas.height / dataMid.length;
-      for (let i = 0; i < dataMid.length; i++) {
-        const val = dataMid[i] / 255;
-        const barWidth = val * canvas.width;
-        ctx.fillStyle = `hsl(${i/dataMid.length*360},100%,50%)`;
-        ctx.fillRect(0, i * barHeight, barWidth, barHeight);
+      if (tracerToggle.checked) {
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
-    }
 
-    function drawAlpine86() {
       const bins = dataMid.length;
-      const bars = 10;
-      const binPerBar = Math.floor(bins / bars);
-      const margin = 50;
-      const usableHeight = canvas.height - margin*2;
-      const barSpacing = usableHeight / bars;
-      ctx.fillStyle = '#00ff00';
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = '#00ff00';
-      for (let i = 0; i < bars; i++) {
-        let sum = 0;
-        for (let j = 0; j < binPerBar; j++) {
-          sum += dataMid[i*binPerBar + j];
-        }
-        const avg = sum / binPerBar / 255;
-        const barWidth = avg * (canvas.width * 0.9);
-        ctx.fillRect(margin, margin + i*barSpacing, barWidth, barSpacing * 0.6);
+      const barW = canvas.width / bins;
+      const sens = parseFloat(sensSlider.value);
+
+      for (let i = 0; i < bins; i++) {
+        let f = (dataMid[i] / 255) * sens;
+        let h = (i / bins) * 360;
+        let height = f * canvas.height;
+        ctx.fillStyle = `hsl(${h},100%,50%)`;
+        ctx.fillRect(i * barW, canvas.height - height, barW, height);
       }
+
+      updateDbMeter();
+
+      // Beat detection
+      const t = performance.now() * 0.001;
+      let bass = (dataMid[2] + dataMid[3]) / 2 / 255;
+      if (momentsToggle.checked && bass > parseFloat(beatThreshold.value) && t - lastBeatTime > parseFloat(beatCooldown.value)) {
+        lastBeatTime = t;
+        beatTimes.push(t);
+        if (beatTimes.length > 8) beatTimes.shift();
+        if (beatTimes.length >= 2) {
+          let intervals = [];
+          for (let i = 1; i < beatTimes.length; i++) intervals.push(beatTimes[i] - beatTimes[i - 1]);
+          let avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          bpm = 60 / avgInterval;
+        }
+      }
+      updateBpm(t);
     }
 
-    startBtn.onclick = start;
-    fftSelect.onchange = () => { 
+    startBtn.onclick = startEQ;
+    fftSelect.onchange = () => {
       if (analyserL && analyserR) {
-        analyserL.fftSize = analyserR.fftSize = parseInt(fftSelect.value); 
+        analyserL.fftSize = analyserR.fftSize = parseInt(fftSelect.value);
         dataL = new Uint8Array(analyserL.frequencyBinCount);
         dataR = new Uint8Array(analyserR.frequencyBinCount);
         dataMid = new Uint8Array(analyserL.frequencyBinCount);
       }
-    }
+    };
+    fsBtn.onclick = () => { document.fullscreenElement ? document.exitFullscreen() : canvas.requestFullscreen(); };
+
     populateDevices();
   </script>
 </body>
