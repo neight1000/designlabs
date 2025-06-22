@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visual EQ v2.0 - 3D Enhanced</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; overflow: hidden;
+      background: #000; color: #fff;
+      font-family: sans-serif;
+      height: 100vh; width: 100vw;
+    }
+    #controls {
+      position: absolute; top: 10px; left: 50%;
+      transform: translateX(-50%);
+      display: flex; gap: 8px; align-items: center;
+      z-index: 20; transition: opacity .5s;
+      background: rgba(0,0,0,0.8); padding: 8px; border-radius: 6px;
+      flex-wrap: wrap; justify-content: center;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    select, button, label, input[type=range], input[type=color] {
+      background: #333; color: #fff;
+      border: 1px solid #666; padding: 4px 8px;
+      font-size: 14px; border-radius: 4px;
+    }
+    button:hover, select:hover {
+      background: #555;
+    }
+    label { display: flex; align-items: center; gap: 4px; }
+    input[type=range] { width: 100px; }
+    input[type=color] { width: 40px; height: 28px; padding: 2px; }
+    
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+    
+    #threejs-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 1;
+    }
+    
+    #vis {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 10;
+      pointer-events: none;
+    }
+    
+    #error {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255,0,0,0.1); border: 1px solid #f00;
+      padding: 20px; border-radius: 8px; text-align: center;
+      display: none; z-index: 30;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="threejs-canvas"></canvas>
+    <canvas id="vis"></canvas>
+  </div>
+  
+  <div id="controls">
+    <select id="deviceSelect"></select>
+    <button id="startBtn">Start</button>
+    <select id="fftSelect">
+      <option>256</option><option selected>512</option>
+      <option>1024</option><option>2048</option>
+      <option>4096</option><option>8192</option>
+      <option>16384</option><option>32768</option>
+    </select>
+    <select id="presetSelect">
+      <option value="synthwave">Synthwave</option>
+      <option value="cyberpunk">Cyberpunk</option>
+      <option value="vhs">VHS Drift</option>
+      <option value="tape">Tape Echo</option>
+      <option value="neon">Neon Grid</option>
+      <option value="aurora">Aurora</option>
+      <option value="spectrum">Spectrum Cascade</option>
+      <option value="oscilloscope">Oscilloscope</option>
+      <option value="retro70s">1970s Retro</option>
+      <option value="disco80s">1980s Disco</option>
+      <option value="rave90s">1990s Rave</option>
+      <option value="y2k2000s">Y2K 2000s</option>
+      <option value="alpine">Alpine Car Stereo</option>
+      <option value="rainbow">Rainbow Glitter</option>
+    </select>
+    <label>Sensitivity
+      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
+    </label>
+    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
+    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
+    <label><input type="checkbox" id="momentsToggle"> Moments</label>
+    <label><input type="checkbox" id="gridToggle" checked> Grid</label>
+    <label>Grid Color
+      <input type="color" id="gridColor" value="#666666">
+    </label>
+    <label><input type="checkbox" id="bg3dToggle" checked> 3D Background</label>
+    <button id="fsBtn">Fullscreen</button>
+  </div>
+  
+  <div id="error">
+    <h3>Error</h3>
+    <p id="errorMsg"></p>
+    <button onclick="this.parentElement.style.display='none'">Close</button>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    const deviceSelect   = document.getElementById('deviceSelect'),
+          startBtn        = document.getElementById('startBtn'),
+          fftSelect       = document.getElementById('fftSelect'),
+          presetSelect    = document.getElementById('presetSelect'),
+          sensSlider      = document.getElementById('sensSlider'),
+          tracerToggle    = document.getElementById('tracerToggle'),
+          crossfadeToggle = document.getElementById('crossfadeToggle'),
+          momentsToggle   = document.getElementById('momentsToggle'),
+          gridToggle      = document.getElementById('gridToggle'),
+          gridColor       = document.getElementById('gridColor'),
+          bg3dToggle      = document.getElementById('bg3dToggle'),
+          fsBtn           = document.getElementById('fsBtn'),
+          controls        = document.getElementById('controls'),
+          canvas          = document.getElementById('vis'),
+          ctx             = canvas.getContext('2d'),
+          threejsCanvas   = document.getElementById('threejs-canvas'),
+          errorDiv        = document.getElementById('error'),
+          errorMsg        = document.getElementById('errorMsg');
+
+    let audioContext, splitter, leftAnalyser, rightAnalyser, stream,
+        dataLeft, dataRight, startTime;
+    let mainPreset = presetSelect.value;
+    let xfadeActive=false, xfadeStart=0, xfadeDur=5, nextXfade=0,
+        secondaryPreset=mainPreset;
+    let lastBeatTime=0, momentHue=0, momentHueAlpha=0;
+
+    // Three.js variables
+    let scene, camera, renderer, animationId;
+    let bgObjects = {
+      synthwave: null,
+      cyberpunk: null,
+      vhs: null,
+      tape: null,
+      neon: null,
+      aurora: null,
+      spectrum: null,
+      oscilloscope: null,
+      retro70s: null,
+      disco80s: null,
+      rave90s: null,
+      y2k2000s: null,
+      alpine: null,
+      rainbow: null
+    };
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorDiv.style.display = 'block';
+    }
+
+    // 1D noise
+    function fract(x){ return x - Math.floor(x); }
+    function rand(n){ return fract(Math.sin(n)*43758.5453123); }
+    function noise1D(x){
+      const i=Math.floor(x), f=fract(x);
+      return rand(i)*(1-f)+rand(i+1)*f;
+    }
+
+    function resizeCanvas(){
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      
+      if (renderer) {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+      }
+    }
+    window.addEventListener('resize', resizeCanvas);
+    document.addEventListener('fullscreenchange', resizeCanvas);
+
+    // Initialize Three.js
+    function init3D() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ canvas: threejsCanvas, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);
+      
+      camera.position.z = 5;
+      
+      create3DBackgrounds();
+      resizeCanvas();
+    }
+
+    function create3DBackgrounds() {
+      // Synthwave - Floating geometric shapes with neon edges
+      bgObjects.synthwave = new THREE.Group();
+      for (let i = 0; i < 50; i++) {
+        const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: Math.random() > 0.5 ? 0xff00ff : 0x00ffff,
+          wireframe: true
+        });
+        const cube = new THREE.Mesh(geometry, material);
+        cube.position.set(
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 20
+        );
+        cube.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        bgObjects.synthwave.add(cube);
+      }
+      scene.add(bgObjects.synthwave);
+
+      // Cyberpunk - Matrix-style falling code
+      bgObjects.cyberpunk = new THREE.Group();
+      for (let i = 0; i < 100; i++) {
+        const geometry = new THREE.PlaneGeometry(0.1, 0.5);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0x00ff41,
+          transparent: true,
+          opacity: Math.random() * 0.8 + 0.2
+        });
+        const plane = new THREE.Mesh(geometry, material);
+        plane.position.set(
+          (Math.random() - 0.5) * 30,
+          Math.random() * 20 + 10,
+          (Math.random() - 0.5) * 20
+        );
+        bgObjects.cyberpunk.add(plane);
+      }
+      scene.add(bgObjects.cyberpunk);
+
+      // VHS - Glitchy planes
+      bgObjects.vhs = new THREE.Group();
+      for (let i = 0; i < 20; i++) {
+        const geometry = new THREE.PlaneGeometry(2, 1);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: new THREE.Color().setHSL(Math.random(), 1, 0.5),
+          transparent: true,
+          opacity: 0.3
+        });
+        const plane = new THREE.Mesh(geometry, material);
+        plane.position.set(
+          (Math.random() - 0.5) * 15,
+          (Math.random() - 0.5) * 10,
+          (Math.random() - 0.5) * 15
+        );
+        plane.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        bgObjects.vhs.add(plane);
+      }
+      scene.add(bgObjects.vhs);
+
+      // Tape - Warm spinning cylinders
+      bgObjects.tape = new THREE.Group();
+      for (let i = 0; i < 30; i++) {
+        const geometry = new THREE.CylinderGeometry(0.1, 0.1, 2);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0xffaa00,
+          wireframe: true
+        });
+        const cylinder = new THREE.Mesh(geometry, material);
+        cylinder.position.set(
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 20,
+          (Math.random() - 0.5) * 20
+        );
+        bgObjects.tape.add(cylinder);
+      }
+      scene.add(bgObjects.tape);
+
+      // Neon - Electric grid
+      bgObjects.neon = new THREE.Group();
+      const gridGeometry = new THREE.PlaneGeometry(30, 30, 30, 30);
+      const gridMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x00ffff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.3
+      });
+      const grid = new THREE.Mesh(gridGeometry, gridMaterial);
+      grid.rotation.x = -Math.PI / 2;
+      grid.position.y = -5;
+      bgObjects.neon.add(grid);
+      scene.add(bgObjects.neon);
+
+      // Aurora - Flowing ribbons
+      bgObjects.aurora = new THREE.Group();
+      for (let i = 0; i < 15; i++) {
+        const geometry = new THREE.PlaneGeometry(8, 0.5);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: new THREE.Color().setHSL(i / 15, 1, 0.6),
+          transparent: true,
+          opacity: 0.4
+        });
+        const ribbon = new THREE.Mesh(geometry, material);
+        ribbon.position.set(0, i - 7.5, -10 + i);
+        ribbon.rotation.z = Math.sin(i) * 0.3;
+        bgObjects.aurora.add(ribbon);
+      }
+      scene.add(bgObjects.aurora);
+
+      // Spectrum - 3D frequency bars
+      bgObjects.spectrum = new THREE.Group();
+      for (let i = 0; i < 64; i++) {
+        const geometry = new THREE.BoxGeometry(0.3, 1, 0.3);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: new THREE.Color().setHSL(i / 64, 1, 0.5)
+        });
+        const bar = new THREE.Mesh(geometry, material);
+        bar.position.set(
+          (i - 32) * 0.4,
+          0,
+          -5
+        );
+        bgObjects.spectrum.add(bar);
+      }
+      scene.add(bgObjects.spectrum);
+
+      // Oscilloscope - Spinning rings
+      bgObjects.oscilloscope = new THREE.Group();
+      for (let i = 0; i < 10; i++) {
+        const geometry = new THREE.RingGeometry(i + 1, i + 1.1, 32);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0x00ff00,
+          transparent: true,
+          opacity: 0.5 - i * 0.05
+        });
+        const ring = new THREE.Mesh(geometry, material);
+        ring.position.z = -10;
+        bgObjects.oscilloscope.add(ring);
+      }
+      scene.add(bgObjects.oscilloscope);
+
+      // Retro 70s - Wood-textured spheres
+      bgObjects.retro70s = new THREE.Group();
+      for (let i = 0; i < 25; i++) {
+        const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0x8B4513,
+          wireframe: Math.random() > 0.5
+        });
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.set(
+          (Math.random() - 0.5) * 25,
+          (Math.random() - 0.5) * 25,
+          (Math.random() - 0.5) * 25
+        );
+        bgObjects.retro70s.add(sphere);
+      }
+      scene.add(bgObjects.retro70s);
+
+      // Disco 80s - Mirror balls
+      bgObjects.disco80s = new THREE.Group();
+      for (let i = 0; i < 20; i++) {
+        const geometry = new THREE.SphereGeometry(0.8, 8, 8);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: new THREE.Color().setHSL(Math.random(), 1, 0.7),
+          wireframe: true
+        });
+        const ball = new THREE.Mesh(geometry, material);
+        ball.position.set(
+          (Math.random() - 0.5) * 30,
+          (Math.random() - 0.5) * 30,
+          (Math.random() - 0.5) * 30
+        );
+        bgObjects.disco80s.add(ball);
+      }
+      scene.add(bgObjects.disco80s);
+
+      // Rave 90s - Pulsing pyramids
+      bgObjects.rave90s = new THREE.Group();
+      for (let i = 0; i < 40; i++) {
+        const geometry = new THREE.ConeGeometry(0.5, 1, 4);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: new THREE.Color().setHSL(Math.random(), 1, 0.8)
+        });
+        const pyramid = new THREE.Mesh(geometry, material);
+        pyramid.position.set(
+          (Math.random() - 0.5) * 30,
+          (Math.random() - 0.5) * 30,
+          (Math.random() - 0.5) * 30
+        );
+        pyramid.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        bgObjects.rave90s.add(pyramid);
+      }
+      scene.add(bgObjects.rave90s);
+
+      // Y2K 2000s - Chrome torus
+      bgObjects.y2k2000s = new THREE.Group();
+      for (let i = 0; i < 15; i++) {
+        const geometry = new THREE.TorusGeometry(2 + i * 0.5, 0.2, 16, 100);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: 0x00ccff,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.6 - i * 0.03
+        });
+        const torus = new THREE.Mesh(geometry, material);
+        torus.rotation.x = i * Math.PI / 8;
+        bgObjects.y2k2000s.add(torus);
+      }
+      scene.add(bgObjects.y2k2000s);
+
+      // Alpine - Circuit board
+      bgObjects.alpine = new THREE.Group();
+      for (let x = -10; x <= 10; x += 2) {
+        for (let z = -10; z <= 10; z += 2) {
+          const geometry = new THREE.BoxGeometry(0.1, 0.1, 1.8);
+          const material = new THREE.MeshBasicMaterial({ 
+            color: 0x00ff00
+          });
+          const trace = new THREE.Mesh(geometry, material);
+          trace.position.set(x, 0, z);
+          bgObjects.alpine.add(trace);
+          
+          if (Math.random() > 0.7) {
+            const nodeGeometry = new THREE.SphereGeometry(0.1, 8, 8);
+            const nodeMaterial = new THREE.MeshBasicMaterial({ 
+              color: 0xffff00
+            });
+            const node = new THREE.Mesh(nodeGeometry, nodeMaterial);
+            node.position.set(x, 0.2, z);
+            bgObjects.alpine.add(node);
+          }
+        }
+      }
+      scene.add(bgObjects.alpine);
+
+      // Rainbow - Colorful spirals
+      bgObjects.rainbow = new THREE.Group();
+      for (let i = 0; i < 100; i++) {
+        const geometry = new THREE.SphereGeometry(0.1, 8, 8);
+        const material = new THREE.MeshBasicMaterial({ 
+          color: new THREE.Color().setHSL(i / 100, 1, 0.7)
+        });
+        const sphere = new THREE.Mesh(geometry, material);
+        const angle = (i / 100) * Math.PI * 8;
+        const radius = 5 + Math.sin(angle * 2) * 2;
+        sphere.position.set(
+          Math.cos(angle) * radius,
+          (i / 100) * 10 - 5,
+          Math.sin(angle) * radius
+        );
+        bgObjects.rainbow.add(sphere);
+      }
+      scene.add(bgObjects.rainbow);
+
+      // Initially hide all backgrounds
+      Object.values(bgObjects).forEach(bg => {
+        if (bg) bg.visible = false;
+      });
+    }
+
+    function animate3D() {
+      if (!renderer || !bg3dToggle.checked) return;
+      
+      const time = performance.now() * 0.001;
+      
+      // Get audio data for reactive animations
+      const bassLevel = audioContext && dataLeft ? 
+        ((dataLeft[2] + dataRight[2]) / 2) / 255 : 0;
+      const midLevel = audioContext && dataLeft ? 
+        ((dataLeft[Math.floor(dataLeft.length * 0.3)] + dataRight[Math.floor(dataRight.length * 0.3)]) / 2) / 255 : 0;
+      const trebleLevel = audioContext && dataLeft ? 
+        ((dataLeft[Math.floor(dataLeft.length * 0.8)] + dataRight[Math.floor(dataRight.length * 0.8)]) / 2) / 255 : 0;
+
+      // Animate based on current preset
+      const currentBg = bgObjects[mainPreset];
+      if (currentBg && currentBg.visible) {
+        switch (mainPreset) {
+          case 'synthwave':
+            currentBg.children.forEach((cube, i) => {
+              cube.rotation.x += 0.01 + bassLevel * 0.05;
+              cube.rotation.y += 0.01 + midLevel * 0.05;
+              cube.position.y += Math.sin(time + i) * 0.02;
+            });
+            break;
+            
+          case 'cyberpunk':
+            currentBg.children.forEach((plane, i) => {
+              plane.position.y -= 0.1 + trebleLevel * 0.2;
+              if (plane.position.y < -10) plane.position.y = 20;
+              plane.material.opacity = 0.3 + bassLevel * 0.5;
+            });
+            break;
+            
+          case 'vhs':
+            currentBg.children.forEach((plane, i) => {
+              plane.rotation.z += 0.02 + bassLevel * 0.1;
+              plane.position.x += Math.sin(time * 2 + i) * 0.01;
+              plane.material.opacity = 0.2 + midLevel * 0.4;
+            });
+            break;
+            
+          case 'tape':
+            currentBg.children.forEach((cylinder, i) => {
+              cylinder.rotation.y += 0.03 + bassLevel * 0.1;
+              cylinder.position.y += Math.sin(time + i * 0.5) * 0.01;
+            });
+            break;
+            
+          case 'neon':
+            currentBg.children[0].rotation.z += 0.005 + bassLevel * 0.02;
+            currentBg.children[0].material.opacity = 0.2 + trebleLevel * 0.4;
+            break;
+            
+          case 'aurora':
+            currentBg.children.forEach((ribbon, i) => {
+              ribbon.rotation.z = Math.sin(time + i * 0.5) * 0.5 + bassLevel;
+              ribbon.material.opacity = 0.3 + midLevel * 0.4;
+            });
+            break;
+            
+          case 'spectrum':
+            currentBg.children.forEach((bar, i) => {
+              const freq = audioContext && dataLeft ? dataLeft[i] || 0 : 0;
+              bar.scale.y = 1 + (freq / 255) * 3;
+              bar.material.color.setHSL((i / 64 + time * 0.1) % 1, 1, 0.5);
+            });
+            break;
+            
+          case 'oscilloscope':
+            currentBg.children.forEach((ring, i) => {
+              ring.rotation.z += 0.01 * (i + 1) + bassLevel * 0.05;
+              ring.material.opacity = (0.5 - i * 0.05) + midLevel * 0.3;
+            });
+            break;
+            
+          case 'retro70s':
+            currentBg.children.forEach((sphere, i) => {
+              sphere.rotation.x += 0.01 + bassLevel * 0.03;
+              sphere.rotation.y += 0.005 + midLevel * 0.02;
+              sphere.position.y += Math.sin(time * 0.5 + i) * 0.02;
+            });
+            break;
+            
+          case 'disco80s':
+            currentBg.children.forEach((ball, i) => {
+              ball.rotation.x += 0.02 + bassLevel * 0.1;
+              ball.rotation.y += 0.03 + midLevel * 0.1;
+              ball.material.color.setHSL((time + i * 0.1) % 1, 1, 0.7);
+            });
+            break;
+            
+          case 'rave90s':
+            currentBg.children.forEach((pyramid, i) => {
+              pyramid.rotation.x += 0.05 + bassLevel * 0.2;
+              pyramid.rotation.y += 0.03 + trebleLevel * 0.1;
+              pyramid.scale.setScalar(1 + bassLevel * 0.5);
+              pyramid.material.color.setHSL((time * 2 + i * 0.05) % 1, 1, 0.8);
+            });
+            break;
+            
+          case 'y2k2000s':
+            currentBg.children.forEach((torus, i) => {
+              torus.rotation.y += 0.01 * (i + 1) + bassLevel * 0.05;
+              torus.rotation.z += 0.005 + midLevel * 0.02;
+            });
+            break;
+            
+          case 'alpine':
+            currentBg.children.forEach((obj, i) => {
+              if (obj.geometry.type === 'SphereGeometry') {
+                obj.material.color.setRGB(
+                  bassLevel,
+                  midLevel,
+                  trebleLevel
+                );
+              }
+            });
+            break;
+            
+          case 'rainbow':
+            currentBg.children.forEach((sphere, i) => {
+              const angle = (i / 100) * Math.PI * 8 + time;
+              const radius = 5 + Math.sin(angle * 2 + bassLevel * 5) * 2;
+              sphere.position.x = Math.cos(angle) * radius;
+              sphere.position.z = Math.sin(angle) * radius;
+              sphere.scale.setScalar(1 + midLevel * 0.5);
+            });
+            break;
+        }
+      }
+      
+      // Camera movement
+      camera.position.x = Math.sin(time * 0.1) * 2;
+      camera.position.y = Math.cos(time * 0.15) * 1;
+      camera.lookAt(0, 0, 0);
+      
+      renderer.render(scene, camera);
+    }
+
+    async function populateDevices(){
+      try {
+        const devs = await navigator.mediaDevices.enumerateDevices();
+        devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
+          const o=document.createElement('option');
+          o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
+          deviceSelect.append(o);
+        });
+      } catch(e) {
+        showError('Failed to load devices: ' + e.message);
+      }
+    }
+
+    async function startEQ(){
+      if(audioContext) {
+        // Stop existing
+        if(stream) stream.getTracks().forEach(t=>t.stop());
+        audioContext.close();
+        audioContext = null;
+        startBtn.textContent = 'Start';
+        return;
+      }
+      
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: { deviceId: deviceSelect.value||undefined }
+        });
+        audioContext = new (window.AudioContext||window.webkitAudioContext)();
+        splitter = audioContext.createChannelSplitter(2);
+        leftAnalyser = audioContext.createAnalyser();
+        rightAnalyser = audioContext.createAnalyser();
+        leftAnalyser.fftSize = rightAnalyser.fftSize = parseInt(fftSelect.value);
+        leftAnalyser.smoothingTimeConstant = rightAnalyser.smoothingTimeConstant = 0.8;
+        dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+        dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+        const src = audioContext.createMediaStreamSource(stream);
+        src.connect(splitter);
+        splitter.connect(leftAnalyser, 0);
+        splitter.connect(rightAnalyser, 1);
+        startTime = performance.now();
+        nextXfade = startTime/1000 + 300 + Math.random()*300;
+        startBtn.textContent = 'Stop';
+        draw();
+      } catch(e) {
+        showError('Failed to start audio: ' + e.message);
+      }
+    }
+
+    fftSelect.addEventListener('change', ()=>{
+      if(!leftAnalyser) return;
+      leftAnalyser.fftSize = rightAnalyser.fftSize = parseInt(fftSelect.value);
+      dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
+      dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+    });
+
+    presetSelect.addEventListener('change', ()=>{ 
+      mainPreset = presetSelect.value;
+      // Hide all 3D backgrounds
+      Object.values(bgObjects).forEach(bg => {
+        if (bg) bg.visible = false;
+      });
+      // Show current preset background
+      if (bgObjects[mainPreset]) {
+        bgObjects[mainPreset].visible = true;
+      }
+    });
+
+    bg3dTog
