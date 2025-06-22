@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Enhanced + Decibel Meter</title>
+  <title>Visual EQ Pro</title>
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden;
@@ -83,65 +83,35 @@
   <canvas id="vis" aria-label="Audio visualizer"></canvas>
   <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#f43;font-size:1.1em;background:#222;padding:1em 2em;border-radius:6px;"></div>
   <script>
-    // --- Helper: Debounce for resize ---
-    function debounce(fn, delay) {
-      let timer; return function(...args) {
-        clearTimeout(timer);
-        timer = setTimeout(()=>fn.apply(this, args), delay);
-      }
-    }
-
-    // --- DOM Elements ---
+    // --- DOM and State ---
     const $ = id => document.getElementById(id);
-    const deviceSelect    = $('deviceSelect');
-    const startBtn        = $('startBtn');
-    const fftSelect       = $('fftSelect');
-    const presetSelect    = $('presetSelect');
-    const sensSlider      = $('sensSlider');
-    const tracerToggle    = $('tracerToggle');
-    const crossfadeToggle = $('crossfadeToggle');
-    const momentsToggle   = $('momentsToggle');
-    const beatThreshold   = $('beatThreshold');
-    const beatCooldown    = $('beatCooldown');
-    const fsBtn           = $('fsBtn');
-    const controls        = $('controls');
-    const canvas          = $('vis');
-    const fallback        = $('fallback');
-    const ctx             = canvas.getContext('2d');
-
-    // --- State ---
+    const deviceSelect = $('deviceSelect'), startBtn = $('startBtn'), fftSelect = $('fftSelect'),
+      presetSelect = $('presetSelect'), sensSlider = $('sensSlider'), tracerToggle = $('tracerToggle'),
+      crossfadeToggle = $('crossfadeToggle'), momentsToggle = $('momentsToggle'),
+      beatThreshold = $('beatThreshold'), beatCooldown = $('beatCooldown'), fsBtn = $('fsBtn'),
+      controls = $('controls'), canvas = $('vis'), fallback = $('fallback'), ctx = canvas.getContext('2d');
     const state = {
-      audioContext: null, splitter: null,
-      leftAnalyser: null, rightAnalyser: null,
-      dataLeft: null, dataRight: null, dataMid: null,
-      startTime: 0,
-      mainPreset: presetSelect.value,
-      xfadeActive: false, xfadeStart: 0, xfadeDur: 5, nextXfade: 0,
-      secondaryPreset: presetSelect.value,
-      lastBeatTime: 0, momentHue: 0, momentHueAlpha: 0,
-      spectrumTrails: [],
-      // Decibel meter state
-      dbMeterNode: null,
-      dbValue: -Infinity,
-      dbSmoothed: -Infinity
+      audioContext: null, splitter: null, leftAnalyser: null, rightAnalyser: null,
+      dataLeft: null, dataRight: null, dataMid: null, startTime: 0,
+      mainPreset: presetSelect.value, xfadeActive: false, xfadeStart: 0, xfadeDur: 5, nextXfade: 0,
+      secondaryPreset: presetSelect.value, lastBeatTime: 0, momentHue: 0, momentHueAlpha: 0,
+      spectrumTrails: [], dbMeterNode: null, dbValue: -Infinity, dbSmoothed: -Infinity,
+      beatTimes: [], bpm: 0
     };
 
-    // --- Utility Functions ---
+    // --- Helpers ---
     const fract = x => x - Math.floor(x);
     const rand = n => fract(Math.sin(n)*43758.5453123);
     function noise1D(x){ const i=Math.floor(x), f=fract(x); return rand(i)*(1-f)+rand(i+1)*f; }
-
-    // --- Responsive Canvas ---
     function resizeCanvas() {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
       state.spectrumTrails = [];
     }
-    window.addEventListener('resize', debounce(resizeCanvas, 100));
+    window.addEventListener('resize', ()=>setTimeout(resizeCanvas, 100));
     document.addEventListener('fullscreenchange', resizeCanvas);
     resizeCanvas();
 
-    // --- Device Enumeration ---
     async function populateDevices() {
       try {
         const devs = await navigator.mediaDevices.enumerateDevices();
@@ -151,12 +121,8 @@
           o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
           deviceSelect.append(o);
         });
-      } catch (e) {
-        showFallback('Could not enumerate audio devices.');
-      }
+      } catch (e) { showFallback('Could not enumerate audio devices.'); }
     }
-
-    // --- Fallback Handler ---
     function showFallback(msg) {
       fallback.style.display = 'block';
       fallback.textContent = msg;
@@ -174,16 +140,14 @@
         let rms = Math.sqrt(sum / buf.length);
         let db = 20 * Math.log10(rms || 1e-8);
         state.dbValue = db;
-        // Smooth out the dB meter visually
         if (!isFinite(state.dbSmoothed)) state.dbSmoothed = db;
         state.dbSmoothed = state.dbSmoothed*0.85 + db*0.15;
       };
       sourceNode.connect(meterNode);
-      meterNode.connect(audioContext.destination); // required for onaudioprocess to run
+      meterNode.connect(audioContext.destination);
       return meterNode;
     }
 
-    // --- Audio Setup and Start ---
     async function startEQ() {
       if(state.audioContext) return;
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -210,20 +174,13 @@
         state.startTime = performance.now();
         state.nextXfade = state.startTime/1000 + 300 + Math.random()*300;
         state.spectrumTrails = [];
-
-        // --- Decibel Meter Setup ---
-        if (state.dbMeterNode) {
-          try { state.dbMeterNode.disconnect(); } catch(e){}
-        }
+        if (state.dbMeterNode) { try { state.dbMeterNode.disconnect(); } catch(e){} }
         state.dbMeterNode = createDbMeterNode(state.audioContext, src);
-
         draw();
       } catch (e) {
         showFallback('Permission denied or no input device found.');
       }
     }
-
-    // --- Event Listeners ---
     fftSelect.addEventListener('change', ()=>{
       if(!state.leftAnalyser) return;
       state.leftAnalyser.fftSize = state.rightAnalyser.fftSize = parseInt(fftSelect.value);
@@ -235,43 +192,238 @@
     presetSelect.addEventListener('change', ()=> state.mainPreset = presetSelect.value);
 
     // --- PRESET DEFINITIONS ---
-    // ... (same as previously enhanced code above, omitted here for brevity)
-    // For brevity, copy the EQ_PRESETS object from the previous response!
+    // All colors are dynamic HSB, 100% saturation, same base hue
+    function dynamicHSB(hue, sat, bri, shift=0, alpha=1) {
+      return `hsla(${(hue+shift)%360},${sat}%,${bri}%,${alpha})`;
+    }
+    // Base hue for all presets, shifts over time
+    function baseHue(t) {
+      // Moment accent on hue
+      return ((t*30) + state.momentHue*state.momentHueAlpha) % 360;
+    }
+
+    const EQ_PRESETS = {
+      vhs: {
+        name: 'VHS Drift',
+        sensitivity: 1.15,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 80),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 55, 30),
+        curveDash: true,
+        beforeDraw: (ctx, state, options) => {
+          ctx.save();
+          let yJitter = Math.sin(options.t*2) * 2 + (Math.random()-0.5)*2*state.momentHueAlpha;
+          ctx.translate(0, yJitter);
+          if (Math.random() < 0.004 + state.momentHueAlpha*0.05) {
+            let barY = Math.random() * canvas.height;
+            ctx.fillStyle = dynamicHSB(baseHue(options.t),100,100,180,0.11);
+            ctx.fillRect(0, barY, canvas.width, 12+(Math.random()*16));
+          }
+          ctx.strokeStyle = dynamicHSB(baseHue(options.t),100,60,120,0.09);
+          ctx.lineWidth = 1;
+          for(let y=0; y<canvas.height; y+=4){
+            const off = 2 * Math.sin(y/50 + options.t*3);
+            ctx.beginPath(); ctx.moveTo(off, y);
+            ctx.lineTo(canvas.width+off, y); ctx.stroke();
+          }
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      tape: {
+        name: 'Tape Echo',
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 80, 200),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 35, 220),
+        beforeDraw: (ctx, state, options) => {
+          ctx.save();
+          ctx.globalAlpha = 0.12 + state.momentHueAlpha*0.1;
+          ctx.fillStyle = dynamicHSB(baseHue(options.t),100,15,180,1);
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.globalAlpha = options.alpha * 0.7;
+          ctx.shadowBlur = 30; ctx.shadowColor = dynamicHSB(baseHue(options.t),100, 85, 0,1);
+          ctx.strokeStyle = dynamicHSB(baseHue(options.t),100, 60, 60,0.12);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let x = 0; x < canvas.width; x += 6) {
+            let y = canvas.height * 0.5 + Math.sin(options.t + x/100 + Math.sin(options.t*0.7)*2) * 18;
+            if(x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+        },
+        afterDraw: ctx => { ctx.shadowBlur = 0; ctx.restore(); }
+      },
+      neon: {
+        name: 'Neon Grid',
+        sensitivity: 1.1,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 90),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 120),
+        beforeDraw: (ctx, state, options) => {
+          ctx.save();
+          const hue = baseHue(options.t);
+          ctx.strokeStyle = dynamicHSB(hue,100,75,0,1);
+          ctx.lineWidth = 1 + 2 * state.momentHueAlpha;
+          const gridSpacing = 50 + 6 * Math.sin(options.t);
+          for(let x=0; x<canvas.width; x+=gridSpacing){
+            ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
+          }
+          for(let y=0; y<canvas.height; y+=gridSpacing){
+            ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+          }
+          ctx.shadowBlur = 20; ctx.shadowColor = dynamicHSB(hue,100, 90, 0,1);
+        },
+        afterDraw: ctx => { ctx.shadowBlur = 0; ctx.restore(); }
+      },
+      aurora: {
+        name: 'Aurora',
+        sensitivity: 1.0,
+        mainColor: (ctx, t) => {
+          const hue = baseHue(t);
+          const grad = ctx.createLinearGradient(0,0,0,canvas.height);
+          grad.addColorStop(0, dynamicHSB(hue,100,30));
+          grad.addColorStop(0.5 + 0.1*Math.sin(state.momentHue*0.01 + t*0.5), dynamicHSB(hue+60,100,75));
+          grad.addColorStop(1, dynamicHSB(hue+180,100,25));
+          return grad;
+        },
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t)+120, 100, 60),
+        alpha: 0.5,
+        beforeDraw: (ctx, state, options) => {
+          ctx.save();
+          for(let k=0; k<3; k++) {
+            ctx.beginPath();
+            for(let x=0; x<canvas.width; x+=3){
+              let freq = 0.001*k + 0.0005*Math.sin(options.t + k);
+              let y = canvas.height*0.7 - 70*Math.sin(options.t*0.7 + x*freq + k*2)
+                      - 40*Math.sin(options.t*0.8 + x*freq*1.3 + k*4)
+                      + 30*Math.sin(options.t + k*3);
+              if(x===0) ctx.moveTo(x,y);
+              else ctx.lineTo(x,y);
+            }
+            ctx.strokeStyle = dynamicHSB(baseHue(options.t)+40*k,100,70,0,0.25+0.2*k+0.2*state.momentHueAlpha);
+            ctx.lineWidth = 2 + 2*k;
+            ctx.stroke();
+          }
+        },
+        afterDraw: ctx => ctx.restore()
+      },
+      spectrum: {
+        name: 'Spectrum Cascade',
+        sensitivity: 1.2,
+        customDraw: (ctx, state, options) => {
+          const bins = state.dataMid.length, slice = canvas.width/bins, sens = options.sens, t = options.t;
+          if (state.spectrumTrails.length !== bins) { state.spectrumTrails = Array(bins).fill(0); }
+          const hue = baseHue(t);
+          for(let i=0;i<bins;i++){
+            let f = Math.min(state.dataMid[i]/255 * sens,1);
+            let x=i*slice, h=(i/bins*120) + hue, barH=f*canvas.height;
+            state.spectrumTrails[i] = Math.max(barH, state.spectrumTrails[i]*0.92);
+            ctx.fillStyle=dynamicHSB(h,100,60+20*Math.sin(t+i*0.08));
+            ctx.fillRect(x,canvas.height-state.spectrumTrails[i],slice,state.spectrumTrails[i]);
+            ctx.globalAlpha = 0.15 + 0.2*state.momentHueAlpha;
+            ctx.fillStyle=dynamicHSB(h,100,85,0,1);
+            ctx.fillRect(x,canvas.height-state.spectrumTrails[i]-6,slice,state.spectrumTrails[i]+6);
+            ctx.globalAlpha = 1;
+          }
+        }
+      },
+      pultec: {
+        name: 'Pultec EQ',
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t)+30,100,70),
+        beforeDraw: (ctx, state, options) => {
+          if (state.momentHueAlpha > 0.2) {
+            ctx.save();
+            ctx.globalAlpha = 0.09 * state.momentHueAlpha;
+            ctx.fillStyle = dynamicHSB(baseHue(options.t)+20,100,100,0,1);
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, 120+90*state.momentHueAlpha, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+      },
+      neve: {
+        name: 'Neve EQ',
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t)+15,100,55),
+        beforeDraw: (ctx, state, options) => {
+          ctx.save();
+          ctx.globalAlpha = 0.08 + 0.1*state.momentHueAlpha;
+          ctx.fillStyle = dynamicHSB(baseHue(options.t)+180,100,15,0,1);
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.restore();
+        }
+      },
+      ssl: {
+        name: 'SSL EQ',
+        sensitivity: 1.2,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t)+200,100,65),
+        beforeDraw: (ctx, state, options) => {
+          ctx.save();
+          ctx.globalAlpha = 0.11 + 0.11*state.momentHueAlpha;
+          ctx.fillStyle = dynamicHSB(baseHue(options.t)+210,100,22,0,1);
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.restore();
+        }
+      }
+    };
 
     // --- Modular DrawPreset Function ---
-    // ... (same as previously enhanced code above, omitted here for brevity)
+    function drawPreset(presetKey, alpha, hueOffset, t, noiseAmp, lfo){
+      const preset = EQ_PRESETS[presetKey];
+      if (!preset) return;
+      const sens = parseFloat(sensSlider.value) * (preset.sensitivity || 1);
+      const bins  = state.dataMid.length;
+      const slice = canvas.width/bins;
+      const options = {sens, t, lfo, alpha};
+      ctx.globalAlpha = alpha * (preset.alpha || 1);
+      if (preset.customDraw) {
+        preset.customDraw(ctx, state, {...options, hueOffset});
+        ctx.globalAlpha = 1;
+        return;
+      }
+      if (preset.beforeDraw) preset.beforeDraw(ctx, state, {...options, hueOffset});
+      const midVal  = i => state.dataMid[i]/255;
+      const sideVal = i => Math.abs(state.dataLeft[i]-state.dataRight[i])/255;
+      function drawCurve(getVal, color, dash=false){
+        ctx.beginPath();
+        for(let i=0;i<bins;i++){
+          let f = Math.min(getVal(i)*sens,1);
+          let x=i*slice, y=canvas.height-f*canvas.height;
+          y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
+          i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+        }
+        ctx.lineWidth = 2 * (1 + (Math.random()-0.5)*0.1*lfo);
+        ctx.strokeStyle = typeof color === 'function' ? color(ctx, t) : color;
+        ctx.setLineDash(dash?[4,4]:[]);
+        ctx.stroke(); ctx.setLineDash([]);
+      }
+      if (preset.mainColor)
+        drawCurve(midVal, preset.mainColor, preset.curveDash);
+      if (preset.sideColor)
+        drawCurve(sideVal, preset.sideColor, true);
+      if (preset.afterDraw) preset.afterDraw(ctx);
+      ctx.globalAlpha = 1;
+    }
 
     // --- Decibel Meter drawing ---
     function drawDbMeter() {
-      // Decibel bar on left of canvas
       const barX = 12, barY = 32, barW = 18, barH = canvas.height - 64;
-      // dB range: -60 dB (bottom) to 0 dB (top)
       const minDb = -60, maxDb = 0;
       const db = Math.max(minDb, Math.min(state.dbSmoothed, maxDb));
       const norm = (db - minDb) / (maxDb - minDb);
-
-      // Bar background
       ctx.save();
       ctx.globalAlpha = 0.8;
       ctx.fillStyle = "#222";
       ctx.fillRect(barX-3, barY-3, barW+6, barH+6);
-
-      // Bar gradient (green to yellow to red)
       const grad = ctx.createLinearGradient(barX, barY+barH, barX, barY);
       grad.addColorStop(0.0, "#0f0");
       grad.addColorStop(0.7, "#ff0");
       grad.addColorStop(1.0, "#f00");
-
-      // Draw level
       ctx.fillStyle = grad;
       ctx.fillRect(barX, barY + barH*(1-norm), barW, barH*norm);
-
-      // Border
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 1;
       ctx.strokeRect(barX-1, barY-1, barW+2, barH+2);
-
-      // dB text
       ctx.font = "bold 15px sans-serif";
       ctx.fillStyle = "#fff";
       ctx.textAlign = "left";
@@ -279,8 +431,19 @@
       ctx.fillText(db.toFixed(1) + " dB", barX + barW + 10, barY + barH*(1-norm));
       ctx.restore();
     }
+    // --- BPM Meter drawing ---
+    function drawBpmMeter(ctx, bpm) {
+      ctx.save();
+      ctx.font = "bold 18px sans-serif";
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "top";
+      ctx.shadowColor = "#000"; ctx.shadowBlur = 5;
+      ctx.fillText(`BPM: ${bpm > 0 ? Math.round(bpm) : '--'}`, canvas.width - 24, 24);
+      ctx.restore();
+    }
 
-    // --- Draw Loop ---
+    // --- Main Draw Loop ---
     function draw() {
       requestAnimationFrame(draw);
       state.leftAnalyser.getByteFrequencyData(state.dataLeft);
@@ -294,7 +457,7 @@
       const lfo = (Math.sin(Math.PI*0.2*t)+1)/2;
       const noiseAmp = 0.02 * (0.5 + 0.5*lfo);
 
-      // Crossfade logic (same as before)
+      // Crossfade
       if(crossfadeToggle.checked) {
         if(!state.xfadeActive && t > state.nextXfade){
           state.xfadeActive = true; state.xfadeStart = t;
@@ -314,7 +477,7 @@
       }
       const w1=1-w2;
 
-      // Beat detection
+      // --- Beat detection and BPM ---
       const threshold = parseFloat(beatThreshold.value);
       const cooldown  = parseFloat(beatCooldown.value);
       const bassAvg = ((state.dataLeft[2]+state.dataRight[2])/2)/255;
@@ -322,10 +485,21 @@
         state.lastBeatTime = t;
         state.momentHue = Math.random()*360;
         state.momentHueAlpha = 1;
+        state.beatTimes.push(t);
+        if (state.beatTimes.length > 8) state.beatTimes.shift();
+        if (state.beatTimes.length >= 2) {
+          let intervals = [];
+          for (let i = 1; i < state.beatTimes.length; i++)
+            intervals.push(state.beatTimes[i] - state.beatTimes[i-1]);
+          const avgInterval = intervals.reduce((a,b) => a+b, 0) / intervals.length;
+          state.bpm = 60 / avgInterval;
+        } else {
+          state.bpm = 0;
+        }
       }
       state.momentHueAlpha *= 0.9;
 
-      // Tracer
+      // Tracer or clear
       if(tracerToggle.checked) {
         ctx.fillStyle='rgba(0,0,0,0.15)';
         ctx.fillRect(0,0,canvas.width,canvas.height);
@@ -337,30 +511,26 @@
       const freqs=[60,250,1000,4000,16000];
       const nyq=state.audioContext.sampleRate/2;
       const slice=canvas.width/binCount;
-      ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
-      ctx.font='12px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.2)';
+      ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1;
+      ctx.font='12px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.22)';
       freqs.forEach(f=>{
         const b=Math.round(f/nyq*binCount), x=b*slice;
         ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
         ctx.fillText(f+'Hz', x+2,14);
       });
 
-      // --- Decibel Meter Draw ---
       drawDbMeter();
+      drawBpmMeter(ctx, state.bpm);
 
-      // --- EQ Preset Draw ---
       drawPreset(state.mainPreset, w1, hueOffset, t, noiseAmp, lfo);
       if(w2>0) drawPreset(state.secondaryPreset, w2, hueOffset, t, noiseAmp, lfo);
     }
 
-    // --- Fullscreen Button ---
     fsBtn.onclick = ()=> {
       document.fullscreenElement
         ? document.exitFullscreen()
         : canvas.requestFullscreen();
     };
-
-    // --- Auto-hide Controls on Inactivity ---
     let hideT;
     ['pointermove','touchstart','keydown'].forEach(evt=>
       document.addEventListener(evt,()=>{
@@ -369,15 +539,8 @@
         hideT = setTimeout(()=>controls.style.opacity='0',3000);
       })
     );
-
-    // --- App Init ---
     startBtn.addEventListener('click', startEQ);
     populateDevices();
-
-    // --- EQ_PRESETS and drawPreset functions ---
-    // Copy from the previous enhanced version provided to you.
-    // (Omitted here for length, but plug in the EQ_PRESETS and drawPreset as above!)
-
   </script>
 </body>
 </html>
