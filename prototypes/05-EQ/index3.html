@@ -1,4 +1,13 @@
-<!DOCTYPE html>
+case 'disco80s':
+          // Mirror ball disco reflections
+          if(gridToggle.checked) {
+            const mirrorSize = 25;
+            for(let x=0;x<canvas.width;x+=mirrorSize){
+              for(let y=0;y<canvas.height;y+=mirrorSize){
+                const phase = (x+y)/50 + t*3;
+                const brightness = (Math.sin(phase)+1)/2;
+                const hue = ((x+y+t*150)%360);
+        <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
