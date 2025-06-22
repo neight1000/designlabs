@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ v1.15</title>
+  <title>Visual EQ Enhanced</title>
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden;
@@ -28,6 +28,8 @@
     canvas {
       position: absolute; top: 0; left: 0;
       width: 100vw; height: 100vh;
+      display: block;
+      cursor: pointer;
     }
     @media (max-width: 700px) {
       #controls { flex-direction: column; gap: 4px; }
@@ -116,7 +118,9 @@
       mainPreset: presetSelect.value,
       xfadeActive: false, xfadeStart: 0, xfadeDur: 5, nextXfade: 0,
       secondaryPreset: presetSelect.value,
-      lastBeatTime: 0, momentHue: 0, momentHueAlpha: 0
+      lastBeatTime: 0, momentHue: 0, momentHueAlpha: 0,
+      // For trailing bar effect in spectrum
+      spectrumTrails: []
     };
 
     // --- Utility Functions ---
@@ -128,6 +132,8 @@
     function resizeCanvas() {
       canvas.width  = window.innerWidth;
       canvas.height = window.innerHeight;
+      // Reset spectrum trails on resize
+      state.spectrumTrails = [];
     }
     window.addEventListener('resize', debounce(resizeCanvas, 100));
     document.addEventListener('fullscreenchange', resizeCanvas);
@@ -182,6 +188,7 @@
         state.splitter.connect(state.rightAnalyser, 1);
         state.startTime = performance.now();
         state.nextXfade = state.startTime/1000 + 300 + Math.random()*300;
+        state.spectrumTrails = [];
         draw();
       } catch (e) {
         showFallback('Permission denied or no input device found.');
@@ -195,10 +202,12 @@
       state.dataLeft = new Uint8Array(state.leftAnalyser.frequencyBinCount);
       state.dataRight = new Uint8Array(state.rightAnalyser.frequencyBinCount);
       state.dataMid = new Uint8Array(state.leftAnalyser.frequencyBinCount);
+      state.spectrumTrails = []; // reset trails on FFT size change
     });
     presetSelect.addEventListener('change', ()=> state.mainPreset = presetSelect.value);
 
     // --- PRESET DEFINITIONS ---
+    // Each preset is modular, dynamic, and audio-reactive
     const EQ_PRESETS = {
       vhs: {
         name: 'VHS Drift',
@@ -207,14 +216,29 @@
         sideColor: ctx => 'hsl(0,0%,80%)',
         curveDash: true,
         beforeDraw: (ctx, state, options) => {
-          ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+          // Simulate tape drift: vertical/horizontal jitter, random glitches
+          ctx.save();
+          // Small vertical frame "jitter"
+          let yJitter = Math.sin(options.t*2) * 2 + (Math.random()-0.5)*2*state.momentHueAlpha;
+          ctx.translate(0, yJitter);
+
+          // Occasional rolling bar glitch
+          if (Math.random() < 0.004 + state.momentHueAlpha*0.05) {
+            let barY = Math.random() * canvas.height;
+            ctx.fillStyle = `rgba(255,255,255,0.05)`;
+            ctx.fillRect(0, barY, canvas.width, 12+(Math.random()*16));
+          }
+
+          // Horizontal scanlines
+          ctx.strokeStyle = 'rgba(255,255,255,0.06)';
           ctx.lineWidth = 1;
           for(let y=0; y<canvas.height; y+=4){
             const off = 2 * Math.sin(y/50 + options.t*3);
             ctx.beginPath(); ctx.moveTo(off, y);
             ctx.lineTo(canvas.width+off, y); ctx.stroke();
           }
-        }
+        },
+        afterDraw: ctx => ctx.restore()
       },
       tape: {
         name: 'Tape Echo',
@@ -222,73 +246,153 @@
         mainColor: ctx => 'hsl(200,100%,80%)',
         sideColor: ctx => 'hsl(200,100%,80%)',
         beforeDraw: (ctx, state, options) => {
-          ctx.shadowBlur = 30; ctx.shadowColor = '#fff';
+          // Faded echo trail using a translucent overlay
+          ctx.save();
+          ctx.globalAlpha = 0.12 + state.momentHueAlpha*0.1;
+          ctx.fillStyle = "#1a2233";
+          ctx.fillRect(0,0,canvas.width,canvas.height);
           ctx.globalAlpha = options.alpha * 0.7;
+          ctx.shadowBlur = 30; ctx.shadowColor = '#fff';
+
+          // Overlay slow sine wave for tape flutter
+          ctx.strokeStyle = "rgba(255,255,255,0.08)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (let x = 0; x < canvas.width; x += 6) {
+            let y = canvas.height * 0.5 + Math.sin(options.t + x/100 + Math.sin(options.t*0.7)*2) * 18;
+            if(x === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
         },
-        afterDraw: (ctx) => {
-          ctx.shadowBlur = 0;
-        }
+        afterDraw: ctx => { ctx.shadowBlur = 0; ctx.restore(); }
       },
       neon: {
         name: 'Neon Grid',
         sensitivity: 1.1,
-        mainColor: ctx => 'hsl(180,100%,60%)',
+        mainColor: ctx => {
+          // Animate hue with beat
+          return `hsl(${180 + state.momentHue*state.momentHueAlpha},100%,60%)`;
+        },
         sideColor: ctx => 'hsl(180,100%,60%)',
         beforeDraw: (ctx, state, options) => {
-          ctx.strokeStyle = 'hsl(180,100%,60%)';
-          ctx.lineWidth = 1;
-          for(let x=0; x<canvas.width; x+=50){
+          // Animated grid, color pulses with beat
+          ctx.save();
+          const baseHue = 180 + state.momentHue * state.momentHueAlpha;
+          ctx.strokeStyle = `hsl(${baseHue},100%,60%)`;
+          ctx.lineWidth = 1 + 2 * state.momentHueAlpha;
+          const gridSpacing = 50 + 6 * Math.sin(options.t); // animated grid spacing
+          for(let x=0; x<canvas.width; x+=gridSpacing){
             ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
           }
-          for(let y=0; y<canvas.height; y+=50){
+          for(let y=0; y<canvas.height; y+=gridSpacing){
             ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
           }
-          ctx.shadowBlur = 20; ctx.shadowColor = 'hsl(180,100%,80%)';
+          ctx.shadowBlur = 20; ctx.shadowColor = `hsl(${baseHue},100%,80%)`;
         },
-        afterDraw: (ctx) => {
-          ctx.shadowBlur = 0;
-        }
+        afterDraw: ctx => { ctx.shadowBlur = 0; ctx.restore(); }
       },
       aurora: {
         name: 'Aurora',
         sensitivity: 1.0,
         mainColor: ctx => {
+          // Animated gradient background
           const grad = ctx.createLinearGradient(0,0,0,canvas.height);
           grad.addColorStop(0,'#081d71');
-          grad.addColorStop(0.5,'#20ff90');
+          grad.addColorStop(0.5 + 0.1*Math.sin(state.momentHue*0.01 + performance.now()*0.0005),'#20ff90');
           grad.addColorStop(1,'#081d71');
           return grad;
         },
         sideColor: ctx => 'hsl(120,100%,50%)',
-        alpha: 0.5
+        alpha: 0.5,
+        beforeDraw: (ctx, state, options) => {
+          // Draw moving "ribbons" for aurora effect (bass-driven)
+          ctx.save();
+          for(let k=0; k<3; k++) {
+            ctx.beginPath();
+            for(let x=0; x<canvas.width; x+=3){
+              let freq = 0.001*k + 0.0005*Math.sin(options.t + k);
+              let y = canvas.height*0.7 - 70*Math.sin(options.t*0.7 + x*freq + k*2)
+                      - 40*Math.sin(options.t*0.8 + x*freq*1.3 + k*4)
+                      + 30*Math.sin(options.t + k*3);
+              if(x===0) ctx.moveTo(x,y);
+              else ctx.lineTo(x,y);
+            }
+            ctx.strokeStyle = `hsla(${130+40*k},90%,70%,${0.25+0.2*k+0.2*state.momentHueAlpha})`;
+            ctx.lineWidth = 2 + 2*k;
+            ctx.stroke();
+          }
+        },
+        afterDraw: ctx => ctx.restore()
       },
       spectrum: {
         name: 'Spectrum Cascade',
         sensitivity: 1.2,
         customDraw: (ctx, state, options) => {
+          // Trailing bars with glow, color pulses on beat
           const bins = state.dataMid.length, slice = canvas.width/bins, sens = options.sens;
+          // Initialize or resize trails
+          if (state.spectrumTrails.length !== bins) {
+            state.spectrumTrails = Array(bins).fill(0);
+          }
           for(let i=0;i<bins;i++){
             let f = Math.min(state.dataMid[i]/255 * sens,1);
             let x=i*slice, h=(i/bins*360)%360, barH=f*canvas.height;
-            ctx.fillStyle=`hsl(${h},100%,60%)`;
-            ctx.fillRect(x,canvas.height-barH,slice,barH);
+            // Save trailing value
+            state.spectrumTrails[i] = Math.max(barH, state.spectrumTrails[i]*0.92);
+            // Main bar
+            ctx.fillStyle=`hsl(${h + state.momentHue*state.momentHueAlpha},100%,60%)`;
+            ctx.fillRect(x,canvas.height-state.spectrumTrails[i],slice,state.spectrumTrails[i]);
+            // Trailing glow
+            ctx.globalAlpha = 0.15 + 0.2*state.momentHueAlpha;
+            ctx.fillStyle=`hsl(${h},100%,90%)`;
+            ctx.fillRect(x,canvas.height-state.spectrumTrails[i]-6,slice,state.spectrumTrails[i]+6);
+            ctx.globalAlpha = 1;
           }
         }
       },
       pultec: {
         name: 'Pultec EQ',
         sensitivity: 1.2,
-        mainColor: ctx => 'hsl(30,100%,60%)'
+        mainColor: ctx => `hsl(30,100%,60%)`,
+        beforeDraw: (ctx, state, options) => {
+          // Gold accent on beat
+          if (state.momentHueAlpha > 0.2) {
+            ctx.save();
+            ctx.globalAlpha = 0.13 * state.momentHueAlpha;
+            ctx.fillStyle = 'gold';
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, canvas.height/2, 120+90*state.momentHueAlpha, 0, 2*Math.PI);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
       },
       neve: {
         name: 'Neve EQ',
         sensitivity: 1.2,
-        mainColor: ctx => 'hsl(15,100%,55%)'
+        mainColor: ctx => `hsl(15,100%,55%)`,
+        beforeDraw: (ctx, state, options) => {
+          // Hardware-style blue overlay
+          ctx.save();
+          ctx.globalAlpha = 0.08 + 0.1*state.momentHueAlpha;
+          ctx.fillStyle = "navy";
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.restore();
+        }
       },
       ssl: {
         name: 'SSL EQ',
         sensitivity: 1.2,
-        mainColor: ctx => 'hsl(200,100%,60%)'
+        mainColor: ctx => `hsl(200,100%,60%)`,
+        beforeDraw: (ctx, state, options) => {
+          // Blue/grey SSL glow
+          ctx.save();
+          ctx.globalAlpha = 0.11 + 0.11*state.momentHueAlpha;
+          ctx.fillStyle = "#356";
+          ctx.fillRect(0,0,canvas.width,canvas.height);
+          ctx.restore();
+        }
       }
     };
 
@@ -304,14 +408,14 @@
 
       ctx.globalAlpha = alpha * (preset.alpha || 1);
 
-      // Custom draw logic for advanced presets
+      // Custom draw logic for advanced presets (spectrum)
       if (preset.customDraw) {
         preset.customDraw(ctx, state, options);
         ctx.globalAlpha = 1;
         return;
       }
 
-      // Optional beforeDraw logic
+      // Optional beforeDraw logic (for background or special features)
       if (preset.beforeDraw) preset.beforeDraw(ctx, state, options);
 
       // Utility functions
@@ -339,7 +443,7 @@
       if (preset.sideColor)
         drawCurve(sideVal, preset.sideColor, true);
 
-      // Optional afterDraw logic
+      // Optional afterDraw logic (for restoring context)
       if (preset.afterDraw) preset.afterDraw(ctx);
 
       ctx.globalAlpha = 1;
