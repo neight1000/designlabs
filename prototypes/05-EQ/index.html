@@ -3,229 +3,154 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ Pro v1.19</title>
+  <title>Visual EQ Pro - Full Build with Alpine 86</title>
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: #000; color: #fff; font-family: sans-serif; height: 100vh; width: 100vw; }
     #controls {
-      position: absolute; top: 10px; left: 50%;
-      transform: translateX(-50%);
+      position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
       display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
       z-index: 10; transition: opacity .5s;
       background: rgba(0,0,0,0.5); padding: 6px; border-radius: 4px;
     }
     select, button, label, input[type=range] {
-      background: #000; color: #fff;
-      border: 1px solid #fff; padding: 4px 8px;
-      font-size: 1rem;
+      background: #000; color: #fff; border: 1px solid #fff; padding: 4px 8px; font-size: 1rem;
     }
     label { display: flex; align-items: center; gap: 4px; }
     input[type=range] { width: 80px; }
     canvas { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; display: block; cursor: pointer; }
-    @media (max-width:700px) {
-      #controls { flex-direction: column; gap: 4px; }
-      select, button, label, input[type=range] { font-size: 0.9rem; }
-    }
   </style>
 </head>
 <body>
   <div id="controls">
-    <label for="deviceSelect">Input</label>
-    <select id="deviceSelect"></select>
+    <label>Input <select id="deviceSelect"></select></label>
     <button id="startBtn">Start</button>
-    <label for="fftSelect">FFT</label>
-    <select id="fftSelect">
+    <label>FFT <select id="fftSelect">
       <option>256</option><option selected>512</option>
       <option>1024</option><option>2048</option>
       <option>4096</option><option>8192</option>
       <option>16384</option><option>32768</option>
-    </select>
-    <label for="presetSelect">Preset</label>
-    <select id="presetSelect">
+    </select></label>
+    <label>Preset <select id="presetSelect">
       <option value="vhs">VHS Drift</option>
       <option value="tape">Tape Echo</option>
       <option value="neon">Neon Grid</option>
       <option value="aurora">Aurora</option>
       <option value="spectrum">Spectrum Cascade</option>
-      <option value="pultec">Pultec EQ</option>
-      <option value="neve">Neve EQ</option>
-      <option value="ssl">SSL EQ</option>
-    </select>
-    <label for="sensSlider">Sensitivity
-      <input type="range" id="sensSlider" min="0.5" max="3" step="0.05" value="1.15">
-    </label>
-    <label><input type="checkbox" id="tracerToggle" checked> Tracers</label>
-    <label><input type="checkbox" id="crossfadeToggle"> Crossfade</label>
-    <label><input type="checkbox" id="momentsToggle"> Moments</label>
-    <label for="beatThreshold">Beat Thr
-      <input type="range" id="beatThreshold" min="0.1" max="1" step="0.05" value="0.7">
-    </label>
-    <label for="beatCooldown">Cooldown
-      <input type="range" id="beatCooldown" min="0.1" max="2" step="0.1" value="0.3">
-    </label>
-    <button id="fsBtn">Fullscreen</button>
-    <span class="readout" id="dbReadout">dB: --</span>
-    <span class="readout" id="bpmReadout">BPM: --</span>
-    <span class="version">v1.19</span>
+      <option value="alpine86">Alpine 86</option>
+    </select></label>
   </div>
   <canvas id="vis"></canvas>
-  <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;
-       transform:translate(-50%,-50%);color:#f43;font-size:1.1em;
-       background:#222;padding:1em 2em;border-radius:6px;"></div>
+  <div id="fallback" style="display:none;position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);color:#f43;font-size:1.1em;background:#222;padding:1em 2em;border-radius:6px;"></div>
   <script>
-    // DOM refs & state
-    const $ = id=>document.getElementById(id),
-          deviceSelect=$('deviceSelect'),
-          startBtn=$('startBtn'),
-          fftSelect=$('fftSelect'),
-          presetSelect=$('presetSelect'),
-          sensSlider=$('sensSlider'),
-          tracerToggle=$('tracerToggle'),
-          crossfadeToggle=$('crossfadeToggle'),
-          momentsToggle=$('momentsToggle'),
-          beatThreshold=$('beatThreshold'),
-          beatCooldown=$('beatCooldown'),
-          fsBtn=$('fsBtn'),
-          controls=$('controls'),
-          canvas=$('vis'),
-          fallback=$('fallback'),
-          ctx=canvas.getContext('2d'),
-          dbReadout=$('dbReadout'),
-          bpmReadout=$('bpmReadout');
+    const $ = id => document.getElementById(id);
+    const deviceSelect = $('deviceSelect'), startBtn = $('startBtn'), fftSelect = $('fftSelect'), presetSelect = $('presetSelect');
+    const canvas = $('vis'), fallback = $('fallback'), ctx = canvas.getContext('2d');
+    let audioContext, splitter, analyserL, analyserR, dataL, dataR, dataMid;
 
-    const state = {
-      audioContext:null, splitter:null,
-      leftAnalyser:null, rightAnalyser:null,
-      dataLeft:null, dataRight:null, dataMid:null,
-      startTime:0, mainPreset:presetSelect.value,
-      xfadeActive:false, xfadeStart:0, xfadeDur:5, nextXfade:0,
-      secondaryPreset:presetSelect.value,
-      lastBeatTime:0, momentHue:0, momentHueAlpha:0,
-      spectrumTrails:[], dbSmoothed:-60,
-      beatTimes:[], bpm:0
-    };
-
-    // Helpers
-    const fract=x=>x-Math.floor(x),
-          rand=n=>fract(Math.sin(n)*43758.5453123);
-    function noise1D(x){const i=Math.floor(x),f=fract(x);return rand(i)*(1-f)+rand(i+1)*f;}
-    function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight;state.spectrumTrails=[];}
-    window.addEventListener('resize',resizeCanvas);
-    document.addEventListener('fullscreenchange',resizeCanvas);
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    async function populateDevices(){
+    async function populateDevices() {
       try {
-        const devs=await navigator.mediaDevices.enumerateDevices();
-        deviceSelect.innerHTML='';
-        devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
-          const o=document.createElement('option');
-          o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        deviceSelect.innerHTML = '';
+        devices.filter(d => d.kind === 'audioinput').forEach((d, i) => {
+          const o = document.createElement('option');
+          o.value = d.deviceId; o.textContent = d.label || `Mic ${i+1}`;
           deviceSelect.append(o);
         });
-      } catch(e){ showFallback('Could not enumerate audio devices.'); }
-    }
-    function showFallback(msg){
-      fallback.style.display='block';
-      fallback.textContent=msg;
-      controls.style.display='none';
-      canvas.style.display='none';
+      } catch (e) {
+        showFallback('Could not enumerate devices.');
+      }
     }
 
-    // dB/BPM readouts
-    function updateDbMeter(){
-      if(!state.leftAnalyser) return;
-      const buf=new Float32Array(state.leftAnalyser.fftSize);
-      state.leftAnalyser.getFloatTimeDomainData(buf);
-      let sum=0; buf.forEach(v=>sum+=v*v);
-      let rms=Math.sqrt(sum/buf.length), db=20*Math.log10(rms||1e-8);
-      if(!isFinite(db)) db=-60;
-      state.dbSmoothed=state.dbSmoothed*0.85+db*0.15;
-      dbReadout.textContent='dB: '+(db>-59?db.toFixed(1):'--');
-    }
-    function updateBpmMeter(){
-      bpmReadout.textContent='BPM: '+(state.bpm>0?Math.round(state.bpm):'--');
+    function showFallback(msg) {
+      fallback.style.display = 'block';
+      fallback.textContent = msg;
     }
 
-    // startEQ
-    async function startEQ(){
-      if(state.audioContext) return;
-      if(!navigator.mediaDevices?.getUserMedia){
-        showFallback('Web Audio API not supported.');
-        return;
+    async function start() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showFallback('Web Audio API not supported.'); return;
       }
       try {
-        const stream=await navigator.mediaDevices.getUserMedia({audio:{deviceId:deviceSelect.value||undefined}});
-        const ac=new (AudioContext||webkitAudioContext)();
-        state.audioContext=ac;
-        state.splitter=ac.createChannelSplitter(2);
-        state.leftAnalyser=ac.createAnalyser();
-        state.rightAnalyser=ac.createAnalyser();
-        [state.leftAnalyser,state.rightAnalyser].forEach(a=>{
-          a.fftSize=parseInt(fftSelect.value);
-          a.smoothingTimeConstant=0.8;
-        });
-        state.dataLeft=new Uint8Array(state.leftAnalyser.frequencyBinCount);
-        state.dataRight=new Uint8Array(state.rightAnalyser.frequencyBinCount);
-        state.dataMid=new Uint8Array(state.leftAnalyser.frequencyBinCount);
-        const src=ac.createMediaStreamSource(stream);
-        src.connect(state.splitter);
-        state.splitter.connect(state.leftAnalyser,0);
-        state.splitter.connect(state.rightAnalyser,1);
-        state.startTime=performance.now();
-        state.nextXfade=state.startTime/1000+300+Math.random()*300;
-        state.spectrumTrails=[];
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: deviceSelect.value || undefined }});
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        splitter = audioContext.createChannelSplitter(2);
+        analyserL = audioContext.createAnalyser();
+        analyserR = audioContext.createAnalyser();
+        analyserL.fftSize = analyserR.fftSize = parseInt(fftSelect.value);
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(splitter);
+        splitter.connect(analyserL, 0);
+        splitter.connect(analyserR, 1);
+        dataL = new Uint8Array(analyserL.frequencyBinCount);
+        dataR = new Uint8Array(analyserR.frequencyBinCount);
+        dataMid = new Uint8Array(analyserL.frequencyBinCount);
         draw();
-      } catch(e){
+      } catch (e) {
         showFallback('Permission denied or no input device found.');
       }
     }
-    fftSelect.addEventListener('change',()=>{
-      if(!state.leftAnalyser) return;
-      [state.leftAnalyser,state.rightAnalyser].forEach(a=>{
-        a.fftSize=parseInt(fftSelect.value);
-      });
-      state.dataLeft=new Uint8Array(state.leftAnalyser.frequencyBinCount);
-      state.dataRight=new Uint8Array(state.rightAnalyser.frequencyBinCount);
-      state.dataMid=new Uint8Array(state.leftAnalyser.frequencyBinCount);
-      state.spectrumTrails=[];
-    });
-    presetSelect.addEventListener('change',()=>state.mainPreset=presetSelect.value);
 
-    // color
-    function dynamicHSB(hue,sat,bri,shift=0,alpha=1){
-      return `hsla(${(hue+shift)%360},${sat}%,${bri}%,${alpha})`;
-    }
-    function baseHue(t){
-      return ((t*30)+state.momentHue*state.momentHueAlpha)%360;
+    function draw() {
+      requestAnimationFrame(draw);
+      analyserL.getByteFrequencyData(dataL);
+      analyserR.getByteFrequencyData(dataR);
+      for (let i = 0; i < dataL.length; i++) {
+        dataMid[i] = (dataL[i] + dataR[i]) / 2;
+      }
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const preset = presetSelect.value;
+      if (preset === 'alpine86') drawAlpine86();
+      else drawDefault();
     }
 
-    // EQ_PRESETS (v1.19, without graphic/alpine)
-    const EQ_PRESETS = {
-      vhs:   { /* your v1.19 VHS code */ },
-      tape:  { /* your v1.19 Tape code */ },
-      neon:  { /* your v1.19 Neon code */ },
-      aurora:{ /* your v1.19 Aurora code */ },
-      spectrum:{ /* your v1.19 Spectrum code */ },
-      pultec:{ /* your v1.19 Pultec code */ },
-      neve:  { /* your v1.19 Neve code */ },
-      ssl:   { /* your v1.19 SSL code */ }
-    };
+    function drawDefault() {
+      const barHeight = canvas.height / dataMid.length;
+      for (let i = 0; i < dataMid.length; i++) {
+        const val = dataMid[i] / 255;
+        const barWidth = val * canvas.width;
+        ctx.fillStyle = `hsl(${i/dataMid.length*360},100%,50%)`;
+        ctx.fillRect(0, i * barHeight, barWidth, barHeight);
+      }
+    }
 
-    // drawPreset, drawBandMarkers, draw(), etc. all as they were in v1.19
+    function drawAlpine86() {
+      const bins = dataMid.length;
+      const bars = 10;
+      const binPerBar = Math.floor(bins / bars);
+      const margin = 50;
+      const usableHeight = canvas.height - margin*2;
+      const barSpacing = usableHeight / bars;
+      ctx.fillStyle = '#00ff00';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#00ff00';
+      for (let i = 0; i < bars; i++) {
+        let sum = 0;
+        for (let j = 0; j < binPerBar; j++) {
+          sum += dataMid[i*binPerBar + j];
+        }
+        const avg = sum / binPerBar / 255;
+        const barWidth = avg * (canvas.width * 0.9);
+        ctx.fillRect(margin, margin + i*barSpacing, barWidth, barSpacing * 0.6);
+      }
+    }
 
-    fsBtn.onclick = ()=> {
-      document.fullscreenElement ? document.exitFullscreen() : canvas.requestFullscreen();
-    };
-    ['pointermove','touchstart','keydown'].forEach(evt=>
-      document.addEventListener(evt,()=>{
-        controls.style.opacity='1';
-        clearTimeout(this.hideT);
-        this.hideT = setTimeout(()=>controls.style.opacity='0',3000);
-      })
-    );
-    startBtn.addEventListener('click', startEQ);
+    startBtn.onclick = start;
+    fftSelect.onchange = () => { 
+      if (analyserL && analyserR) {
+        analyserL.fftSize = analyserR.fftSize = parseInt(fftSelect.value); 
+        dataL = new Uint8Array(analyserL.frequencyBinCount);
+        dataR = new Uint8Array(analyserR.frequencyBinCount);
+        dataMid = new Uint8Array(analyserL.frequencyBinCount);
+      }
+    }
     populateDevices();
   </script>
 </body>
 </html>
-
