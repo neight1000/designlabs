@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Visual EQ v1.14</title>
+  <title>Visual EQ v1.15</title>
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden;
@@ -68,23 +68,23 @@
   <canvas id="vis"></canvas>
 
   <script>
-    const deviceSelect   = document.getElementById('deviceSelect'),
-          startBtn        = document.getElementById('startBtn'),
-          fftSelect       = document.getElementById('fftSelect'),
-          presetSelect    = document.getElementById('presetSelect'),
-          sensSlider      = document.getElementById('sensSlider'),
-          tracerToggle    = document.getElementById('tracerToggle'),
-          crossfadeToggle = document.getElementById('crossfadeToggle'),
-          momentsToggle   = document.getElementById('momentsToggle'),
-          beatThreshold   = document.getElementById('beatThreshold'),
-          beatCooldown    = document.getElementById('beatCooldown'),
-          fsBtn           = document.getElementById('fsBtn'),
-          controls        = document.getElementById('controls'),
-          canvas          = document.getElementById('vis'),
-          ctx             = canvas.getContext('2d');
+    const deviceSelect    = document.getElementById('deviceSelect'),
+          startBtn         = document.getElementById('startBtn'),
+          fftSelect        = document.getElementById('fftSelect'),
+          presetSelect     = document.getElementById('presetSelect'),
+          sensSlider       = document.getElementById('sensSlider'),
+          tracerToggle     = document.getElementById('tracerToggle'),
+          crossfadeToggle  = document.getElementById('crossfadeToggle'),
+          momentsToggle    = document.getElementById('momentsToggle'),
+          beatThreshold    = document.getElementById('beatThreshold'),
+          beatCooldown     = document.getElementById('beatCooldown'),
+          fsBtn            = document.getElementById('fsBtn'),
+          controls         = document.getElementById('controls'),
+          canvas           = document.getElementById('vis'),
+          ctx              = canvas.getContext('2d');
 
     let audioContext, splitter, leftAnalyser, rightAnalyser,
-        dataLeft, dataRight, startTime;
+        dataLeft, dataRight, dataMid, startTime;
     let mainPreset = presetSelect.value;
     let xfadeActive=false, xfadeStart=0, xfadeDur=5, nextXfade=0,
         secondaryPreset=mainPreset;
@@ -109,8 +109,7 @@
       const devs = await navigator.mediaDevices.enumerateDevices();
       devs.filter(d=>d.kind==='audioinput').forEach((d,i)=>{
         const o=document.createElement('option');
-        o.value=d.deviceId;
-        o.textContent=d.label||`Mic ${i+1}`;
+        o.value=d.deviceId; o.textContent=d.label||`Mic ${i+1}`;
         deviceSelect.append(o);
       });
     }
@@ -128,6 +127,7 @@
       leftAnalyser.smoothingTimeConstant = rightAnalyser.smoothingTimeConstant = 0.8;
       dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
       dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+      dataMid = new Uint8Array(leftAnalyser.frequencyBinCount);
       const src = audioContext.createMediaStreamSource(stream);
       src.connect(splitter);
       splitter.connect(leftAnalyser, 0);
@@ -142,13 +142,18 @@
       leftAnalyser.fftSize = rightAnalyser.fftSize = parseInt(fftSelect.value);
       dataLeft = new Uint8Array(leftAnalyser.frequencyBinCount);
       dataRight = new Uint8Array(rightAnalyser.frequencyBinCount);
+      dataMid = new Uint8Array(leftAnalyser.frequencyBinCount);
     });
-    presetSelect.addEventListener('change', ()=>{ mainPreset = presetSelect.value; });
+    presetSelect.addEventListener('change', ()=> mainPreset = presetSelect.value);
 
     function draw(){
       requestAnimationFrame(draw);
       leftAnalyser.getByteFrequencyData(dataLeft);
       rightAnalyser.getByteFrequencyData(dataRight);
+      const binCount = dataLeft.length;
+      for(let i=0;i<binCount;i++){
+        dataMid[i] = (dataLeft[i] + dataRight[i]) * 0.5;
+      }
 
       const t = (performance.now() - startTime)*0.001;
       const hueOffset = (t*5) % 360;
@@ -196,54 +201,52 @@
 
       // band markers
       const freqs=[60,250,1000,4000,16000];
-      const bins=leftAnalyser.frequencyBinCount;
       const nyq=audioContext.sampleRate/2;
-      const slice=canvas.width/bins;
+      const slice=canvas.width/binCount;
       ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=1;
       ctx.font='12px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.2)';
       freqs.forEach(f=>{
-        const b=Math.round(f/nyq*bins), x=b*slice;
+        const b=Math.round(f/nyq*binCount), x=b*slice;
         ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
         ctx.fillText(f+'Hz', x+2,14);
       });
 
-      // draw presets
       drawPreset(mainPreset, w1, hueOffset, t, noiseAmp);
       if(w2>0) drawPreset(secondaryPreset, w2, hueOffset, t, noiseAmp);
     }
 
     function drawPreset(preset, alpha, hueOffset, t, noiseAmp){
-      const sens=parseFloat(sensSlider.value);
-      const bins=leftAnalyser.frequencyBinCount;
-      const slice=canvas.width/bins;
-      const jitter=1+(Math.random()-0.5)*0.1*lfo;
-      ctx.globalAlpha=alpha;
+      const sens = parseFloat(sensSlider.value);
+      const bins  = dataMid.length;
+      const slice = canvas.width/bins;
+      const jitter = 1 + (Math.random()-0.5)*0.1*lfo;
+      ctx.globalAlpha = alpha;
 
-      const midVal=i=>(dataLeft[i]+dataRight[i])/2/255;
-      const sideVal=i=>Math.abs(dataLeft[i]-dataRight[i])/255;
+      const midVal  = i => dataMid[i]/255;
+      const sideVal = i => Math.abs(dataLeft[i]-dataRight[i])/255;
 
       function drawCurve(getVal, color, dash=false){
         ctx.beginPath();
         for(let i=0;i<bins;i++){
-          let f=Math.min(getVal(i)*sens,1);
+          let f = Math.min(getVal(i)*sens,1);
           let x=i*slice, y=canvas.height-f*canvas.height;
-          y+=(noise1D(i*0.05+t*0.3)-0.5)*noiseAmp*canvas.height;
+          y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
           i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
         }
-        ctx.lineWidth=2*jitter;
-        ctx.strokeStyle=color;
+        ctx.lineWidth = 2*jitter;
+        ctx.strokeStyle = color;
         ctx.setLineDash(dash?[4,4]:[]);
         ctx.stroke();
         ctx.setLineDash([]);
       }
 
-      const dynHue=base=>(base+hueOffset+momentHue*momentHueAlpha)%360;
+      const dynHue = base => (base + hueOffset + momentHue*momentHueAlpha)%360;
 
       switch(preset){
         case 'vhs':
           ctx.strokeStyle='rgba(255,255,255,0.1)'; ctx.lineWidth=1;
           for(let y=0;y<canvas.height;y+=4){
-            const off=2*Math.sin(y/50+t*3);
+            const off=2*Math.sin(y/50 + t*3);
             ctx.beginPath(); ctx.moveTo(off,y);
             ctx.lineTo(canvas.width+off,y); ctx.stroke();
           }
@@ -284,7 +287,7 @@
           break;
         case 'spectrum':
           for(let i=0;i<bins;i++){
-            let f=Math.min(midVal(i)*sens,1);
+            let f = Math.min(midVal(i)*sens,1);
             let x=i*slice, h=(i/bins*360)%360, barH=f*canvas.height;
             ctx.fillStyle=`hsl(${h},100%,60%)`;
             ctx.fillRect(x,canvas.height-barH,slice,barH);
@@ -304,7 +307,7 @@
       ctx.globalAlpha=1;
     }
 
-    fsBtn.onclick=()=>{
+    fsBtn.onclick = ()=> {
       document.fullscreenElement
         ? document.exitFullscreen()
         : canvas.requestFullscreen();
@@ -313,7 +316,7 @@
       document.addEventListener(evt,()=>{
         controls.style.opacity='1';
         clearTimeout(this.hideT);
-        this.hideT=setTimeout(()=>controls.style.opacity='0',3000);
+        this.hideT = setTimeout(()=>controls.style.opacity='0',3000);
       })
     );
 
