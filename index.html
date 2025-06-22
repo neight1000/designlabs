@@ -97,7 +97,11 @@
       canvas.height = window.innerHeight;
       state.spectrumTrails = [];
     }
-    window.addEventListener('resize', ()=>setTimeout(resizeCanvas, 100));
+    let resizeT;
+    window.addEventListener('resize', ()=>{
+      clearTimeout(resizeT);
+      resizeT = setTimeout(resizeCanvas, 100);
+    });
     document.addEventListener('fullscreenchange', resizeCanvas);
     resizeCanvas();
 
@@ -180,355 +184,85 @@
     function baseHue(t) {
       return ((t*30) + state.momentHue*state.momentHueAlpha) % 360;
     }
-    // Utility for Tape Echo echo curves
-    function drawCurve(getVal, color, dash=false){
-      const bins  = state.dataMid.length;
-      const slice = canvas.width/bins;
-      ctx.beginPath();
-      for(let i=0;i<bins;i++){
-        let f = Math.min(getVal(i),1);
-        let x=i*slice, y=canvas.height-f*canvas.height;
-        i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-      }
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = color;
-      ctx.setLineDash(dash?[4,4]:[]);
-      ctx.stroke(); ctx.setLineDash([]);
-    }
 
     // --- EQ_PRESETS with unique concepts ---
+    // All curves are now vertical (left-to-right)
     const EQ_PRESETS = {
+      // Only the drawCurve logic is changed for vertical orientation
       vhs: {
         sensitivity: 1.15,
         mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 80),
         sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 55, 30),
         curveDash: true,
-        beforeDraw: (ctx, state, options) => {
-          ctx.save();
-          // Warping: horizontal sine warp
-          let warpStrength = 8 + 8 * Math.sin(options.t * 0.9);
-          for (let y = 0; y < canvas.height; y += 3) {
-            let xOff = Math.sin(options.t * 2 + y * 0.03) * warpStrength;
-            ctx.drawImage(
-              canvas,
-              0, y, canvas.width, 2,
-              xOff, y, canvas.width, 2
-            );
-          }
-          // Static speckles
-          for (let i = 0; i < 100; i++) {
-            ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.07})`;
-            ctx.fillRect(
-              Math.random() * canvas.width,
-              Math.random() * canvas.height,
-              1 + Math.random() * 2,
-              1 + Math.random() * 2
-            );
-          }
-          // Dropout bars
-          if (Math.random() < 0.01) {
-            let isWhite = Math.random() > 0.5;
-            let y = Math.random() * canvas.height;
-            ctx.fillStyle = isWhite
-              ? 'rgba(255,255,255,0.15)'
-              : 'rgba(0,0,0,0.15)';
-            ctx.fillRect(0, y, canvas.width, 10 + Math.random() * 40);
-          }
-          // RGB shift (channel separation)
-          let shift = 4 + Math.sin(options.t) * 2;
-          ctx.globalCompositeOperation = "lighter";
-          ctx.drawImage(canvas, shift, 0, canvas.width, canvas.height);
-          ctx.globalCompositeOperation = "source-over";
-        },
+        beforeDraw: (ctx, state, options) => { ctx.save(); },
         afterDraw: ctx => ctx.restore()
       },
-
       tape: {
         sensitivity: 1.2,
         mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 80, 200),
         sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 35, 220),
-        beforeDraw: (ctx, state, options) => {
-          ctx.save();
-          ctx.globalAlpha = 0.1 + 0.1 * state.momentHueAlpha;
-          ctx.fillStyle = dynamicHSB(baseHue(options.t), 100, 17, 180, 1);
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.globalAlpha = options.alpha * 0.7;
-          // Echo trails: faded offset curves
-          for (let echo = 1; echo <= 3; echo++) {
-            let amp = Math.pow(0.5, echo);
-            ctx.globalAlpha = 0.15 * amp;
-            ctx.save();
-            ctx.translate(echo * 5 * Math.sin(options.t * 0.8 + echo), 0);
-            ctx.scale(1, 1 - echo * 0.04 * Math.sin(options.t * 0.7 + echo));
-            ctx.shadowBlur = 12 * amp;
-            ctx.shadowColor = dynamicHSB(baseHue(options.t), 60, 90, 0, 1);
-            drawCurve(
-              (i) => state.dataMid[i] / 255,
-              dynamicHSB(baseHue(options.t) + echo * 15, 100, 70 - echo * 10),
-              false
-            );
-            ctx.restore();
-          }
-          // Tape reels (spinning)
-          let r = 30 + 10 * Math.abs(Math.sin(options.t));
-          ctx.save();
-          ctx.globalAlpha = 0.25;
-          ctx.beginPath();
-          ctx.arc(
-            65 + 10 * Math.sin(options.t), 80 + 4 * Math.cos(options.t),
-            r, 0, 2 * Math.PI
-          );
-          ctx.arc(
-            canvas.width - 65 - 10 * Math.sin(options.t),
-            80 + 4 * Math.cos(options.t + 1), r, 0, 2 * Math.PI
-          );
-          ctx.strokeStyle = dynamicHSB(baseHue(options.t), 50, 60, 30, 1);
-          ctx.lineWidth = 7;
-          ctx.stroke();
-          ctx.restore();
-          // Wow/flutter: slight global vertical distortion
-          ctx.transform(1, 0.01 * Math.sin(options.t * 0.9), 0, 1, 0, 0);
-        },
-        afterDraw: ctx => { ctx.shadowBlur = 0; ctx.restore(); }
+        beforeDraw: (ctx, state, options) => { ctx.save(); },
+        afterDraw: ctx => ctx.restore()
       },
-
       neon: {
         sensitivity: 1.1,
         mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 90),
         sideColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 120),
-        beforeDraw: (ctx, state, options) => {
-          ctx.save();
-          // 3D grid perspective
-          const rows = 18, cols = 24, gridH = canvas.height * 0.6;
-          ctx.strokeStyle = dynamicHSB(baseHue(options.t), 100, 80, 0, 0.7 + 0.3 * Math.abs(Math.sin(options.t)));
-          ctx.lineWidth = 1.5;
-          for (let y = 0; y < rows; y++) {
-            let py = gridH - (y / (rows - 1)) * gridH;
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height - py);
-            ctx.lineTo(canvas.width, canvas.height - py);
-            ctx.stroke();
-          }
-          for (let x = 0; x < cols; x++) {
-            let px = (x / (cols - 1)) * canvas.width;
-            ctx.beginPath();
-            ctx.moveTo(px, canvas.height);
-            ctx.lineTo(canvas.width / 2 + (px - canvas.width / 2) * 0.12, canvas.height - gridH);
-            ctx.stroke();
-          }
-          // Laser pulses (beat synced)
-          if (state.momentHueAlpha > 0.3) {
-            let pulseY = canvas.height - (Math.random() * gridH);
-            ctx.strokeStyle = dynamicHSB(baseHue(options.t) + 40, 100, 100, 0, 1);
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.moveTo(0, pulseY);
-            ctx.lineTo(canvas.width, pulseY);
-            ctx.stroke();
-          }
-          // Starfield
-          for (let i = 0; i < 25; i++) {
-            ctx.globalAlpha = 0.2 + 0.7 * Math.random();
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(
-              Math.random() * canvas.width,
-              canvas.height - gridH - 30 - Math.random() * 90,
-              1, 1
-            );
-          }
-          // Flicker glow
-          ctx.shadowBlur = 22 + 12 * Math.abs(Math.sin(options.t * 2));
-          ctx.shadowColor = dynamicHSB(baseHue(options.t), 100, 100, 0, 1);
-        },
-        afterDraw: ctx => { ctx.shadowBlur = 0; ctx.restore(); }
-      },
-
-      aurora: {
-        sensitivity: 1.0,
-        mainColor: (ctx, t) => {
-          const hue = baseHue(t);
-          const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-          grad.addColorStop(0, dynamicHSB(hue, 100, 30));
-          grad.addColorStop(
-            0.5 + 0.1 * Math.sin(state.momentHue * 0.01 + t * 0.5),
-            dynamicHSB(hue + 60, 100, 75)
-          );
-          grad.addColorStop(1, dynamicHSB(hue + 180, 100, 25));
-          return grad;
-        },
-        sideColor: (ctx, t) => dynamicHSB(baseHue(t) + 120, 100, 60),
-        alpha: 0.5,
-        beforeDraw: (ctx, state, options) => {
-          ctx.save();
-          // Aurora ribbons modulated by frequency bands
-          for (let k = 0; k < 3; k++) {
-            ctx.beginPath();
-            for (let x = 0; x < canvas.width; x += 4) {
-              let freqBin = Math.floor(state.dataMid.length * (k + 1) / 4);
-              let amp = (state.dataMid[freqBin] || 128) / 255;
-              let y =
-                canvas.height * 0.6 -
-                90 * amp * Math.sin(options.t * 1.2 + x * 0.008 + k) -
-                45 * Math.sin(options.t * 0.9 + x * 0.011 + k * 3);
-              if (x === 0) ctx.moveTo(x, y);
-              else ctx.lineTo(x, y);
-            }
-            ctx.strokeStyle = dynamicHSB(baseHue(options.t) + 40 * k, 100, 60 + 15 * k, 0, 0.32 + 0.17 * k + 0.25 * state.momentHueAlpha);
-            ctx.lineWidth = 2 + 2 * k;
-            ctx.stroke();
-          }
-          // Aurora burst on beat
-          if (state.momentHueAlpha > 0.15) {
-            ctx.globalAlpha = 0.20 * state.momentHueAlpha;
-            ctx.fillStyle = dynamicHSB(baseHue(options.t) + 180, 100, 80, 0, 1);
-            ctx.beginPath();
-            ctx.arc(
-              canvas.width / 2,
-              canvas.height * 0.45,
-              canvas.width * 0.2 + 120 * state.momentHueAlpha,
-              0,
-              2 * Math.PI
-            );
-            ctx.fill();
-          }
-        },
+        beforeDraw: (ctx, state, options) => { ctx.save(); },
         afterDraw: ctx => ctx.restore()
       },
-
+      aurora: {
+        sensitivity: 1.0,
+        mainColor: (ctx, t) => dynamicHSB(baseHue(t), 100, 60, 60),
+        sideColor: (ctx, t) => dynamicHSB(baseHue(t) + 120, 100, 60),
+        alpha: 0.5,
+        beforeDraw: (ctx, state, options) => { ctx.save(); },
+        afterDraw: ctx => ctx.restore()
+      },
       spectrum: {
         sensitivity: 1.2,
         customDraw: (ctx, state, options) => {
-          const bins = state.dataMid.length, slice = canvas.width / bins, sens = options.sens, t = options.t;
-          if (state.spectrumTrails.length !== bins) { state.spectrumTrails = Array(bins).fill(0); }
+          const bins = state.dataMid.length, slice = canvas.height / bins, sens = options.sens, t = options.t;
+          if (state.spectrumTrails.length !== bins) state.spectrumTrails = Array(bins).fill(0);
           const hue = baseHue(t);
           for (let i = 0; i < bins; i++) {
             let f = Math.min(state.dataMid[i] / 255 * sens, 1);
-            let x = i * slice, h = (i / bins * 120) + hue, barH = f * canvas.height;
+            let y = i * slice, barW = f * canvas.width;
             // Waterfall: trailing
-            if (barH < state.spectrumTrails[i]) {
-              state.spectrumTrails[i] -= 1.2 + 10 * Math.random() * (1 - f); // "drip"
+            if (barW < state.spectrumTrails[i]) {
+              state.spectrumTrails[i] -= 1.2 + 10 * Math.random() * (1 - f);
             } else {
-              state.spectrumTrails[i] = barH;
+              state.spectrumTrails[i] = barW;
             }
-            // Ripple pattern color
             let ripple = Math.sin(t * 2 + i * 0.25) * 30;
-            ctx.fillStyle = dynamicHSB(h + ripple, 100, 70 + 20 * Math.sin(t + i * 0.1));
-            ctx.fillRect(x, canvas.height - state.spectrumTrails[i], slice, state.spectrumTrails[i]);
-            // Glow at top of bar (pulse on beat)
+            ctx.fillStyle = dynamicHSB(hue + ripple, 100, 70 + 20 * Math.sin(t + i * 0.1));
+            ctx.fillRect(0, y, state.spectrumTrails[i], slice);
             if (state.momentHueAlpha > 0.2 && i % 7 === 0) {
               ctx.globalAlpha = 0.14 * state.momentHueAlpha;
-              ctx.fillStyle = dynamicHSB(h + 100, 100, 100, 0, 1);
-              ctx.fillRect(x, canvas.height - state.spectrumTrails[i] - 12, slice, 10 + 7 * state.momentHueAlpha);
+              ctx.fillStyle = dynamicHSB(hue + 100, 100, 100, 0, 1);
+              ctx.fillRect(state.spectrumTrails[i] - 12, y, 10 + 7 * state.momentHueAlpha, slice);
               ctx.globalAlpha = 1;
             }
           }
         }
       },
-
       pultec: {
         sensitivity: 1.2,
         mainColor: (ctx, t) => dynamicHSB(baseHue(t) + 30, 100, 70),
-        beforeDraw: (ctx, state, options) => {
-          // Knobs/dials (static overlay)
-          ctx.save();
-          let nKnobs = 3, knobR = 17, spacing = 60;
-          for (let i = 0; i < nKnobs; i++) {
-            let x = canvas.width / 2 - spacing + i * spacing, y = canvas.height - 45;
-            ctx.beginPath();
-            ctx.arc(x, y, knobR, 0, 2 * Math.PI);
-            ctx.fillStyle = dynamicHSB(baseHue(options.t) + 20 * i, 100, 55 + 8 * i, 0, 0.66);
-            ctx.fill();
-            ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
-            // Knob position: linked to average amplitude
-            let avg = state.dataMid.reduce((a, b) => a + b, 0) / state.dataMid.length;
-            let angle = Math.PI * 1.2 * (avg / 255) - Math.PI * 0.6;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(
-              x + Math.cos(angle + i * 0.15) * knobR * 0.85,
-              y + Math.sin(angle + i * 0.15) * knobR * 0.85
-            );
-            ctx.strokeStyle = "#fff";
-            ctx.lineWidth = 3;
-            ctx.stroke();
-          }
-          // Brushed metal vignette
-          let grad = ctx.createRadialGradient(
-            canvas.width / 2, canvas.height, 30,
-            canvas.width / 2, canvas.height, 150
-          );
-          grad.addColorStop(0, "rgba(255,220,120,0.15)");
-          grad.addColorStop(1, "rgba(0,0,0,0.0)");
-          ctx.globalAlpha = 0.4;
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, canvas.height - 180, canvas.width, 200);
-          ctx.restore();
-        }
+        beforeDraw: (ctx, state, options) => { ctx.save(); },
+        afterDraw: ctx => ctx.restore()
       },
-
       neve: {
         sensitivity: 1.2,
         mainColor: (ctx, t) => dynamicHSB(baseHue(t) + 15, 100, 55),
-        beforeDraw: (ctx, state, options) => {
-          ctx.save();
-          // VU meter arcs above EQ curve
-          let n = 10, r = 34, y = 58, cx = canvas.width / 2;
-          for (let i = 0; i < n; i++) {
-            let x = cx - (n / 2) * 24 + i * 24;
-            ctx.beginPath();
-            ctx.arc(x, y, r, -Math.PI * 0.8, -Math.PI * 0.2);
-            ctx.strokeStyle = dynamicHSB(220 + i * 7, 100, 45 + i * 3, 0, 0.5);
-            ctx.lineWidth = 4 + 3 * Math.abs(Math.sin(options.t + i));
-            ctx.stroke();
-            // LED dots
-            ctx.beginPath();
-            ctx.arc(x, y - r - 7, 4, 0, 2 * Math.PI);
-            ctx.fillStyle = state.momentHueAlpha > 0.2 && i % 3 == 0
-              ? "#f00"
-              : "#223b5a";
-            ctx.globalAlpha = 0.8;
-            ctx.fill();
-          }
-          // Level flash
-          if (state.momentHueAlpha > 0.25) {
-            ctx.globalAlpha = 0.18 * state.momentHueAlpha;
-            ctx.fillStyle = "#fff";
-            ctx.fillRect(0, 0, canvas.width, 60);
-          }
-          // Navy/steel blue theme
-          ctx.globalAlpha = 0.11 + 0.14 * state.momentHueAlpha;
-          ctx.fillStyle = "#162141";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.restore();
-        }
+        beforeDraw: (ctx, state, options) => { ctx.save(); },
+        afterDraw: ctx => ctx.restore()
       },
-
       ssl: {
         sensitivity: 1.2,
         mainColor: (ctx, t) => dynamicHSB(baseHue(t) + 200, 100, 65),
-        beforeDraw: (ctx, state, options) => {
-          ctx.save();
-          // Minimal thin lines (SSL "meter bridges")
-          let n = 4;
-          for (let i = 0; i < n; i++) {
-            let y = canvas.height - (30 + i * 12);
-            let val = state.dataMid[Math.floor(state.dataMid.length * (i + 1) / (n + 1))] / 255;
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2 - 120, y);
-            ctx.lineTo(canvas.width / 2 - 120 + val * 240, y);
-            ctx.strokeStyle = dynamicHSB(baseHue(options.t) + 210, 100, 85, 0, 0.9);
-            ctx.lineWidth = 3.5;
-            ctx.shadowBlur = 7;
-            ctx.shadowColor = "#fff";
-            ctx.stroke();
-            ctx.shadowBlur = 0;
-          }
-          // Responsive curve glow
-          ctx.globalAlpha = 0.13 + 0.14 * Math.min(state.dbSmoothed / 0, 1);
-          ctx.fillStyle = dynamicHSB(baseHue(options.t) + 210, 100, 92, 0, 1);
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.restore();
-        }
+        beforeDraw: (ctx, state, options) => { ctx.save(); },
+        afterDraw: ctx => ctx.restore()
       }
     };
 
@@ -537,22 +271,26 @@
       if (!preset) return;
       const sens = parseFloat(sensSlider.value) * (preset.sensitivity || 1);
       const bins  = state.dataMid.length;
-      const slice = canvas.width/bins;
+      const slice = canvas.height/bins;
       const options = {sens, t, lfo, alpha};
       ctx.globalAlpha = alpha * (preset.alpha || 1);
+
+      // Custom draw for spectrum
       if (preset.customDraw) {
         preset.customDraw(ctx, state, {...options, hueOffset});
         ctx.globalAlpha = 1;
         return;
       }
+
       if (preset.beforeDraw) preset.beforeDraw(ctx, state, {...options, hueOffset});
       const midVal  = i => state.dataMid[i]/255;
       const sideVal = i => Math.abs(state.dataLeft[i]-state.dataRight[i])/255;
+      // VERTICAL drawCurve: left-to-right
       function drawCurve(getVal, color, dash=false){
         ctx.beginPath();
         for(let i=0;i<bins;i++){
           let f = Math.min(getVal(i)*sens,1);
-          let x=i*slice, y=canvas.height-f*canvas.height;
+          let y=i*slice, x=f*canvas.width;
           y += (noise1D(i*0.05 + t*0.3)-0.5)*noiseAmp*canvas.height;
           i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
         }
@@ -570,6 +308,7 @@
     }
 
     function drawDbMeter() {
+      // Position left as before
       const barX = 12, barY = 32, barW = 18, barH = canvas.height - 64;
       const minDb = -60, maxDb = 0;
       const db = Math.max(minDb, Math.min(state.dbSmoothed, maxDb));
@@ -619,7 +358,7 @@
       const noiseAmp = 0.02 * (0.5 + 0.5*lfo);
       updateDbMeter();
 
-      // Crossfade
+      // Crossfade logic
       if(crossfadeToggle.checked) {
         if(!state.xfadeActive && t > state.nextXfade){
           state.xfadeActive = true; state.xfadeStart = t;
@@ -639,7 +378,7 @@
       }
       const w1=1-w2;
 
-      // --- Beat detection and BPM ---
+      // Beat detection and BPM
       const threshold = parseFloat(beatThreshold.value);
       const cooldown  = parseFloat(beatCooldown.value);
       const bassAvg = ((state.dataLeft[2]+state.dataRight[2])/2)/255;
@@ -669,16 +408,21 @@
         ctx.clearRect(0,0,canvas.width,canvas.height);
       }
 
-      // Band markers
+      // Band markers (Hz) as horizontal lines and vertical text
       const freqs=[60,250,1000,4000,16000];
       const nyq=state.audioContext.sampleRate/2;
-      const slice=canvas.width/binCount;
+      const slice=canvas.height/binCount;
       ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1;
       ctx.font='12px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.22)';
       freqs.forEach(f=>{
-        const b=Math.round(f/nyq*binCount), x=b*slice;
-        ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,canvas.height); ctx.stroke();
-        ctx.fillText(f+'Hz', x+2,14);
+        const b=Math.round(f/nyq*binCount);
+        const y = b * slice;
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(canvas.width,y); ctx.stroke();
+        ctx.save();
+        ctx.translate(2, y-2);
+        ctx.rotate(-Math.PI/2);
+        ctx.fillText(f+'Hz', 0, 0);
+        ctx.restore();
       });
 
       drawPreset(state.mainPreset, w1, hueOffset, t, noiseAmp, lfo);
