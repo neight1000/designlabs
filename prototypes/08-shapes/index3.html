@@ -194,8 +194,8 @@
             
             <div class="slider-group">
                 <label for="dampingSlider">Damping:</label>
-                <input type="range" id="dampingSlider" class="slider" min="0.85" max="0.99" step="0.01" value="0.98">
-                <span class="slider-value" id="dampingValue">0.98</span>
+                <input type="range" id="dampingSlider" class="slider" min="0.85" max="0.99" step="0.01" value="0.95">
+                <span class="slider-value" id="dampingValue">0.95</span>
             </div>
         </div>
         
@@ -227,21 +227,25 @@
         
         // Physics constants (adjustable via sliders)
         let GRAVITY = 0.3;
-        let DAMPING = 0.98;
-        const BOUNCE = 0.7;
-        const SEPARATION_FORCE = 1.2;
-        const MIN_VELOCITY = 0.05; // Threshold for settling
-        const SETTLING_TIME = 60; // Frames before shape settles
+        let DAMPING = 0.95; // Better default damping
+        const BOUNCE = 0.6; // Reduced bounce
+        const SEPARATION_FORCE = 0.8; // Reduced separation force
+        const MIN_VELOCITY = 0.02; // Lower threshold for settling
+        const MIN_POSITION_CHANGE = 0.1; // Position stability check
+        const SETTLING_TIME = 30; // Reduced frames before shape settles
+        const VELOCITY_THRESHOLD = 0.001; // Very low threshold for final settling
         
         // Slider event listeners
         gravitySlider.addEventListener('input', function() {
             GRAVITY = parseFloat(this.value);
             gravityValue.textContent = GRAVITY.toFixed(1);
-            // Wake up settled shapes if gravity changes significantly
-            if (Math.abs(GRAVITY - 0.3) > 0.2) {
+            // Only wake up shapes if gravity increases significantly
+            if (GRAVITY > 0.5) {
                 shapes.forEach(shape => {
-                    shape.settled = false;
-                    shape.settlingTimer = 0;
+                    if (shape.settled) {
+                        shape.settled = false;
+                        shape.settlingTimer = 0;
+                    }
                 });
                 startAnimation();
             }
@@ -259,6 +263,19 @@
             
             // Recalculate sizes for new canvas dimensions
             recalculateAllSizes();
+            
+            // Force all shapes to wake up and reposition
+            shapes.forEach(shape => {
+                shape.settled = false;
+                shape.settlingTimer = 0;
+                // Keep shapes within new bounds
+                shape.x = Math.max(0, Math.min(shape.x, canvas.width - shape.size));
+                shape.y = Math.max(0, Math.min(shape.y, canvas.height - shape.size));
+            });
+            
+            if (shapes.length > 0) {
+                startAnimation();
+            }
         }
         
         window.addEventListener('resize', resizeCanvas);
@@ -266,60 +283,76 @@
         
         function calculateOptimalSize() {
             if (shapes.length === 0) {
-                // First shape gets significant portion of screen
-                return Math.min(canvas.width, canvas.height) * 0.4;
+                // First shape gets a reasonable portion of screen
+                return Math.min(canvas.width, canvas.height) * 0.25;
             }
             
-            // Calculate total available area
-            const totalArea = canvas.width * canvas.height;
+            // Calculate total available area with padding
+            const availableArea = canvas.width * canvas.height * 0.85; // 85% fill factor
             const targetShapes = shapes.length + 1;
             
-            // Each shape should occupy roughly equal area
-            const areaPerShape = totalArea / targetShapes;
-            
-            // Convert area to diameter (for consistent sizing across shapes)
-            let size = Math.sqrt(areaPerShape * 4 / Math.PI) * 0.9; // 90% fill factor
+            // Base area per shape
+            const baseAreaPerShape = availableArea / targetShapes;
             
             // Apply golden ratio variation for visual interest
-            const phiVariation = Math.sin(clickCount * PHI * 0.1) * 0.15 + 1;
-            size *= phiVariation;
+            const phiIndex = (clickCount - 1) % 8; // Cycle through 8 variations
+            const phiVariation = 0.8 + (Math.sin(phiIndex * PHI * 0.5) * 0.4); // 0.4 to 1.2 range
             
-            // Ensure reasonable bounds
-            const minSize = Math.min(canvas.width, canvas.height) * 0.05;
-            const maxSize = Math.min(canvas.width, canvas.height) * 0.6;
+            const adjustedArea = baseAreaPerShape * phiVariation;
+            
+            // Convert area to size (assuming square base area)
+            let size = Math.sqrt(adjustedArea);
+            
+            // Apply shape-specific adjustments
+            const shapeType = getShapeType(clickCount);
+            switch(shapeType) {
+                case 'triangle': size *= 1.1; break; // Triangles need more space
+                case 'circle': size *= 0.95; break; // Circles pack more efficiently
+                case 'square': size *= 1.0; break; // Base size
+            }
+            
+            // Ensure reasonable bounds based on screen size
+            const minSize = Math.min(canvas.width, canvas.height) * 0.06;
+            const maxSize = Math.min(canvas.width, canvas.height) * 0.4;
             
             return Math.max(minSize, Math.min(size, maxSize));
+        }
+        
+        function getShapeType(clickNum) {
+            const clickMod = clickNum % 3;
+            if (clickMod === 1) return 'square';
+            else if (clickMod === 2) return 'triangle';
+            else return 'circle';
         }
         
         function recalculateAllSizes() {
             if (shapes.length === 0) return;
             
-            const totalArea = canvas.width * canvas.height;
-            const areaPerShape = totalArea / shapes.length;
+            const availableArea = canvas.width * canvas.height * 0.85;
+            const baseAreaPerShape = availableArea / shapes.length;
             
             shapes.forEach((shape, index) => {
+                // Apply golden ratio spiral for size variation
+                const phiVariation = 0.8 + (Math.sin(index * PHI * 0.3) * 0.4);
+                
                 // Shape-specific area adjustments
-                let areaMultiplier = 1;
+                let areaMultiplier = 1.0;
                 switch(shape.type) {
-                    case 'square': areaMultiplier = 1.0; break;
                     case 'triangle': areaMultiplier = 1.1; break;
-                    case 'circle': areaMultiplier = 0.9; break;
+                    case 'circle': areaMultiplier = 0.95; break;
+                    case 'square': areaMultiplier = 1.0; break;
                 }
                 
-                // Apply golden ratio spiral
-                const phiVariation = Math.sin(index * PHI) * 0.1 + 1;
-                const adjustedArea = areaPerShape * areaMultiplier * phiVariation;
-                
-                // Convert to size
-                let newSize = Math.sqrt(adjustedArea * 4 / Math.PI) * 0.9;
+                const adjustedArea = baseAreaPerShape * phiVariation * areaMultiplier;
+                let newSize = Math.sqrt(adjustedArea);
                 
                 // Bounds checking
-                const minSize = Math.min(canvas.width, canvas.height) * 0.05;
-                const maxSize = Math.min(canvas.width, canvas.height) * 0.6;
+                const minSize = Math.min(canvas.width, canvas.height) * 0.06;
+                const maxSize = Math.min(canvas.width, canvas.height) * 0.4;
                 newSize = Math.max(minSize, Math.min(newSize, maxSize));
                 
                 shape.targetSize = newSize;
-                shape.mass = newSize * 0.01; // Proportional mass
+                shape.mass = newSize * 0.008; // Reduced mass for more stable physics
             });
         }
         
@@ -332,11 +365,14 @@
                 size: size,
                 targetSize: size,
                 type: type,
-                vx: (Math.random() - 0.5) * 3,
-                vy: Math.random() * -4 - 2,
-                mass: size * 0.01,
+                vx: (Math.random() - 0.5) * 2, // Reduced initial velocity
+                vy: Math.random() * -3 - 1, // Reduced initial velocity
+                mass: size * 0.008,
                 settled: false,
-                settlingTimer: 0
+                settlingTimer: 0,
+                lastX: x - size/2,
+                lastY: y - size/2,
+                positionStableCount: 0
             };
         }
         
@@ -344,32 +380,38 @@
             let anyMoving = false;
             
             shapes.forEach((shape, i) => {
-                // Animate size changes
+                // Animate size changes smoothly
                 if (Math.abs(shape.size - shape.targetSize) > 0.5) {
-                    shape.size += (shape.targetSize - shape.size) * 0.08;
-                    shape.mass = shape.size * 0.01;
+                    shape.size += (shape.targetSize - shape.size) * 0.05; // Slower size changes
+                    shape.mass = shape.size * 0.008;
                     anyMoving = true;
                 }
                 
                 if (!shape.settled) {
+                    const oldX = shape.x;
+                    const oldY = shape.y;
+                    
                     // Apply gravity
                     shape.vy += GRAVITY;
                     
-                    // Shape separation (anti-overlap)
+                    // Shape separation (anti-overlap) with improved collision detection
                     shapes.forEach((other, j) => {
                         if (i !== j) {
                             const dx = (shape.x + shape.size/2) - (other.x + other.size/2);
                             const dy = (shape.y + shape.size/2) - (other.y + other.size/2);
                             const distance = Math.sqrt(dx*dx + dy*dy);
-                            const minDistance = (shape.size + other.size) / 2 + 2;
+                            const minDistance = (shape.size + other.size) / 2 + 3; // Small buffer
                             
-                            if (distance < minDistance && distance > 0) {
+                            if (distance < minDistance && distance > 0.1) {
                                 const overlap = minDistance - distance;
-                                const force = overlap * SEPARATION_FORCE;
+                                const force = overlap * SEPARATION_FORCE * 0.5; // Gentler separation
                                 const forceX = (dx / distance) * force;
                                 const forceY = (dy / distance) * force;
                                 
-                                const massRatio = other.mass / (shape.mass + other.mass);
+                                // Mass-based force distribution
+                                const totalMass = shape.mass + other.mass;
+                                const massRatio = other.mass / totalMass;
+                                
                                 shape.vx += forceX * massRatio;
                                 shape.vy += forceY * massRatio;
                             }
@@ -380,7 +422,7 @@
                     shape.x += shape.vx;
                     shape.y += shape.vy;
                     
-                    // Boundary collisions
+                    // Boundary collisions with improved bounce handling
                     let collided = false;
                     
                     if (shape.x < 0) {
@@ -411,23 +453,28 @@
                     shape.vx *= DAMPING;
                     shape.vy *= DAMPING;
                     
-                    // Check for settling
+                    // Improved settling detection
                     const totalVelocity = Math.sqrt(shape.vx * shape.vx + shape.vy * shape.vy);
+                    const positionChange = Math.sqrt((shape.x - oldX) ** 2 + (shape.y - oldY) ** 2);
                     
-                    if (totalVelocity < MIN_VELOCITY) {
+                    // Check for both velocity and position stability
+                    if (totalVelocity < MIN_VELOCITY && positionChange < MIN_POSITION_CHANGE) {
                         shape.settlingTimer++;
                         if (shape.settlingTimer > SETTLING_TIME) {
-                            shape.settled = true;
-                            shape.vx = 0;
-                            shape.vy = 0;
-                            shape.settlingTimer = 0;
+                            // Final check - if velocity is extremely low, settle completely
+                            if (totalVelocity < VELOCITY_THRESHOLD) {
+                                shape.settled = true;
+                                shape.vx = 0;
+                                shape.vy = 0;
+                                shape.settlingTimer = 0;
+                            }
                         }
                     } else {
-                        shape.settlingTimer = 0;
+                        shape.settlingTimer = Math.max(0, shape.settlingTimer - 2); // Decay settling timer
                         anyMoving = true;
                     }
                     
-                    if (totalVelocity > MIN_VELOCITY) {
+                    if (totalVelocity > VELOCITY_THRESHOLD) {
                         anyMoving = true;
                     }
                 }
@@ -440,7 +487,7 @@
             const { x, y, size, type, settled } = shape;
             
             // Slight visual difference for settled shapes
-            const alpha = settled ? 0.9 : 1.0;
+            const alpha = settled ? 0.95 : 1.0;
             
             switch (type) {
                 case 'square':
@@ -512,22 +559,18 @@
             clickCounter.textContent = `Clicks: ${clickCount}`;
             
             // Determine shape type
-            let shapeType;
-            const clickMod = clickCount % 3;
-            if (clickMod === 1) shapeType = 'square';
-            else if (clickMod === 2) shapeType = 'triangle';
-            else shapeType = 'circle';
+            const shapeType = getShapeType(clickCount);
             
             // Create new shape
             const newShape = createShape(clickX, clickY, shapeType);
             shapes.push(newShape);
             
-            // Recalculate all sizes to fill 100% of space
+            // Recalculate all sizes to maintain proper space filling
             recalculateAllSizes();
             
-            // Disturb nearby shapes
-            const disturbanceRadius = 120;
-            const disturbanceForce = 0.8;
+            // Gentle disturbance to nearby shapes
+            const disturbanceRadius = 100;
+            const disturbanceForce = 0.4; // Reduced disturbance
             
             shapes.forEach((shape, index) => {
                 if (index < shapes.length - 1) { // Don't disturb the new shape
@@ -539,8 +582,8 @@
                         const force = (disturbanceRadius - distance) / disturbanceRadius * disturbanceForce;
                         const angle = Math.atan2(dy, dx);
                         
-                        shape.vx += Math.cos(angle) * force * 5;
-                        shape.vy += Math.sin(angle) * force * 5;
+                        shape.vx += Math.cos(angle) * force * 3;
+                        shape.vy += Math.sin(angle) * force * 3;
                         shape.settled = false;
                         shape.settlingTimer = 0;
                     }
@@ -564,7 +607,7 @@
         
         function saveImage() {
             const link = document.createElement('a');
-            link.download = 'bauhaus-gravity-filled.png';
+            link.download = 'bauhaus-gravity-stable.png';
             link.href = canvas.toDataURL();
             link.click();
         }
