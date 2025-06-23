@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bauhaus Gravity Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            color: #000000;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #000000;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 2px;
+            font-size: 18px;
+            text-transform: uppercase;
+        }
+
+        .controls {
+            background: #f5f5f5;
+            padding: 15px 20px;
+            border-bottom: 1px solid #000000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .click-counter {
+            font-size: 14px;
+            font-weight: bold;
+            padding: 8px 12px;
+            border: 1px solid #000000;
+            background: #ffffff;
+            min-width: 120px;
+            text-align: center;
+        }
+
+        .btn {
+            background: #000000;
+            color: #ffffff;
+            border: none;
+            padding: 8px 16px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #333333;
+        }
+
+        .legend {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        #canvas {
+            flex: 1;
+            display: block;
+            cursor: crosshair;
+            background: #ffffff;
+            border: none;
+        }
+
+        .footer {
+            background: #000000;
+            color: #ffffff;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .shape-preview {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #000000;
+            display: inline-block;
+            margin-left: 5px;
+        }
+
+        .shape-preview.square {
+            background: #000000;
+        }
+
+        .shape-preview.triangle {
+            background: linear-gradient(45deg, #000000 50%, transparent 50%);
+        }
+
+        .shape-preview.circle {
+            border-radius: 50%;
+            background: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        Bauhaus Gravity Generator
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <div class="click-counter" id="clickCounter">Clicks: 0</div>
+            <div class="legend">
+                1 Click: Square <div class="shape-preview square"></div>
+                2 Clicks: Triangle <div class="shape-preview triangle"></div>
+                3 Clicks: Circle <div class="shape-preview circle"></div>
+            </div>
+        </div>
+        <div class="control-group">
+            <button class="btn" onclick="clearCanvas()">Clear</button>
+            <button class="btn" onclick="saveImage()">Save</button>
+        </div>
+    </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <div class="footer">
+        Physics-Based Gravity | Golden Ratio: φ = 1.618...
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const clickCounter = document.getElementById('clickCounter');
+        
+        let clickCount = 0;
+        let shapes = [];
+        let animationId = null;
+        const PHI = 1.618033988749895;
+        
+        // Physics constants
+        const GRAVITY = 0.3;
+        const FRICTION = 0.98;
+        const BOUNCE = 0.6;
+        const SEPARATION_FORCE = 0.8;
+        const MIN_SIZE = 20;
+        const MAX_SIZE_RATIO = 0.25;
+        
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - rect.top - 40;
+            
+            // Adjust existing shapes to new canvas size
+            shapes.forEach(shape => {
+                if (shape.x + shape.size > canvas.width) {
+                    shape.x = Math.max(0, canvas.width - shape.size);
+                }
+                if (shape.y + shape.size > canvas.height) {
+                    shape.y = Math.max(0, canvas.height - shape.size);
+                }
+            });
+            
+            recalculateAllSizes();
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        function calculateOptimalSize() {
+            if (shapes.length === 0) {
+                return Math.min(canvas.width, canvas.height) * 0.3;
+            }
+            
+            // Calculate total canvas area
+            const totalArea = canvas.width * canvas.height;
+            
+            // Calculate area per shape to fill canvas efficiently
+            const targetShapes = shapes.length + 1;
+            const areaPerShape = totalArea / targetShapes;
+            
+            // Convert area to size (assuming square for calculation)
+            let size = Math.sqrt(areaPerShape) * 0.8; // 80% fill factor for spacing
+            
+            // Apply golden ratio variation
+            const variation = Math.sin(clickCount * 0.1) * 0.3 + 1;
+            size *= variation;
+            
+            // Constrain to reasonable bounds
+            const maxSize = Math.min(canvas.width, canvas.height) * MAX_SIZE_RATIO;
+            return Math.max(MIN_SIZE, Math.min(size, maxSize));
+        }
+        
+        function recalculateAllSizes() {
+            if (shapes.length === 0) return;
+            
+            const totalArea = canvas.width * canvas.height;
+            const areaPerShape = totalArea / shapes.length;
+            
+            shapes.forEach((shape, index) => {
+                // Add variation based on shape index and type
+                let variation = 1;
+                switch(shape.type) {
+                    case 'square': variation = 1.0; break;
+                    case 'triangle': variation = 1.1; break;
+                    case 'circle': variation = 0.9; break;
+                }
+                
+                // Apply golden ratio
+                const phiVariation = Math.sin(index * PHI) * 0.2 + 1;
+                let newSize = Math.sqrt(areaPerShape * 0.8) * variation * phiVariation;
+                
+                // Smooth size transition
+                const maxSize = Math.min(canvas.width, canvas.height) * MAX_SIZE_RATIO;
+                newSize = Math.max(MIN_SIZE, Math.min(newSize, maxSize));
+                
+                // Animate size change
+                shape.targetSize = newSize;
+            });
+        }
+        
+        function createShape(x, y, type) {
+            const size = calculateOptimalSize();
+            
+            return {
+                x: x - size/2,
+                y: y - size/2,
+                size: size,
+                targetSize: size,
+                type: type,
+                vx: (Math.random() - 0.5) * 2,
+                vy: Math.random() * -3 - 2, // Initial upward velocity
+                mass: size * size * 0.0001,
+                settled: false
+            };
+        }
+        
+        function updatePhysics() {
+            shapes.forEach((shape, i) => {
+                // Size animation
+                if (Math.abs(shape.size - shape.targetSize) > 0.5) {
+                    shape.size += (shape.targetSize - shape.size) * 0.1;
+                    shape.mass = shape.size * shape.size * 0.0001;
+                }
+                
+                // Apply gravity
+                shape.vy += GRAVITY;
+                
+                // Separation force between shapes
+                shapes.forEach((other, j) => {
+                    if (i !== j) {
+                        const dx = (shape.x + shape.size/2) - (other.x + other.size/2);
+                        const dy = (shape.y + shape.size/2) - (other.y + other.size/2);
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        const minDistance = (shape.size + other.size) / 2 + 5;
+                        
+                        if (distance < minDistance && distance > 0) {
+                            const force = (minDistance - distance) * SEPARATION_FORCE;
+                            const forceX = (dx / distance) * force;
+                            const forceY = (dy / distance) * force;
+                            
+                            shape.vx += forceX * (1 / shape.mass);
+                            shape.vy += forceY * (1 / shape.mass);
+                        }
+                    }
+                });
+                
+                // Update position
+                shape.x += shape.vx;
+                shape.y += shape.vy;
+                
+                // Boundary collisions with perfect fitting
+                let collided = false;
+                
+                // Left boundary
+                if (shape.x < 0) {
+                    shape.x = 0;
+                    shape.vx *= -BOUNCE;
+                    collided = true;
+                }
+                
+                // Right boundary
+                if (shape.x + shape.size > canvas.width) {
+                    shape.x = canvas.width - shape.size;
+                    shape.vx *= -BOUNCE;
+                    collided = true;
+                }
+                
+                // Top boundary
+                if (shape.y < 0) {
+                    shape.y = 0;
+                    shape.vy *= -BOUNCE;
+                    collided = true;
+                }
+                
+                // Bottom boundary - perfect fit
+                if (shape.y + shape.size >= canvas.height) {
+                    shape.y = canvas.height - shape.size;
+                    shape.vy *= -BOUNCE;
+                    shape.settled = Math.abs(shape.vy) < 0.5;
+                    collided = true;
+                }
+                
+                // Apply friction
+                shape.vx *= FRICTION;
+                shape.vy *= FRICTION;
+                
+                // Check if shape has settled
+                if (Math.abs(shape.vx) < 0.1 && Math.abs(shape.vy) < 0.1 && collided) {
+                    shape.settled = true;
+                    shape.vx = 0;
+                    shape.vy = 0;
+                }
+            });
+        }
+        
+        function drawShape(shape) {
+            const { x, y, size, type } = shape;
+            
+            switch (type) {
+                case 'square':
+                    ctx.fillStyle = '#000000';
+                    ctx.fillRect(x, y, size, size);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x + 1, y + 1, size - 2, size - 2);
+                    break;
+                    
+                case 'triangle':
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.moveTo(x + size/2, y);
+                    ctx.lineTo(x, y + size);
+                    ctx.lineTo(x + size, y + size);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    break;
+                    
+                case 'circle':
+                    const radius = size / 2;
+                    const centerX = x + radius;
+                    const centerY = y + radius;
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                    break;
+            }
+        }
+        
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            updatePhysics();
+            
+            shapes.forEach(drawShape);
+            
+            // Continue animation if any shape is still moving
+            const isMoving = shapes.some(shape => 
+                Math.abs(shape.vx) > 0.01 || 
+                Math.abs(shape.vy) > 0.01 || 
+                Math.abs(shape.size - shape.targetSize) > 0.5
+            );
+            
+            if (isMoving) {
+                animationId = requestAnimationFrame(animate);
+            } else {
+                animationId = null;
+            }
+        }
+        
+        function startAnimation() {
+            if (!animationId) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+        
+        canvas.addEventListener('click', function(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const clickY = e.clientY - rect.top;
+            
+            clickCount++;
+            clickCounter.textContent = `Clicks: ${clickCount}`;
+            
+            // Determine shape type
+            let shapeType;
+            const clickMod = clickCount % 3;
+            if (clickMod === 1) shapeType = 'square';
+            else if (clickMod === 2) shapeType = 'triangle';
+            else shapeType = 'circle';
+            
+            // Create new shape at click position
+            const newShape = createShape(clickX, clickY, shapeType);
+            shapes.push(newShape);
+            
+            // Recalculate all sizes to accommodate new shape
+            recalculateAllSizes();
+            
+            // Apply disturbance to existing shapes
+            shapes.forEach((shape, index) => {
+                if (index < shapes.length - 1) { // Don't disturb the new shape
+                    const dx = shape.x - clickX;
+                    const dy = shape.y - clickY;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (distance < 150) {
+                        const force = (150 - distance) * 0.02;
+                        shape.vx += (dx / distance) * force;
+                        shape.vy += (dy / distance) * force;
+                        shape.settled = false;
+                    }
+                }
+            });
+            
+            startAnimation();
+        });
+        
+        function clearCanvas() {
+            shapes = [];
+            clickCount = 0;
+            clickCounter.textContent = 'Clicks: 0';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+        
+        function saveImage() {
+            const link = document.createElement('a');
+            link.download = 'bauhaus-gravity.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // Initial draw
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    </script>
+</body>
+</html>
