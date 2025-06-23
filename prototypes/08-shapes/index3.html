@@ -18,8 +18,6 @@ body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color
 .toggle-switch { display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; user-select: none;}
 .toggle-switch input[type="checkbox"] { width: 36px; height: 18px; appearance: none; background: #ccc; border-radius: 9px; cursor: pointer;}
 .toggle-switch input[type="checkbox"]:checked { background: #457b9d;}
-.toggle-switch input[type="checkbox"]::before { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: transform 0.2s;}
-.toggle-switch input[type="checkbox"]:checked::before { transform: translateX(18px);}
 #canvas { flex: 1; display: block; cursor: crosshair; background: #fff; border: none;}
 .footer { background: #000; color: #fff; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;}
 </style>
@@ -48,6 +46,10 @@ body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color
             <label for="colorToggle">Color Cycle</label>
             <input type="checkbox" id="colorToggle"/>
         </div>
+        <div class="toggle-switch">
+            <label for="confettiToggle">Confetti Pops</label>
+            <input type="checkbox" id="confettiToggle" checked/>
+        </div>
     </div>
     <div>
         <button class="btn" onclick="clearCanvas()">Clear</button>
@@ -67,9 +69,12 @@ const gravityValue = document.getElementById('gravityValue');
 const dampingSlider = document.getElementById('dampingSlider');
 const dampingValue = document.getElementById('dampingValue');
 const colorToggle = document.getElementById('colorToggle');
+const confettiToggle = document.getElementById('confettiToggle');
+let confettiEnabled = confettiToggle.checked;
 
 let clickCount = 0;
 let shapes = [];
+let confettiParticles = [];
 let animationId = null;
 
 // Bauhaus palette: black, red, blue, yellow
@@ -92,12 +97,13 @@ colorToggle.addEventListener('change', function () {
         shape.color = colorCycling ? BAUHAUS_COLORS[i % BAUHAUS_COLORS.length] : "#000";
     });
 });
-
+confettiToggle.addEventListener('change', function () {
+    confettiEnabled = confettiToggle.checked;
+});
 function getShapeType(clickNum) {
     const clickMod = clickNum % 3;
     return clickMod === 1 ? "square" : clickMod === 2 ? "triangle" : "circle";
 }
-
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - canvas.getBoundingClientRect().top - 40;
@@ -139,7 +145,7 @@ function createShape(x, y, type, color) {
         type: type,
         color: color,
         rotation: (type !== "circle") ? (Math.random() - 0.5) * 0.2 : 0,
-        rotationSpeed: (type !== "circle") ? (Math.random() - 0.5) * 0.03 : 0,
+        rotationSpeed: (type !== "circle") ? (Math.random() - 0.5) * 0.04 : 0,
         mass: size * 0.007,
         settled: false
     };
@@ -177,7 +183,52 @@ function drawShape(shape) {
     ctx.restore();
 }
 
-// Collision resolution with minimum separation margin
+// Confetti code
+function spawnConfetti(x, y, color) {
+    if (!confettiEnabled) return;
+    const N = 36;
+    for (let i = 0; i < N; i++) {
+        let angle = Math.random() * 2 * Math.PI;
+        let speed = 3 + Math.random() * 4;
+        let size = 5 + Math.random() * 8;
+        let c = colorCycling ? BAUHAUS_COLORS[Math.floor(Math.random() * BAUHAUS_COLORS.length)] : color;
+        confettiParticles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: size,
+            color: c,
+            life: 36 + Math.random() * 22,
+            alpha: 1.0,
+            gravity: 0.21 + Math.random() * 0.08
+        });
+    }
+}
+function updateConfetti() {
+    for (let i = confettiParticles.length - 1; i >= 0; i--) {
+        let p = confettiParticles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += p.gravity;
+        p.life--;
+        p.alpha *= 0.97;
+        if (p.life <= 0) confettiParticles.splice(i, 1);
+    }
+}
+function drawConfetti() {
+    for (let p of confettiParticles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// Collision resolution with strict bounce and spin interaction
 function resolveCollisions() {
     const separationMargin = 0.08;
     for (let i = 0; i < shapes.length; i++) {
@@ -200,18 +251,25 @@ function resolveCollisions() {
                 s.y += ny * pushS;
                 o.x -= nx * pushO;
                 o.y -= ny * pushO;
-                // Exchange velocities (elastic, but damped)
-                let tx = -ny, ty = nx;
-                let dpTan1 = s.vx * tx + s.vy * ty;
-                let dpTan2 = o.vx * tx + o.vy * ty;
-                let dpNorm1 = s.vx * nx + s.vy * ny;
-                let dpNorm2 = o.vx * nx + o.vy * ny;
-                let m1 = (dpNorm1 * (s.mass - o.mass) + 2 * o.mass * dpNorm2) / totalMass;
-                let m2 = (dpNorm2 * (o.mass - s.mass) + 2 * s.mass * dpNorm1) / totalMass;
-                s.vx = tx * dpTan1 + nx * m1 * 0.92;
-                s.vy = ty * dpTan1 + ny * m1 * 0.92;
-                o.vx = tx * dpTan2 + nx * m2 * 0.92;
-                o.vy = ty * dpTan2 + ny * m2 * 0.92;
+
+                // Bounce: calculate relative velocity along normal
+                let rvx = s.vx - o.vx;
+                let rvy = s.vy - o.vy;
+                let vRel = rvx * nx + rvy * ny;
+                if (vRel < 0) {
+                    let restitution = 0.92;
+                    let impulse = -(1 + restitution) * vRel / (1/s.mass + 1/o.mass);
+                    let impulseX = impulse * nx;
+                    let impulseY = impulse * ny;
+                    s.vx += impulseX / s.mass;
+                    s.vy += impulseY / s.mass;
+                    o.vx -= impulseX / o.mass;
+                    o.vy -= impulseY / o.mass;
+
+                    // If either shape is spinning, transfer some spin to the other as a bounce (not true torque math, but gives fun effect)
+                    if (s.type !== "circle") o.rotationSpeed += s.rotationSpeed * 0.3 * Math.sign(Math.random()-0.5);
+                    if (o.type !== "circle") s.rotationSpeed += o.rotationSpeed * 0.3 * Math.sign(Math.random()-0.5);
+                }
             }
         }
     }
@@ -254,13 +312,15 @@ function updatePhysics() {
         }
     }
     resolveCollisions();
-    return anyMoving;
+    updateConfetti();
+    return anyMoving || confettiParticles.length > 0;
 }
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     let moving = updatePhysics();
     for (let s of shapes) drawShape(s);
+    drawConfetti();
     if (moving) animationId = requestAnimationFrame(animate);
     else animationId = null;
 }
@@ -271,6 +331,7 @@ function startAnimation() {
 
 function clearCanvas() {
     shapes = [];
+    confettiParticles = [];
     clickCount = 0;
     clickCounter.textContent = 'Clicks: 0';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -303,6 +364,7 @@ canvas.addEventListener('click', function (e) {
         const cy = s.y + s.size/2;
         const r = s.size/2;
         if (Math.hypot(mx - cx, my - cy) < r) {
+            spawnConfetti(cx, cy, s.color);
             shapes.splice(i, 1);
             rescaleShapes();
             shapes.forEach(shape => {
