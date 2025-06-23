@@ -58,7 +58,7 @@ body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color
 </div>
 <canvas id="canvas"></canvas>
 <div class="footer">
-    No Overlap &middot; Bauhaus Colors Only (Black, Red, Blue, Yellow)
+    STRICT: No Overlap &middot; Bauhaus Colors Only (Black, Red, Blue, Yellow)
 </div>
 <script>
 const canvas = document.getElementById('canvas');
@@ -129,6 +129,7 @@ function calculateOptimalShapeSize() {
     let sizeX = W / cols;
     let sizeY = H / rows;
     let size = Math.min(sizeX, sizeY) * 0.88;
+    // If there are overlaps, shrink size a bit
     return Math.max(30, size);
 }
 
@@ -137,6 +138,8 @@ function rescaleShapes() {
     for (let s of shapes) {
         s.targetSize = newSize;
     }
+    // After resize, also run strict separation a few times to ensure no overlap
+    for (let k = 0; k < 15; k++) strictSeparateAll();
 }
 
 function createShape(x, y, type, color) {
@@ -235,58 +238,74 @@ function drawConfetti() {
     }
 }
 
-// Robust, strict separation and bounce, even with spinning
-function resolveCollisions() {
+// Super strict, repeated separation for NO OVERLAP
+function strictSeparateAll() {
     const separationMargin = 0.08;
-    let maxIter = 8; // At most 8 relaxation passes per frame for strict separation
-    for (let iter = 0; iter < maxIter; iter++) {
-        let anyOverlap = false;
-        for (let i = 0; i < shapes.length; i++) {
-            let s = shapes[i];
-            for (let j = i + 1; j < shapes.length; j++) {
-                let o = shapes[j];
-                let dx = (s.x + s.size/2) - (o.x + o.size/2);
-                let dy = (s.y + s.size/2) - (o.y + o.size/2);
-                let dist = Math.sqrt(dx * dx + dy * dy);
-                let minDist = (s.size + o.size) / 2 * (1 + separationMargin);
-                if (dist < minDist && dist > 0) {
-                    anyOverlap = true;
-                    // Minimum translation vector to separate
-                    let overlap = minDist - dist;
-                    let nx = dx / dist;
-                    let ny = dy / dist;
-                    let totalMass = s.mass + o.mass;
-                    let pushS = (overlap * (o.mass / totalMass));
-                    let pushO = (overlap * (s.mass / totalMass));
-                    s.x += nx * pushS;
-                    s.y += ny * pushS;
-                    o.x -= nx * pushO;
-                    o.y -= ny * pushO;
+    let again = false;
+    for (let i = 0; i < shapes.length; i++) {
+        let s = shapes[i];
+        for (let j = i + 1; j < shapes.length; j++) {
+            let o = shapes[j];
+            let dx = (s.x + s.size/2) - (o.x + o.size/2);
+            let dy = (s.y + s.size/2) - (o.y + o.size/2);
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let minDist = (s.size + o.size) / 2 * (1 + separationMargin);
+            if (dist < minDist && dist > 0) {
+                again = true;
+                // Minimum translation vector to separate
+                let overlap = minDist - dist;
+                let nx = dx / dist;
+                let ny = dy / dist;
+                let totalMass = s.mass + o.mass;
+                let pushS = (overlap * (o.mass / totalMass));
+                let pushO = (overlap * (s.mass / totalMass));
+                s.x += nx * pushS;
+                s.y += ny * pushS;
+                o.x -= nx * pushO;
+                o.y -= ny * pushO;
+            }
+        }
+    }
+    return again;
+}
 
-                    // Bounce: calculate relative velocity along normal
-                    let rvx = s.vx - o.vx;
-                    let rvy = s.vy - o.vy;
-                    let vRel = rvx * nx + rvy * ny;
-                    if (vRel < 0) {
-                        let restitution = 0.92;
-                        let impulse = -(1 + restitution) * vRel / (1/s.mass + 1/o.mass);
-                        let impulseX = impulse * nx;
-                        let impulseY = impulse * ny;
-                        s.vx += impulseX / s.mass;
-                        s.vy += impulseY / s.mass;
-                        o.vx -= impulseX / o.mass;
-                        o.vy -= impulseY / o.mass;
+function resolveCollisions() {
+    // Do bounce physics and some overlap separation, but strictSeparateAll() handles true non-overlap
+    const separationMargin = 0.08;
+    for (let i = 0; i < shapes.length; i++) {
+        let s = shapes[i];
+        for (let j = i + 1; j < shapes.length; j++) {
+            let o = shapes[j];
+            let dx = (s.x + s.size/2) - (o.x + o.size/2);
+            let dy = (s.y + s.size/2) - (o.y + o.size/2);
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let minDist = (s.size + o.size) / 2 * (1 + separationMargin);
+            if (dist < minDist && dist > 0) {
+                // Bounce: calculate relative velocity along normal
+                let nx = dx / dist;
+                let ny = dy / dist;
+                let rvx = s.vx - o.vx;
+                let rvy = s.vy - o.vy;
+                let vRel = rvx * nx + rvy * ny;
+                if (vRel < 0) {
+                    let restitution = 0.92;
+                    let impulse = -(1 + restitution) * vRel / (1/s.mass + 1/o.mass);
+                    let impulseX = impulse * nx;
+                    let impulseY = impulse * ny;
+                    s.vx += impulseX / s.mass;
+                    s.vy += impulseY / s.mass;
+                    o.vx -= impulseX / o.mass;
+                    o.vy -= impulseY / o.mass;
 
-                        // Spin transfer
-                        if (s.type !== "circle") o.rotationSpeed += s.rotationSpeed * 0.3 * Math.sign(Math.random()-0.5);
-                        if (o.type !== "circle") s.rotationSpeed += o.rotationSpeed * 0.3 * Math.sign(Math.random()-0.5);
-                    }
+                    // Spin transfer
+                    if (s.type !== "circle") o.rotationSpeed += s.rotationSpeed * 0.3 * Math.sign(Math.random()-0.5);
+                    if (o.type !== "circle") s.rotationSpeed += o.rotationSpeed * 0.3 * Math.sign(Math.random()-0.5);
                 }
             }
         }
-        // Early exit if all separations are done
-        if (!anyOverlap) break;
     }
+    // Now enforce strict non-overlap (run several passes)
+    for (let k = 0; k < 6; k++) strictSeparateAll();
 }
 
 function updatePhysics() {
