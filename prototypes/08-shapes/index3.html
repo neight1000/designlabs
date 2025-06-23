@@ -46,10 +46,6 @@ body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color
             <label for="colorToggle">Color Cycle</label>
             <input type="checkbox" id="colorToggle"/>
         </div>
-        <div class="toggle-switch">
-            <label for="confettiToggle">Confetti Pops</label>
-            <input type="checkbox" id="confettiToggle" checked/>
-        </div>
     </div>
     <div>
         <button class="btn" onclick="clearCanvas()">Clear</button>
@@ -69,12 +65,9 @@ const gravityValue = document.getElementById('gravityValue');
 const dampingSlider = document.getElementById('dampingSlider');
 const dampingValue = document.getElementById('dampingValue');
 const colorToggle = document.getElementById('colorToggle');
-const confettiToggle = document.getElementById('confettiToggle');
-let confettiEnabled = confettiToggle.checked;
 
 let clickCount = 0;
 let shapes = [];
-let confettiParticles = [];
 let animationId = null;
 const BAUHAUS_COLORS = ['#000', '#e63946', '#457b9d', '#ffd60a'];
 let colorCycling = false;
@@ -86,7 +79,7 @@ const SPIN_DAMPING = 0.98;
 const MIN_ROTATION_SPEED = 0.001;
 const GRAVITY_FADE = 0.99;
 
-// Permanent red ball
+// Permanent red ball (acts as a shape)
 const redBall = {
     x: 80,
     y: 80,
@@ -115,9 +108,6 @@ colorToggle.addEventListener('change', function () {
         shape.color = colorCycling ? BAUHAUS_COLORS[i % BAUHAUS_COLORS.length] : "#000";
     });
 });
-confettiToggle.addEventListener('change', function () {
-    confettiEnabled = confettiToggle.checked;
-});
 function getShapeType(clickNum) {
     const clickMod = clickNum % 3;
     return clickMod === 1 ? "square" : clickMod === 2 ? "triangle" : "circle";
@@ -138,13 +128,14 @@ resizeCanvas();
 function calculateOptimalShapeSize() {
     if (shapes.length === 0) return 80;
     const W = canvas.width, H = canvas.height;
-    const n = shapes.length;
+    const n = shapes.length+1; // +1 for the red ball
     let cols = Math.ceil(Math.sqrt(n * W / H));
     let rows = Math.ceil(n / cols);
     let sizeX = W / cols;
     let sizeY = H / rows;
     let size = Math.min(sizeX, sizeY) * 0.88;
-    return Math.max(30, size);
+    // Shrink size if too many shapes to prevent overlap
+    return Math.max(20, size);
 }
 
 function rescaleShapes() {
@@ -152,7 +143,8 @@ function rescaleShapes() {
     for (let s of shapes) {
         s.targetSize = newSize;
     }
-    for (let k = 0; k < 15; k++) strictSeparateAll();
+    // After resize, also run strict separation a few times to ensure no overlap
+    for (let k = 0; k < 20; k++) strictSeparateAll();
 }
 
 function createShape(x, y, type, color) {
@@ -213,51 +205,6 @@ function drawRedBall() {
     ctx.arc(redBall.x + redBall.size/2, redBall.y + redBall.size/2, redBall.size/2, 0, 2 * Math.PI);
     ctx.fill();
     ctx.restore();
-}
-
-// Confetti code
-function spawnConfetti(x, y, color) {
-    if (!confettiEnabled) return;
-    const N = 36;
-    for (let i = 0; i < N; i++) {
-        let angle = Math.random() * 2 * Math.PI;
-        let speed = 3 + Math.random() * 4;
-        let size = 5 + Math.random() * 8;
-        let c = colorCycling ? BAUHAUS_COLORS[Math.floor(Math.random() * BAUHAUS_COLORS.length)] : color;
-        confettiParticles.push({
-            x: x,
-            y: y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            size: size,
-            color: c,
-            life: 36 + Math.random() * 22,
-            alpha: 1.0,
-            gravity: 0.21 + Math.random() * 0.08
-        });
-    }
-}
-function updateConfetti() {
-    for (let i = confettiParticles.length - 1; i >= 0; i--) {
-        let p = confettiParticles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += p.gravity;
-        p.life--;
-        p.alpha *= 0.97;
-        if (p.life <= 0) confettiParticles.splice(i, 1);
-    }
-}
-function drawConfetti() {
-    for (let p of confettiParticles) {
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.restore();
-    }
 }
 
 // Super strict, repeated separation for NO OVERLAP, including red ball
@@ -369,7 +316,7 @@ function resolveCollisions() {
     if (redBall.y < 0) { redBall.y = 0; redBall.vy = Math.abs(redBall.vy) * 0.7; }
     if (redBall.y + redBall.size > canvas.height) { redBall.y = canvas.height - redBall.size; redBall.vy = -Math.abs(redBall.vy) * 0.7; }
     // strict separation (repeat passes)
-    for (let k = 0; k < 6; k++) strictSeparateAll();
+    for (let k = 0; k < 20; k++) strictSeparateAll();
 }
 
 function updatePhysics() {
@@ -423,8 +370,7 @@ function updatePhysics() {
     redBall.vx *= DAMPING;
     redBall.vy *= DAMPING;
     resolveCollisions();
-    updateConfetti();
-    return anyMoving || Math.abs(redBall.vx) > 0.05 || Math.abs(redBall.vy) > 0.05 || confettiParticles.length > 0;
+    return anyMoving || Math.abs(redBall.vx) > 0.05 || Math.abs(redBall.vy) > 0.05;
 }
 
 function animate() {
@@ -432,7 +378,6 @@ function animate() {
     let moving = updatePhysics();
     for (let s of shapes) drawShape(s);
     drawRedBall();
-    drawConfetti();
     if (moving) animationId = requestAnimationFrame(animate);
     else animationId = null;
 }
@@ -443,7 +388,6 @@ function startAnimation() {
 
 function clearCanvas() {
     shapes = [];
-    confettiParticles = [];
     clickCount = 0;
     clickCounter.textContent = 'Clicks: 0';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -478,7 +422,6 @@ canvas.addEventListener('click', function (e) {
         const cy = s.y + s.size/2;
         const r = s.size/2;
         if (Math.hypot(mx - cx, my - cy) < r) {
-            spawnConfetti(cx, cy, s.color);
             shapes.splice(i, 1);
             rescaleShapes();
             shapes.forEach(shape => {
