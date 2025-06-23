@@ -2,80 +2,62 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bauhaus Gravity Generator (Confetti & Sound)</title>
+<title>Bauhaus Gravity Generator</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color: #000; overflow: hidden; height: 100vh; display: flex; flex-direction: column;}
 .header { background: #000; color: #fff; padding: 20px; text-align: center; font-weight: 300; letter-spacing: 2px; font-size: 18px; text-transform: uppercase;}
-.controls { background: #f5f5f5; padding: 15px 20px; border-bottom: 1px solid #000; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
-.control-group { display: flex; align-items: center; gap: 15px;}
-.click-counter { font-size: 14px; font-weight: bold; padding: 8px 12px; border: 1px solid #000; background: #fff; min-width: 120px; text-align: center; transition: background 0.3s;}
-.btn { background: #000; color: #fff; border: none; padding: 8px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all 0.2s;}
+.controls, .footer { background: #f5f5f5; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
+.click-counter { font-size: 14px; font-weight: bold; padding: 8px 12px; border: 1px solid #000; background: #fff; min-width: 120px; text-align: center;}
+.btn { background: #000; color: #fff; border: none; padding: 8px 16px; font-size: 12px; text-transform: uppercase; cursor: pointer;}
 .btn:hover { background: #333;}
-.legend { font-size: 11px; text-transform: uppercase; letter-spacing: 1px;}
+.legend { font-size: 11px; text-transform: uppercase;}
 .slider-group { display: flex; align-items: center; gap: 10px; background: #fff; padding: 8px 12px; border: 1px solid #000;}
-.slider-group label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; min-width: 60px;}
-.slider { width: 100px; height: 4px; background: #ddd; border: none;}
-.slider::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; background: #000; cursor: pointer; border-radius: 0;}
-.slider::-moz-range-thumb { width: 16px; height: 16px; background: #000; cursor: pointer; border-radius: 0; border: none;}
-.slider-value { font-size: 11px; min-width: 30px; text-align: center;}
-.toggle-switch { display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; user-select: none;}
-.toggle-switch input[type="checkbox"] { width: 36px; height: 18px; appearance: none; background: #ccc; outline: none; border-radius: 9px; position: relative; transition: background 0.2s; cursor: pointer;}
-.toggle-switch input[type="checkbox"]:checked { background: #0197F6;}
+.slider-group label { font-size: 11px; text-transform: uppercase; min-width: 60px;}
+.slider { width: 100px; height: 4px;}
+.toggle-switch { display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; user-select: none;}
+.toggle-switch input[type="checkbox"] { width: 36px; height: 18px; appearance: none; background: #ccc; border-radius: 9px; cursor: pointer;}
+.toggle-switch input[type="checkbox"]:checked { background: #457b9d;}
 .toggle-switch input[type="checkbox"]::before { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: transform 0.2s;}
 .toggle-switch input[type="checkbox"]:checked::before { transform: translateX(18px);}
 #canvas { flex: 1; display: block; cursor: crosshair; background: #fff; border: none;}
-.footer { background: #000; color: #fff; padding: 10px 20px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;}
-.shape-preview { width: 20px; height: 20px; border: 1px solid #000; display: inline-block; margin-left: 5px;}
-.shape-preview.square { background: #000;}
-.shape-preview.triangle { background: linear-gradient(45deg, #000 50%, transparent 50%);}
-.shape-preview.circle { border-radius: 50%; background: #000;}
-.sound-toggle { margin-left: 16px; }
+.footer { background: #000; color: #fff; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;}
 </style>
 </head>
 <body>
 <div class="header">Bauhaus Gravity Generator</div>
 <div class="controls">
-    <div class="control-group">
+    <div style="display:flex;gap:20px;align-items:center">
         <div class="click-counter" id="clickCounter">Clicks: 0</div>
         <div class="legend">
-            1 Click: Square <div class="shape-preview square"></div>
-            2 Clicks: Triangle <div class="shape-preview triangle"></div>
-            3 Clicks: Circle <div class="shape-preview circle"></div>
+            1 Click: Square | 2 Clicks: Triangle | 3 Clicks: Circle
         </div>
     </div>
-    <div class="control-group">
+    <div style="display:flex;gap:10px;align-items:center">
         <div class="slider-group">
             <label for="gravitySlider">Gravity:</label>
             <input type="range" id="gravitySlider" class="slider" min="0" max="1" step="0.01" value="0.3">
-            <span class="slider-value" id="gravityValue">0.30</span>
+            <span id="gravityValue">0.30</span>
         </div>
         <div class="slider-group">
             <label for="dampingSlider">Damping:</label>
             <input type="range" id="dampingSlider" class="slider" min="0.85" max="0.99" step="0.01" value="0.95">
-            <span class="slider-value" id="dampingValue">0.95</span>
+            <span id="dampingValue">0.95</span>
         </div>
         <div class="toggle-switch">
             <label for="colorToggle">Color Cycle</label>
             <input type="checkbox" id="colorToggle"/>
         </div>
-        <div class="toggle-switch sound-toggle">
-            <label for="soundToggle">Sound</label>
-            <input type="checkbox" id="soundToggle" checked/>
-        </div>
     </div>
-    <div class="control-group">
+    <div>
         <button class="btn" onclick="clearCanvas()">Clear</button>
         <button class="btn" onclick="saveImage()">Save</button>
     </div>
 </div>
 <canvas id="canvas"></canvas>
 <div class="footer">
-    Physics-Based Gravity | Confetti | Sound | Bauhaus Shapes
+    No Overlap &middot; Bauhaus Colors Only (Black, Red, Blue, Yellow)
 </div>
-<!-- Audio files (must be in same folder as your HTML) -->
-<audio id="popSound" src="pop.mp3" preload="auto"></audio>
-<audio id="ambientSound" src="ambient.mp3" preload="auto" loop></audio>
 <script>
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
@@ -85,42 +67,16 @@ const gravityValue = document.getElementById('gravityValue');
 const dampingSlider = document.getElementById('dampingSlider');
 const dampingValue = document.getElementById('dampingValue');
 const colorToggle = document.getElementById('colorToggle');
-const soundToggle = document.getElementById('soundToggle');
-const popSound = document.getElementById('popSound');
-const ambientSound = document.getElementById('ambientSound');
 
 let clickCount = 0;
 let shapes = [];
-let confettiParticles = [];
 let animationId = null;
-const COLORS = ["#D7263D", "#02182B", "#0197F6", "#FBB13C", "#56A902", "#8F3985", "#B4DFE5", "#FDE74C"];
+
+// Bauhaus palette: black, red, blue, yellow
+const BAUHAUS_COLORS = ['#000', '#e63946', '#457b9d', '#ffd60a'];
 let colorCycling = false;
 let GRAVITY = parseFloat(gravitySlider.value);
 let DAMPING = parseFloat(dampingSlider.value);
-
-let soundEnabled = true;
-
-function startAmbient() {
-    if (soundEnabled) {
-        ambientSound.volume = 0.3;
-        ambientSound.play().catch(()=>{});
-    }
-}
-function stopAmbient() {
-    ambientSound.pause();
-    ambientSound.currentTime = 0;
-}
-soundToggle.addEventListener('change', function () {
-    soundEnabled = this.checked;
-    if (soundEnabled) {
-        startAmbient();
-    } else {
-        stopAmbient();
-    }
-});
-canvas.addEventListener('mousedown', function () {
-    if (soundEnabled && ambientSound.paused) startAmbient();
-});
 
 gravitySlider.addEventListener('input', function () {
     GRAVITY = parseFloat(this.value);
@@ -133,7 +89,7 @@ dampingSlider.addEventListener('input', function () {
 colorToggle.addEventListener('change', function () {
     colorCycling = this.checked;
     shapes.forEach((shape, i) => {
-        shape.color = colorCycling ? COLORS[i % COLORS.length] : "#000";
+        shape.color = colorCycling ? BAUHAUS_COLORS[i % BAUHAUS_COLORS.length] : "#000";
     });
 });
 
@@ -221,52 +177,6 @@ function drawShape(shape) {
     ctx.restore();
 }
 
-// Confetti code
-function spawnConfetti(x, y, color) {
-    const N = 36;
-    for (let i = 0; i < N; i++) {
-        let angle = Math.random() * 2 * Math.PI;
-        let speed = 3 + Math.random() * 4;
-        let size = 5 + Math.random() * 8;
-        let c = colorCycling ? COLORS[Math.floor(Math.random() * COLORS.length)] : color;
-        confettiParticles.push({
-            x: x,
-            y: y,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            size: size,
-            color: c,
-            life: 36 + Math.random() * 22,
-            alpha: 1.0,
-            gravity: 0.21 + Math.random() * 0.08
-        });
-    }
-}
-
-function updateConfetti() {
-    for (let i = confettiParticles.length - 1; i >= 0; i--) {
-        let p = confettiParticles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += p.gravity;
-        p.life--;
-        p.alpha *= 0.97;
-        if (p.life <= 0) confettiParticles.splice(i, 1);
-    }
-}
-
-function drawConfetti() {
-    for (let p of confettiParticles) {
-        ctx.save();
-        ctx.globalAlpha = Math.max(0, Math.min(1, p.alpha));
-        ctx.fillStyle = p.color;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.restore();
-    }
-}
-
 // Collision resolution with minimum separation margin
 function resolveCollisions() {
     const separationMargin = 0.08;
@@ -344,15 +254,13 @@ function updatePhysics() {
         }
     }
     resolveCollisions();
-    updateConfetti();
-    return anyMoving || confettiParticles.length > 0;
+    return anyMoving;
 }
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     let moving = updatePhysics();
     for (let s of shapes) drawShape(s);
-    drawConfetti();
     if (moving) animationId = requestAnimationFrame(animate);
     else animationId = null;
 }
@@ -363,7 +271,6 @@ function startAnimation() {
 
 function clearCanvas() {
     shapes = [];
-    confettiParticles = [];
     clickCount = 0;
     clickCounter.textContent = 'Clicks: 0';
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -383,13 +290,12 @@ function saveImage() {
     link.click();
 }
 
-// Detect click on shape, pop if hit, otherwise add new shape
 canvas.addEventListener('click', function (e) {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left;
     const my = e.clientY - rect.top;
 
-    // Check if click is inside any shape (reverse for topmost)
+    // Pop shape if clicked, else add
     let popped = false;
     for (let i = shapes.length - 1; i >= 0; i--) {
         const s = shapes[i];
@@ -397,16 +303,8 @@ canvas.addEventListener('click', function (e) {
         const cy = s.y + s.size/2;
         const r = s.size/2;
         if (Math.hypot(mx - cx, my - cy) < r) {
-            // Pop sound
-            if (soundEnabled) {
-                popSound.currentTime = 0;
-                popSound.play();
-            }
-            // Confetti explosion at shape center
-            spawnConfetti(cx, cy, s.color);
-            shapes.splice(i, 1); // Pop the shape!
-            rescaleShapes(); // Resize remaining shapes to fit screen
-            // Shuffle: give all shapes a burst of random velocity
+            shapes.splice(i, 1);
+            rescaleShapes();
             shapes.forEach(shape => {
                 shape.vx += (Math.random() - 0.5) * 10;
                 shape.vy += (Math.random() - 0.5) * 10;
@@ -423,48 +321,11 @@ canvas.addEventListener('click', function (e) {
     }
 });
 
-canvas.addEventListener('touchstart', function (e) {
-    if (e.touches.length === 1) {
-        const rect = canvas.getBoundingClientRect();
-        const mx = e.touches[0].clientX - rect.left;
-        const my = e.touches[0].clientY - rect.top;
-        // Same logic as click
-        let popped = false;
-        for (let i = shapes.length - 1; i >= 0; i--) {
-            const s = shapes[i];
-            const cx = s.x + s.size/2;
-            const cy = s.y + s.size/2;
-            const r = s.size/2;
-            if (Math.hypot(mx - cx, my - cy) < r) {
-                if (soundEnabled) {
-                    popSound.currentTime = 0;
-                    popSound.play();
-                }
-                spawnConfetti(cx, cy, s.color);
-                shapes.splice(i, 1);
-                rescaleShapes();
-                shapes.forEach(shape => {
-                    shape.vx += (Math.random() - 0.5) * 10;
-                    shape.vy += (Math.random() - 0.5) * 10;
-                });
-                clickCount--;
-                clickCounter.textContent = `Clicks: ${clickCount}`;
-                startAnimation();
-                popped = true;
-                break;
-            }
-        }
-        if (!popped) {
-            handleShapeAdd(mx, my);
-        }
-    }
-});
-
 function handleShapeAdd(mouseX, mouseY) {
     clickCount++;
     clickCounter.textContent = `Clicks: ${clickCount}`;
     const shapeType = getShapeType(clickCount);
-    const color = colorCycling ? COLORS[(shapes.length) % COLORS.length] : "#000";
+    const color = colorCycling ? BAUHAUS_COLORS[(shapes.length) % BAUHAUS_COLORS.length] : "#000";
     const shape = createShape(mouseX, mouseY, shapeType, color);
 
     // On spawn, ensure no overlap:
@@ -489,7 +350,6 @@ function handleShapeAdd(mouseX, mouseY) {
     startAnimation();
 }
 
-// Initial paint
 ctx.clearRect(0, 0, canvas.width, canvas.height);
 </script>
 </body>
