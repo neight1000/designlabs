@@ -1,8 +1,33 @@
+Absolutely! Here’s how you can achieve **physics-based motion** (gravity/damping, no grid) **while still scaling new shapes to fit the current screen and shape count**:
+
+---
+
+## **Approach**
+
+- **Size Calculation:**  
+  Each time a new shape is added, calculate the optimal size so that all shapes could theoretically fit on the canvas at once (without overlap), based on the current shape count and canvas dimensions.  
+- **Physics-Based:**  
+  Shapes are still physics-driven (gravity, damping, bounces, interaction), but they get this calculated size on creation—and all shapes should smoothly resize when the count changes.
+- **No Grid:**  
+  Placement is based on the user click, and shapes move/fall as physics dictates.
+
+---
+
+## **Full Example Code**
+
+This code ensures:
+- New shapes always spawn at the cursor.
+- Shapes always resize together to maximize fit for the count and screen.
+- Gravity and damping work.
+- Color cycling toggle works.
+- No grid; physics-based, but with dynamic, screen-fitting scaling.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bauhaus Gravity Generator (Physics)</title>
+<title>Bauhaus Gravity Generator (Physics + Scaling)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color: #000; overflow: hidden; height: 100vh; display: flex; flex-direction: column;}
@@ -109,27 +134,43 @@ function getShapeType(clickNum) {
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight - canvas.getBoundingClientRect().top - 40;
+    rescaleShapes();
 }
 window.addEventListener('resize', function() {
     resizeCanvas();
-    // Prevent shapes from being outside canvas after resize
-    for (let s of shapes) {
-        if (s.x + s.size > canvas.width) s.x = canvas.width - s.size;
-        if (s.y + s.size > canvas.height) s.y = canvas.height - s.size;
-    }
 });
 resizeCanvas();
 
+function calculateOptimalShapeSize() {
+    // Try to fit n shapes on the screen with a 5% margin between shapes
+    if (shapes.length === 0) return 80;
+    const W = canvas.width, H = canvas.height;
+    const n = shapes.length;
+    let cols = Math.ceil(Math.sqrt(n * W / H));
+    let rows = Math.ceil(n / cols);
+    let sizeX = W / cols;
+    let sizeY = H / rows;
+    let size = Math.min(sizeX, sizeY) * 0.90; // 10% margin for bouncing/physics
+    return Math.max(30, size);
+}
+
+function rescaleShapes() {
+    // When shape count or screen changes, make all shapes target new size
+    let newSize = calculateOptimalShapeSize();
+    for (let s of shapes) {
+        s.targetSize = newSize;
+    }
+}
+
 function createShape(x, y, type, color) {
-    // Size based on canvas size, but not so big as to overlap by default
-    const minSide = Math.min(canvas.width, canvas.height);
-    const size = Math.max(30, minSide * 0.11);
+    let size = calculateOptimalShapeSize();
     return {
         x: x - size / 2,
         y: y - size / 2,
         vx: (Math.random() - 0.5) * 2,
         vy: Math.random() * -2,
         size: size,
+        targetSize: size,
         type: type,
         color: color,
         rotation: (type !== "circle") ? (Math.random() - 0.5) * 0.2 : 0,
@@ -173,6 +214,16 @@ function drawShape(shape) {
 
 function updatePhysics() {
     let anyMoving = false;
+    // Smoothly resize all shapes to targetSize
+    for (let s of shapes) {
+        if (Math.abs(s.size - s.targetSize) > 0.5) {
+            s.size += (s.targetSize - s.size) * 0.2;
+            // Adjust mass as size changes
+            s.mass = s.size * 0.007;
+        } else {
+            s.size = s.targetSize;
+        }
+    }
     for (let i = 0; i < shapes.length; i++) {
         let s = shapes[i];
         // Gravity
@@ -190,14 +241,14 @@ function updatePhysics() {
         s.vy *= DAMPING;
         // Rotation
         s.rotation += s.rotationSpeed;
-        // Collision with other shapes (basic circle-based, regardless of actual shape for simplicity)
+        // Collision with other shapes (approximate as circles)
         for (let j = 0; j < shapes.length; j++) {
             if (i === j) continue;
             let o = shapes[j];
             let dx = (s.x + s.size/2) - (o.x + o.size/2);
             let dy = (s.y + s.size/2) - (o.y + o.size/2);
             let dist = Math.sqrt(dx * dx + dy * dy);
-            let minDist = (s.size + o.size) / 2 * 0.93; // 7% gap for visual separation
+            let minDist = (s.size + o.size) / 2 * 0.92; // 8% gap for visual separation
             if (dist < minDist && dist > 0) {
                 // Push apart
                 let overlap = minDist - dist;
@@ -267,6 +318,7 @@ function handleShapeAdd(mouseX, mouseY) {
     const color = colorCycling ? COLORS[(shapes.length) % COLORS.length] : "#000";
     const shape = createShape(mouseX, mouseY, shapeType, color);
     shapes.push(shape);
+    rescaleShapes();
     startAnimation();
 }
 
@@ -286,3 +338,14 @@ ctx.clearRect(0, 0, canvas.width, canvas.height);
 </script>
 </body>
 </html>
+```
+
+---
+
+**How this works:**
+- Every time you add a shape or resize the window, all shapes smoothly scale up or down so that the entire set fits the current screen (with a margin).
+- Gravity, damping, and collision are all active.
+- Shapes spawn at the mouse and behave as physics objects.
+- Color cycling toggle works anytime.
+
+Let me know if you want any further enhancements!
