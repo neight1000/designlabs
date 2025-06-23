@@ -1,28 +1,3 @@
-Absolutely! Here’s how you can achieve **physics-based motion** (gravity/damping, no grid) **while still scaling new shapes to fit the current screen and shape count**:
-
----
-
-## **Approach**
-
-- **Size Calculation:**  
-  Each time a new shape is added, calculate the optimal size so that all shapes could theoretically fit on the canvas at once (without overlap), based on the current shape count and canvas dimensions.  
-- **Physics-Based:**  
-  Shapes are still physics-driven (gravity, damping, bounces, interaction), but they get this calculated size on creation—and all shapes should smoothly resize when the count changes.
-- **No Grid:**  
-  Placement is based on the user click, and shapes move/fall as physics dictates.
-
----
-
-## **Full Example Code**
-
-This code ensures:
-- New shapes always spawn at the cursor.
-- Shapes always resize together to maximize fit for the count and screen.
-- Gravity and damping work.
-- Color cycling toggle works.
-- No grid; physics-based, but with dynamic, screen-fitting scaling.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -338,14 +313,3 @@ ctx.clearRect(0, 0, canvas.width, canvas.height);
 </script>
 </body>
 </html>
-```
-
----
-
-**How this works:**
-- Every time you add a shape or resize the window, all shapes smoothly scale up or down so that the entire set fits the current screen (with a margin).
-- Gravity, damping, and collision are all active.
-- Shapes spawn at the mouse and behave as physics objects.
-- Color cycling toggle works anytime.
-
-Let me know if you want any further enhancements!
