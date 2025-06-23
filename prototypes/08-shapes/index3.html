@@ -5,25 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bauhaus Gravity Generator</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
-            background: #ffffff;
-            color: #000000;
+            background: #fff;
+            color: #000;
             overflow: hidden;
             height: 100vh;
             display: flex;
             flex-direction: column;
         }
-
         .header {
-            background: #000000;
-            color: #ffffff;
+            background: #000;
+            color: #fff;
             padding: 20px;
             text-align: center;
             font-weight: 300;
@@ -31,150 +25,153 @@
             font-size: 18px;
             text-transform: uppercase;
         }
-
         .controls {
             background: #f5f5f5;
             padding: 15px 20px;
-            border-bottom: 1px solid #000000;
+            border-bottom: 1px solid #000;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 10px;
         }
-
         .control-group {
             display: flex;
             align-items: center;
             gap: 15px;
         }
-
         .click-counter {
             font-size: 14px;
             font-weight: bold;
             padding: 8px 12px;
-            border: 1px solid #000000;
-            background: #ffffff;
+            border: 1px solid #000;
+            background: #fff;
             min-width: 120px;
             text-align: center;
+            transition: background 0.3s;
         }
-
         .btn {
-            background: #000000;
-            color: #ffffff;
+            background: #000;
+            color: #fff;
             border: none;
             padding: 8px 16px;
             font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 1px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
-
-        .btn:hover {
-            background: #333333;
-        }
-
+        .btn:hover { background: #333; }
         .legend {
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-
         .slider-group {
             display: flex;
             align-items: center;
             gap: 10px;
-            background: #ffffff;
+            background: #fff;
             padding: 8px 12px;
-            border: 1px solid #000000;
+            border: 1px solid #000;
         }
-
         .slider-group label {
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 1px;
             min-width: 60px;
         }
-
-        .slider {
-            width: 100px;
-            height: 4px;
-            background: #ddd;
-            outline: none;
-            border: none;
-            appearance: none;
-        }
-
+        .slider { width: 100px; height: 4px; background: #ddd; border: none; }
         .slider::-webkit-slider-thumb {
             appearance: none;
-            width: 16px;
-            height: 16px;
-            background: #000000;
+            width: 16px; height: 16px;
+            background: #000;
             cursor: pointer;
             border-radius: 0;
         }
-
         .slider::-moz-range-thumb {
-            width: 16px;
-            height: 16px;
-            background: #000000;
+            width: 16px; height: 16px;
+            background: #000;
             cursor: pointer;
             border-radius: 0;
             border: none;
         }
-
         .slider-value {
             font-size: 11px;
             min-width: 30px;
             text-align: center;
         }
-
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            user-select: none;
+        }
+        .toggle-switch input[type="checkbox"] {
+            width: 36px;
+            height: 18px;
+            appearance: none;
+            background: #ccc;
+            outline: none;
+            border-radius: 9px;
+            position: relative;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        .toggle-switch input[type="checkbox"]:checked {
+            background: #0197F6;
+        }
+        .toggle-switch input[type="checkbox"]::before {
+            content: "";
+            position: absolute;
+            left: 2px;
+            top: 2px;
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle-switch input[type="checkbox"]:checked::before {
+            transform: translateX(18px);
+        }
         #canvas {
             flex: 1;
             display: block;
             cursor: crosshair;
-            background: #ffffff;
+            background: #fff;
             border: none;
         }
-
         .footer {
-            background: #000000;
-            color: #ffffff;
+            background: #000;
+            color: #fff;
             padding: 10px 20px;
             text-align: center;
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-
         .shape-preview {
-            width: 20px;
-            height: 20px;
-            border: 1px solid #000000;
+            width: 20px; height: 20px;
+            border: 1px solid #000;
             display: inline-block;
             margin-left: 5px;
         }
-
-        .shape-preview.square {
-            background: #000000;
-        }
-
+        .shape-preview.square { background: #000; }
         .shape-preview.triangle {
-            background: linear-gradient(45deg, #000000 50%, transparent 50%);
+            background: linear-gradient(45deg, #000 50%, transparent 50%);
         }
-
         .shape-preview.circle {
             border-radius: 50%;
-            background: #000000;
+            background: #000;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        Bauhaus Gravity Generator
-    </div>
-    
+    <div class="header">Bauhaus Gravity Generator</div>
     <div class="controls">
         <div class="control-group">
             <div class="click-counter" id="clickCounter">Clicks: 0</div>
@@ -184,33 +181,31 @@
                 3 Clicks: Circle <div class="shape-preview circle"></div>
             </div>
         </div>
-        
         <div class="control-group">
             <div class="slider-group">
                 <label for="gravitySlider">Gravity:</label>
-                <input type="range" id="gravitySlider" class="slider" min="0" max="1" step="0.1" value="0.3">
+                <input type="range" id="gravitySlider" class="slider" min="0" max="1" step="0.05" value="0.3">
                 <span class="slider-value" id="gravityValue">0.3</span>
             </div>
-            
             <div class="slider-group">
                 <label for="dampingSlider">Damping:</label>
                 <input type="range" id="dampingSlider" class="slider" min="0.85" max="0.99" step="0.01" value="0.95">
                 <span class="slider-value" id="dampingValue">0.95</span>
             </div>
+            <div class="toggle-switch">
+                <label for="colorToggle">Color Cycle</label>
+                <input type="checkbox" id="colorToggle"/>
+            </div>
         </div>
-        
         <div class="control-group">
             <button class="btn" onclick="clearCanvas()">Clear</button>
             <button class="btn" onclick="saveImage()">Save</button>
         </div>
     </div>
-    
     <canvas id="canvas"></canvas>
-    
     <div class="footer">
-        Physics-Based Gravity | Golden Ratio: φ = 1.618... | Shapes Fill 100% of Space
+        Physics-Based Gravity | Golden Ratio: φ = 1.618... | Dynamic Bauhaus Shapes
     </div>
-
     <script>
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
@@ -219,399 +214,246 @@
         const gravityValue = document.getElementById('gravityValue');
         const dampingSlider = document.getElementById('dampingSlider');
         const dampingValue = document.getElementById('dampingValue');
-        
+        const colorToggle = document.getElementById('colorToggle');
+
         let clickCount = 0;
         let shapes = [];
         let animationId = null;
         const PHI = 1.618033988749895;
-        
-        // Physics constants (adjustable via sliders)
+        const COLORS = ["#D7263D", "#02182B", "#0197F6", "#FBB13C", "#56A902", "#8F3985", "#B4DFE5", "#FDE74C"];
+        let colorCycling = false;
+
+        // Physics constants
         let GRAVITY = 0.3;
-        let DAMPING = 0.95; // Better default damping
-        const BOUNCE = 0.6; // Reduced bounce
-        const SEPARATION_FORCE = 0.8; // Reduced separation force
-        const MIN_VELOCITY = 0.02; // Lower threshold for settling
-        const MIN_POSITION_CHANGE = 0.1; // Position stability check
-        const SETTLING_TIME = 30; // Reduced frames before shape settles
-        const VELOCITY_THRESHOLD = 0.001; // Very low threshold for final settling
-        
-        // Slider event listeners
-        gravitySlider.addEventListener('input', function() {
+        let DAMPING = 0.95;
+        const BOUNCE = 0.6;
+        const SEPARATION_FORCE = 0.5;
+        const MIN_VELOCITY = 0.03;
+        const VELOCITY_AVG_FRAMES = 12;
+        const GAP_PERCENT = 0.03; // 3% gap
+
+        // UI updates
+        gravitySlider.addEventListener('input', function () {
             GRAVITY = parseFloat(this.value);
-            gravityValue.textContent = GRAVITY.toFixed(1);
-            // Only wake up shapes if gravity increases significantly
-            if (GRAVITY > 0.5) {
-                shapes.forEach(shape => {
-                    if (shape.settled) {
-                        shape.settled = false;
-                        shape.settlingTimer = 0;
-                    }
-                });
-                startAnimation();
-            }
+            gravityValue.textContent = GRAVITY.toFixed(2);
+            shapes.forEach(shape => { shape.settled = false; });
+            startAnimation();
         });
-        
-        dampingSlider.addEventListener('input', function() {
+        dampingSlider.addEventListener('input', function () {
             DAMPING = parseFloat(this.value);
             dampingValue.textContent = DAMPING.toFixed(2);
         });
-        
+        colorToggle.addEventListener('change', function () {
+            colorCycling = this.checked;
+            // Update all shapes to reflect current color mode
+            shapes.forEach((shape, i) => {
+                shape.color = colorCycling ? COLORS[i % COLORS.length] : "#000";
+            });
+            startAnimation();
+        });
+
         function resizeCanvas() {
             const rect = canvas.getBoundingClientRect();
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight - rect.top - 40;
-            
-            // Recalculate sizes for new canvas dimensions
             recalculateAllSizes();
-            
-            // Force all shapes to wake up and reposition
             shapes.forEach(shape => {
                 shape.settled = false;
-                shape.settlingTimer = 0;
                 // Keep shapes within new bounds
                 shape.x = Math.max(0, Math.min(shape.x, canvas.width - shape.size));
                 shape.y = Math.max(0, Math.min(shape.y, canvas.height - shape.size));
             });
-            
-            if (shapes.length > 0) {
-                startAnimation();
-            }
+            if (shapes.length > 0) startAnimation();
         }
-        
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
-        
-        function calculateOptimalSize() {
-            if (shapes.length === 0) {
-                // First shape gets a reasonable portion of screen
-                return Math.min(canvas.width, canvas.height) * 0.25;
-            }
-            
-            // Calculate total available area with padding
-            const availableArea = canvas.width * canvas.height * 0.85; // 85% fill factor
-            const targetShapes = shapes.length + 1;
-            
-            // Base area per shape
-            const baseAreaPerShape = availableArea / targetShapes;
-            
-            // Apply golden ratio variation for visual interest
-            const phiIndex = (clickCount - 1) % 8; // Cycle through 8 variations
-            const phiVariation = 0.8 + (Math.sin(phiIndex * PHI * 0.5) * 0.4); // 0.4 to 1.2 range
-            
-            const adjustedArea = baseAreaPerShape * phiVariation;
-            
-            // Convert area to size (assuming square base area)
-            let size = Math.sqrt(adjustedArea);
-            
-            // Apply shape-specific adjustments
-            const shapeType = getShapeType(clickCount);
-            switch(shapeType) {
-                case 'triangle': size *= 1.1; break; // Triangles need more space
-                case 'circle': size *= 0.95; break; // Circles pack more efficiently
-                case 'square': size *= 1.0; break; // Base size
-            }
-            
-            // Ensure reasonable bounds based on screen size
-            const minSize = Math.min(canvas.width, canvas.height) * 0.06;
-            const maxSize = Math.min(canvas.width, canvas.height) * 0.4;
-            
-            return Math.max(minSize, Math.min(size, maxSize));
-        }
-        
+
         function getShapeType(clickNum) {
             const clickMod = clickNum % 3;
-            if (clickMod === 1) return 'square';
-            else if (clickMod === 2) return 'triangle';
-            else return 'circle';
+            return clickMod === 1 ? 'square' : clickMod === 2 ? 'triangle' : 'circle';
         }
-        
+
+        // Calculate size so that all shapes (with gaps) tile the canvas perfectly
+        function getShapeLayout(n) {
+            // Try to find best grid (rows x cols) for n shapes as square as possible
+            let bestCols = 1, bestRows = n, minDelta = n;
+            for (let cols = 1; cols <= n; cols++) {
+                let rows = Math.ceil(n / cols);
+                let delta = Math.abs(canvas.width / cols - canvas.height / rows);
+                if (delta < minDelta) {
+                    minDelta = delta;
+                    bestCols = cols;
+                    bestRows = rows;
+                }
+            }
+            return {cols: bestCols, rows: bestRows};
+        }
+
         function recalculateAllSizes() {
             if (shapes.length === 0) return;
-            
-            const availableArea = canvas.width * canvas.height * 0.85;
-            const baseAreaPerShape = availableArea / shapes.length;
-            
-            shapes.forEach((shape, index) => {
-                // Apply golden ratio spiral for size variation
-                const phiVariation = 0.8 + (Math.sin(index * PHI * 0.3) * 0.4);
-                
-                // Shape-specific area adjustments
-                let areaMultiplier = 1.0;
-                switch(shape.type) {
-                    case 'triangle': areaMultiplier = 1.1; break;
-                    case 'circle': areaMultiplier = 0.95; break;
-                    case 'square': areaMultiplier = 1.0; break;
-                }
-                
-                const adjustedArea = baseAreaPerShape * phiVariation * areaMultiplier;
-                let newSize = Math.sqrt(adjustedArea);
-                
-                // Bounds checking
-                const minSize = Math.min(canvas.width, canvas.height) * 0.06;
-                const maxSize = Math.min(canvas.width, canvas.height) * 0.4;
-                newSize = Math.max(minSize, Math.min(newSize, maxSize));
-                
-                shape.targetSize = newSize;
-                shape.mass = newSize * 0.008; // Reduced mass for more stable physics
+            const n = shapes.length;
+            const {cols, rows} = getShapeLayout(n);
+            const gapX = canvas.width * GAP_PERCENT / cols;
+            const gapY = canvas.height * GAP_PERCENT / rows;
+            const cellW = canvas.width / cols;
+            const cellH = canvas.height / rows;
+            const shapeW = cellW - gapX;
+            const shapeH = cellH - gapY;
+            // Place each shape in its cell, no overlap, with padding
+            shapes.forEach((shape, idx) => {
+                const col = idx % cols;
+                const row = Math.floor(idx / cols);
+                // Size is min of available cell width/height
+                const size = Math.min(shapeW, shapeH);
+                shape.targetSize = size;
+                shape.mass = size * 0.007;
+                shape.x = col * cellW + gapX / 2 + (cellW - size) / 2;
+                shape.y = row * cellH + gapY / 2 + (cellH - size) / 2;
+                shape.settled = true; // Snap directly
+                shape.vx = 0; shape.vy = 0;
+                shape.velocityHistory = [];
+                // Color update (on color mode change)
+                shape.color = colorCycling ? COLORS[idx % COLORS.length] : "#000";
             });
         }
-        
+
         function createShape(x, y, type) {
-            const size = calculateOptimalSize();
-            
+            // We'll ignore the click location for tiling, but keep for animation
+            const idx = shapes.length;
+            const color = colorCycling ? COLORS[idx % COLORS.length] : "#000";
             return {
-                x: x - size/2,
-                y: y - size/2,
-                size: size,
-                targetSize: size,
+                x: x, // will be reassigned on recalc
+                y: y,
+                size: 10, // will be reassigned on recalc
+                targetSize: 10,
                 type: type,
-                vx: (Math.random() - 0.5) * 2, // Reduced initial velocity
-                vy: Math.random() * -3 - 1, // Reduced initial velocity
-                mass: size * 0.008,
-                settled: false,
-                settlingTimer: 0,
-                lastX: x - size/2,
-                lastY: y - size/2,
-                positionStableCount: 0
+                vx: 0,
+                vy: 0,
+                mass: 1,
+                settled: true,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (type !== 'circle') ? (Math.random() - 0.5) * 0.04 : 0,
+                color: color,
+                velocityHistory: [],
             };
         }
-        
+
+        // No physics needed since shapes are snapped to layout, but keep animation for rotation
         function updatePhysics() {
             let anyMoving = false;
-            
-            shapes.forEach((shape, i) => {
-                // Animate size changes smoothly
+            shapes.forEach((shape) => {
+                // Animate size if needed
                 if (Math.abs(shape.size - shape.targetSize) > 0.5) {
-                    shape.size += (shape.targetSize - shape.size) * 0.05; // Slower size changes
-                    shape.mass = shape.size * 0.008;
+                    shape.size += (shape.targetSize - shape.size) * 0.2;
+                    shape.mass = shape.size * 0.007;
+                    anyMoving = true;
+                } else {
+                    shape.size = shape.targetSize;
+                }
+                // Animate position if needed (should be rare)
+                if (Math.abs(shape.x - shape.targetX) > 0.5 || Math.abs(shape.y - shape.targetY) > 0.5) {
+                    shape.x += (shape.targetX - shape.x) * 0.2;
+                    shape.y += (shape.targetY - shape.y) * 0.2;
                     anyMoving = true;
                 }
-                
-                if (!shape.settled) {
-                    const oldX = shape.x;
-                    const oldY = shape.y;
-                    
-                    // Apply gravity
-                    shape.vy += GRAVITY;
-                    
-                    // Shape separation (anti-overlap) with improved collision detection
-                    shapes.forEach((other, j) => {
-                        if (i !== j) {
-                            const dx = (shape.x + shape.size/2) - (other.x + other.size/2);
-                            const dy = (shape.y + shape.size/2) - (other.y + other.size/2);
-                            const distance = Math.sqrt(dx*dx + dy*dy);
-                            const minDistance = (shape.size + other.size) / 2 + 3; // Small buffer
-                            
-                            if (distance < minDistance && distance > 0.1) {
-                                const overlap = minDistance - distance;
-                                const force = overlap * SEPARATION_FORCE * 0.5; // Gentler separation
-                                const forceX = (dx / distance) * force;
-                                const forceY = (dy / distance) * force;
-                                
-                                // Mass-based force distribution
-                                const totalMass = shape.mass + other.mass;
-                                const massRatio = other.mass / totalMass;
-                                
-                                shape.vx += forceX * massRatio;
-                                shape.vy += forceY * massRatio;
-                            }
-                        }
-                    });
-                    
-                    // Update position
-                    shape.x += shape.vx;
-                    shape.y += shape.vy;
-                    
-                    // Boundary collisions with improved bounce handling
-                    let collided = false;
-                    
-                    if (shape.x < 0) {
-                        shape.x = 0;
-                        shape.vx = Math.abs(shape.vx) * BOUNCE;
-                        collided = true;
-                    }
-                    
-                    if (shape.x + shape.size > canvas.width) {
-                        shape.x = canvas.width - shape.size;
-                        shape.vx = -Math.abs(shape.vx) * BOUNCE;
-                        collided = true;
-                    }
-                    
-                    if (shape.y < 0) {
-                        shape.y = 0;
-                        shape.vy = Math.abs(shape.vy) * BOUNCE;
-                        collided = true;
-                    }
-                    
-                    if (shape.y + shape.size >= canvas.height) {
-                        shape.y = canvas.height - shape.size;
-                        shape.vy = -Math.abs(shape.vy) * BOUNCE;
-                        collided = true;
-                    }
-                    
-                    // Apply damping
-                    shape.vx *= DAMPING;
-                    shape.vy *= DAMPING;
-                    
-                    // Improved settling detection
-                    const totalVelocity = Math.sqrt(shape.vx * shape.vx + shape.vy * shape.vy);
-                    const positionChange = Math.sqrt((shape.x - oldX) ** 2 + (shape.y - oldY) ** 2);
-                    
-                    // Check for both velocity and position stability
-                    if (totalVelocity < MIN_VELOCITY && positionChange < MIN_POSITION_CHANGE) {
-                        shape.settlingTimer++;
-                        if (shape.settlingTimer > SETTLING_TIME) {
-                            // Final check - if velocity is extremely low, settle completely
-                            if (totalVelocity < VELOCITY_THRESHOLD) {
-                                shape.settled = true;
-                                shape.vx = 0;
-                                shape.vy = 0;
-                                shape.settlingTimer = 0;
-                            }
-                        }
-                    } else {
-                        shape.settlingTimer = Math.max(0, shape.settlingTimer - 2); // Decay settling timer
-                        anyMoving = true;
-                    }
-                    
-                    if (totalVelocity > VELOCITY_THRESHOLD) {
-                        anyMoving = true;
-                    }
-                }
+                // Rotation animation
+                shape.rotation += shape.rotationSpeed;
             });
-            
             return anyMoving;
         }
-        
+
         function drawShape(shape) {
-            const { x, y, size, type, settled } = shape;
-            
-            // Slight visual difference for settled shapes
-            const alpha = settled ? 0.95 : 1.0;
-            
+            const { x, y, size, type, rotation, color } = shape;
+            ctx.save();
+            ctx.translate(x + size / 2, y + size / 2);
+            ctx.rotate(rotation);
+            ctx.globalAlpha = 0.98;
+            ctx.fillStyle = color;
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
             switch (type) {
                 case 'square':
-                    ctx.globalAlpha = alpha;
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(x, y, size, size);
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x + 1, y + 1, size - 2, size - 2);
+                    ctx.fillRect(-size / 2, -size / 2, size, size);
+                    ctx.strokeRect(-size / 2 + 1, -size / 2 + 1, size - 2, size - 2);
                     break;
-                    
                 case 'triangle':
-                    ctx.globalAlpha = alpha;
-                    ctx.fillStyle = '#000000';
                     ctx.beginPath();
-                    ctx.moveTo(x + size/2, y);
-                    ctx.lineTo(x, y + size);
-                    ctx.lineTo(x + size, y + size);
+                    ctx.moveTo(0, -size / 2);
+                    ctx.lineTo(-size / 2, size / 2);
+                    ctx.lineTo(size / 2, size / 2);
                     ctx.closePath();
                     ctx.fill();
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
                     ctx.stroke();
                     break;
-                    
                 case 'circle':
-                    ctx.globalAlpha = alpha;
-                    const radius = size / 2;
-                    const centerX = x + radius;
-                    const centerY = y + radius;
-                    ctx.fillStyle = '#000000';
                     ctx.beginPath();
-                    ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                    ctx.arc(0, 0, size / 2, 0, 2 * Math.PI);
                     ctx.fill();
-                    ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
                     ctx.stroke();
                     break;
             }
-            ctx.globalAlpha = 1.0;
+            ctx.restore();
         }
-        
-        function animate() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            const isMoving = updatePhysics();
-            
-            shapes.forEach(drawShape);
-            
-            if (isMoving) {
-                animationId = requestAnimationFrame(animate);
-            } else {
-                animationId = null;
-            }
-        }
-        
-        function startAnimation() {
-            if (!animationId) {
-                animationId = requestAnimationFrame(animate);
-            }
-        }
-        
-        canvas.addEventListener('click', function(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clickX = e.clientX - rect.left;
-            const clickY = e.clientY - rect.top;
-            
-            clickCount++;
-            clickCounter.textContent = `Clicks: ${clickCount}`;
-            
-            // Determine shape type
-            const shapeType = getShapeType(clickCount);
-            
-            // Create new shape
-            const newShape = createShape(clickX, clickY, shapeType);
-            shapes.push(newShape);
-            
-            // Recalculate all sizes to maintain proper space filling
-            recalculateAllSizes();
-            
-            // Gentle disturbance to nearby shapes
-            const disturbanceRadius = 100;
-            const disturbanceForce = 0.4; // Reduced disturbance
-            
-            shapes.forEach((shape, index) => {
-                if (index < shapes.length - 1) { // Don't disturb the new shape
-                    const dx = (shape.x + shape.size/2) - clickX;
-                    const dy = (shape.y + shape.size/2) - clickY;
-                    const distance = Math.sqrt(dx*dx + dy*dy);
-                    
-                    if (distance < disturbanceRadius) {
-                        const force = (disturbanceRadius - distance) / disturbanceRadius * disturbanceForce;
-                        const angle = Math.atan2(dy, dx);
-                        
-                        shape.vx += Math.cos(angle) * force * 3;
-                        shape.vy += Math.sin(angle) * force * 3;
-                        shape.settled = false;
-                        shape.settlingTimer = 0;
-                    }
-                }
-            });
-            
-            startAnimation();
-        });
-        
+
         function clearCanvas() {
             shapes = [];
             clickCount = 0;
             clickCounter.textContent = 'Clicks: 0';
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
             if (animationId) {
                 cancelAnimationFrame(animationId);
                 animationId = null;
             }
         }
-        
+
         function saveImage() {
+            ctx.save();
+            ctx.globalAlpha = 1.0;
+            ctx.fillStyle = "#fff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            shapes.forEach(drawShape);
+            ctx.restore();
+
             const link = document.createElement('a');
-            link.download = 'bauhaus-gravity-stable.png';
+            link.download = 'bauhaus-gravity.png';
             link.href = canvas.toDataURL();
             link.click();
         }
-        
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const isMoving = updatePhysics();
+            shapes.forEach(drawShape);
+            if (isMoving) animationId = requestAnimationFrame(animate);
+            else animationId = null;
+        }
+
+        function startAnimation() {
+            if (!animationId) animationId = requestAnimationFrame(animate);
+        }
+
+        function handleShapeAdd() {
+            clickCount++;
+            clickCounter.textContent = `Clicks: ${clickCount}`;
+            const shapeType = getShapeType(clickCount);
+            // Place at center for animation, will be snapped on recalc
+            const newShape = createShape(canvas.width/2, canvas.height/2, shapeType);
+            shapes.push(newShape);
+            recalculateAllSizes();
+            startAnimation();
+        }
+
+        canvas.addEventListener('click', function (e) {
+            handleShapeAdd();
+        });
+
+        // Touch support
+        canvas.addEventListener('touchstart', function (e) {
+            if (e.touches.length === 1) {
+                handleShapeAdd();
+            }
+        });
+
         // Initial setup
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     </script>
