@@ -1,261 +1,828 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Bauhaus Gravity Generator</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-/* ...[keep your previous styles here]... */
-body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color: #000; overflow: hidden; height: 100vh; display: flex; flex-direction: column;}
-.header { background: #000; color: #fff; padding: 20px; text-align: center; font-weight: 300; letter-spacing: 2px; font-size: 18px; text-transform: uppercase;}
-.controls { background: #f5f5f5; padding: 15px 20px; border-bottom: 1px solid #000; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;}
-.control-group { display: flex; align-items: center; gap: 15px;}
-.click-counter { font-size: 14px; font-weight: bold; padding: 8px 12px; border: 1px solid #000; background: #fff; min-width: 120px; text-align: center; transition: background 0.3s;}
-.btn { background: #000; color: #fff; border: none; padding: 8px 16px; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: all 0.2s;}
-.btn:hover { background: #333;}
-.legend { font-size: 11px; text-transform: uppercase; letter-spacing: 1px;}
-.slider-group { display: flex; align-items: center; gap: 10px; background: #fff; padding: 8px 12px; border: 1px solid #000;}
-.slider-group label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; min-width: 60px;}
-.slider { width: 100px; height: 4px; background: #ddd; border: none;}
-.slider::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; background: #000; cursor: pointer; border-radius: 0;}
-.slider::-moz-range-thumb { width: 16px; height: 16px; background: #000; cursor: pointer; border-radius: 0; border: none;}
-.slider-value { font-size: 11px; min-width: 30px; text-align: center;}
-.toggle-switch { display: flex; align-items: center; gap: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; user-select: none;}
-.toggle-switch input[type="checkbox"] { width: 36px; height: 18px; appearance: none; background: #ccc; outline: none; border-radius: 9px; position: relative; transition: background 0.2s; cursor: pointer;}
-.toggle-switch input[type="checkbox"]:checked { background: #0197F6;}
-.toggle-switch input[type="checkbox"]::before { content: ""; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; background: #fff; border-radius: 50%; transition: transform 0.2s;}
-.toggle-switch input[type="checkbox"]:checked::before { transform: translateX(18px);}
-#canvas { flex: 1; display: block; cursor: crosshair; background: #fff; border: none;}
-.footer { background: #000; color: #fff; padding: 10px 20px; text-align: center; font-size: 10px; text-transform: uppercase; letter-spacing: 1px;}
-.shape-preview { width: 20px; height: 20px; border: 1px solid #000; display: inline-block; margin-left: 5px;}
-.shape-preview.square { background: #000;}
-.shape-preview.triangle { background: linear-gradient(45deg, #000 50%, transparent 50%);}
-.shape-preview.circle { border-radius: 50%; background: #000;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Bauhaus Pattern Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #f8f8f8 0%, #e8e8e8 100%);
+            color: #000000;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            font-weight: 300;
+            letter-spacing: 3px;
+            font-size: 20px;
+            text-transform: uppercase;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { left: -100%; }
+            100% { left: 100%; }
+        }
+
+        .controls {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+            padding: 20px;
+            border-bottom: 2px solid #000000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(255,255,255,0.8);
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .click-counter {
+            font-size: 16px;
+            font-weight: bold;
+            padding: 12px 18px;
+            border: 2px solid #000000;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f8f8 100%);
+            min-width: 140px;
+            text-align: center;
+            border-radius: 6px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .click-counter:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 12px rgba(0,0,0,0.2);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #000000 0%, #333333 100%);
+            color: #ffffff;
+            border: none;
+            padding: 12px 20px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .legend {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .slider-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255,255,255,0.9);
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .slider-group label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            min-width: 70px;
+            font-weight: 600;
+        }
+
+        .slider {
+            width: 120px;
+            height: 6px;
+            background: linear-gradient(to right, #ddd, #bbb);
+            outline: none;
+            border: none;
+            appearance: none;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #000000 0%, #333333 100%);
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            transition: all 0.2s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, #000000 0%, #333333 100%);
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .slider-value {
+            font-size: 12px;
+            min-width: 35px;
+            text-align: center;
+            font-weight: 600;
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        #canvas {
+            flex: 1;
+            display: block;
+            cursor: crosshair;
+            background: radial-gradient(circle at center, #ffffff 0%, #f8f8f8 100%);
+            border: none;
+            transition: filter 0.3s ease;
+        }
+
+        #canvas:hover {
+            filter: brightness(1.02);
+        }
+
+        .footer {
+            background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+            color: #ffffff;
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2);
+        }
+
+        .shape-preview {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #000000;
+            display: inline-block;
+            margin-left: 8px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .shape-preview:hover {
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .shape-preview.square {
+            background: linear-gradient(135deg, #000000 0%, #333333 100%);
+        }
+
+        .shape-preview.triangle {
+            background: linear-gradient(45deg, #000000 50%, transparent 50%);
+        }
+
+        .shape-preview.circle {
+            border-radius: 50%;
+            background: radial-gradient(circle, #000000 0%, #333333 100%);
+        }
+
+        .pattern-mode {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .pattern-mode select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            background: white;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .color-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-picker {
+            width: 40px;
+            height: 30px;
+            border: 2px solid #000;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #000;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .creating {
+            animation: pulse 0.3s ease-in-out;
+        }
+    </style>
 </head>
 <body>
-<div class="header">Bauhaus Gravity Generator</div>
-<div class="controls">
-    <div class="control-group">
-        <div class="click-counter" id="clickCounter">Clicks: 0</div>
-        <div class="legend">
-            1 Click: Square <div class="shape-preview square"></div>
-            2 Clicks: Triangle <div class="shape-preview triangle"></div>
-            3 Clicks: Circle <div class="shape-preview circle"></div>
+    <div class="header">
+        Enhanced Bauhaus Pattern Generator
+    </div>
+    
+    <div class="controls">
+        <div class="control-group">
+            <div class="click-counter" id="clickCounter">Shapes: 0</div>
+            <div class="legend">
+                1: Square <div class="shape-preview square"></div>
+                2: Triangle <div class="shape-preview triangle"></div>
+                3: Circle <div class="shape-preview circle"></div>
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <div class="slider-group">
+                <label for="gravitySlider">Gravity:</label>
+                <input type="range" id="gravitySlider" class="slider" min="0" max="1" step="0.05" value="0.3">
+                <span class="slider-value" id="gravityValue">0.3</span>
+            </div>
+            
+            <div class="slider-group">
+                <label for="dampingSlider">Damping:</label>
+                <input type="range" id="dampingSlider" class="slider" min="0.85" max="0.99" step="0.01" value="0.95">
+                <span class="slider-value" id="dampingValue">0.95</span>
+            </div>
+
+            <div class="slider-group">
+                <label for="separationSlider">Spacing:</label>
+                <input type="range" id="separationSlider" class="slider" min="1" max="10" step="1" value="3">
+                <span class="slider-value" id="separationValue">3</span>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <div class="pattern-mode">
+                <label>Mode:</label>
+                <select id="patternMode">
+                    <option value="gravity">Gravity Drop</option>
+                    <option value="spiral">Spiral Pack</option>
+                    <option value="grid">Grid Align</option>
+                    <option value="scatter">Smart Scatter</option>
+                </select>
+            </div>
+            
+            <div class="color-controls">
+                <label>Color:</label>
+                <input type="color" id="colorPicker" class="color-picker" value="#000000">
+            </div>
+        </div>
+        
+        <div class="control-group">
+            <button class="btn" onclick="clearCanvas()">Clear All</button>
+            <button class="btn" onclick="generateRandom()">Random Fill</button>
+            <button class="btn" onclick="saveImage()">Export PNG</button>
         </div>
     </div>
-    <div class="control-group">
-        <div class="slider-group">
-            <label for="gravitySlider">Gravity:</label>
-            <input type="range" id="gravitySlider" class="slider" min="0" max="1" step="0.05" value="0.3">
-            <span class="slider-value" id="gravityValue">0.3</span>
-        </div>
-        <div class="slider-group">
-            <label for="dampingSlider">Damping:</label>
-            <input type="range" id="dampingSlider" class="slider" min="0.85" max="0.99" step="0.01" value="0.95">
-            <span class="slider-value" id="dampingValue">0.95</span>
-        </div>
-        <div class="toggle-switch">
-            <label for="colorToggle">Color Cycle</label>
-            <input type="checkbox" id="colorToggle"/>
-        </div>
+    
+    <canvas id="canvas"></canvas>
+    
+    <div class="footer">
+        Advanced Physics Engine | Perfect Non-Overlapping | Intelligent Space Filling
     </div>
-    <div class="control-group">
-        <button class="btn" onclick="clearCanvas()">Clear</button>
-        <button class="btn" onclick="saveImage()">Save</button>
-    </div>
-</div>
-<canvas id="canvas"></canvas>
-<div class="footer">
-    Physics-Based Gravity | Golden Ratio: φ = 1.618... | Dynamic Bauhaus Shapes
-</div>
-<script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
-const clickCounter = document.getElementById('clickCounter');
-const gravitySlider = document.getElementById('gravitySlider');
-const gravityValue = document.getElementById('gravityValue');
-const dampingSlider = document.getElementById('dampingSlider');
-const dampingValue = document.getElementById('dampingValue');
-const colorToggle = document.getElementById('colorToggle');
 
-let clickCount = 0;
-let shapes = [];
-let animationId = null;
-const COLORS = ["#D7263D", "#02182B", "#0197F6", "#FBB13C", "#56A902", "#8F3985", "#B4DFE5", "#FDE74C"];
-let colorCycling = false;
-const GAP_PERCENT = 0.03; // 3% gap relative to cell size
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const clickCounter = document.getElementById('clickCounter');
+        const gravitySlider = document.getElementById('gravitySlider');
+        const gravityValue = document.getElementById('gravityValue');
+        const dampingSlider = document.getElementById('dampingSlider');
+        const dampingValue = document.getElementById('dampingValue');
+        const separationSlider = document.getElementById('separationSlider');
+        const separationValue = document.getElementById('separationValue');
+        const patternMode = document.getElementById('patternMode');
+        const colorPicker = document.getElementById('colorPicker');
+        
+        let clickCount = 0;
+        let shapes = [];
+        let animationId = null;
+        const PHI = 1.618033988749895;
+        
+        // Enhanced physics constants
+        let GRAVITY = 0.3;
+        let DAMPING = 0.95;
+        let SEPARATION_BUFFER = 3;
+        const BOUNCE = 0.6;
+        const MIN_VELOCITY = 0.005;
+        const SETTLING_TIME = 30;
+        const COLLISION_DAMPING = 0.8;
+        
+        // Enhanced visual properties
+        let currentColor = '#000000';
+        let currentMode = 'gravity';
+        
+        // Event listeners
+        gravitySlider.addEventListener('input', function() {
+            GRAVITY = parseFloat(this.value);
+            gravityValue.textContent = GRAVITY.toFixed(2);
+            wakeUpShapes();
+        });
+        
+        dampingSlider.addEventListener('input', function() {
+            DAMPING = parseFloat(this.value);
+            dampingValue.textContent = DAMPING.toFixed(2);
+        });
 
-colorToggle.addEventListener('change', function () {
-    colorCycling = this.checked;
-    shapes.forEach((shape, i) => {
-        shape.color = colorCycling ? COLORS[i % COLORS.length] : "#000";
-    });
-    drawAll();
-});
+        separationSlider.addEventListener('input', function() {
+            SEPARATION_BUFFER = parseInt(this.value);
+            separationValue.textContent = SEPARATION_BUFFER;
+            wakeUpShapes();
+        });
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight - canvas.getBoundingClientRect().top - 40;
-    relocateShapesToGrid();
-    drawAll();
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+        patternMode.addEventListener('change', function() {
+            currentMode = this.value;
+            applyPatternMode();
+        });
 
-function getShapeType(clickNum) {
-    const clickMod = clickNum % 3;
-    return clickMod === 1 ? "square" : clickMod === 2 ? "triangle" : "circle";
-}
-
-function getGrid(n) {
-    let cols = Math.ceil(Math.sqrt(n));
-    let rows = Math.ceil(n / cols);
-    // Try to get as close to square as possible
-    while ((cols-1) * rows >= n) cols--;
-    return {cols, rows};
-}
-
-function relocateShapesToGrid(animate=false, animFrom={x:0, y:0}) {
-    const n = shapes.length;
-    if (n === 0) return;
-    const {cols, rows} = getGrid(n);
-    const cellW = canvas.width / cols;
-    const cellH = canvas.height / rows;
-    const gapX = cellW * GAP_PERCENT;
-    const gapY = cellH * GAP_PERCENT;
-    const size = Math.min(cellW, cellH) - Math.max(gapX, gapY);
-
-    shapes.forEach((shape, i) => {
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        const x = col * cellW + (cellW - size) / 2;
-        const y = row * cellH + (cellH - size) / 2;
-        shape.targetX = x;
-        shape.targetY = y;
-        shape.size = size;
-        shape.type = shape.type; // already set
-        shape.color = colorCycling ? COLORS[i % COLORS.length] : "#000";
-        if (animate && i === n - 1) {
-            // Animate only the new shape
-            shape.x = animFrom.x - size/2;
-            shape.y = animFrom.y - size/2;
-            shape.animating = true;
-        } else {
-            shape.x = x;
-            shape.y = y;
-            shape.animating = false;
-        }
-    });
-}
-
-function animateNewShape() {
-    let animating = false;
-    shapes.forEach(shape => {
-        if (shape.animating) {
-            const dx = shape.targetX - shape.x;
-            const dy = shape.targetY - shape.y;
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                shape.x += dx * 0.2;
-                shape.y += dy * 0.2;
-                animating = true;
-            } else {
-                shape.x = shape.targetX;
-                shape.y = shape.targetY;
-                shape.animating = false;
+        colorPicker.addEventListener('change', function() {
+            currentColor = this.value;
+        });
+        
+        function resizeCanvas() {
+            const rect = canvas.getBoundingClientRect();
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight - rect.top - 50;
+            
+            if (shapes.length > 0) {
+                recalculateAndRepositionShapes();
+                wakeUpShapes();
+                startAnimation();
             }
         }
-    });
-    drawAll();
-    if (animating) requestAnimationFrame(animateNewShape);
-}
-
-function drawShape(shape) {
-    const {x, y, size, type, color} = shape;
-    ctx.save();
-    ctx.translate(x + size / 2, y + size / 2);
-    ctx.rotate(shape.rotation || 0);
-    ctx.globalAlpha = 0.98;
-    ctx.fillStyle = color;
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 2;
-    switch (type) {
-        case 'square':
-            ctx.fillRect(-size / 2, -size / 2, size, size);
-            ctx.strokeRect(-size / 2 + 1, -size / 2 + 1, size - 2, size - 2);
-            break;
-        case 'triangle':
-            ctx.beginPath();
-            ctx.moveTo(0, -size / 2);
-            ctx.lineTo(-size / 2, size / 2);
-            ctx.lineTo(size / 2, size / 2);
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-            break;
-        case 'circle':
-            ctx.beginPath();
-            ctx.arc(0, 0, size / 2, 0, 2 * Math.PI);
-            ctx.fill();
-            ctx.stroke();
-            break;
-    }
-    ctx.restore();
-}
-
-function drawAll() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    shapes.forEach(drawShape);
-}
-
-function clearCanvas() {
-    shapes = [];
-    clickCount = 0;
-    clickCounter.textContent = 'Clicks: 0';
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function saveImage() {
-    ctx.save();
-    ctx.globalAlpha = 1.0;
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    shapes.forEach(drawShape);
-    ctx.restore();
-
-    const link = document.createElement('a');
-    link.download = 'bauhaus-gravity.png';
-    link.href = canvas.toDataURL();
-    link.click();
-}
-
-function handleShapeAdd(mouseX, mouseY) {
-    clickCount++;
-    clickCounter.textContent = `Clicks: ${clickCount}`;
-    const shapeType = getShapeType(clickCount);
-    const shape = {
-        x: mouseX, y: mouseY, size: 10, type: shapeType,
-        rotation: (shapeType !== "circle") ? (Math.random() - 0.5) * 0.2 : 0,
-        color: colorCycling ? COLORS[(shapes.length) % COLORS.length] : "#000",
-        animating: false
-    };
-    shapes.push(shape);
-    relocateShapesToGrid(true, {x: mouseX, y: mouseY});
-    animateNewShape();
-}
-
-canvas.addEventListener('click', function (e) {
-    const rect = canvas.getBoundingClientRect();
-    handleShapeAdd(e.clientX - rect.left, e.clientY - rect.top);
-});
-
-canvas.addEventListener('touchstart', function (e) {
-    if (e.touches.length === 1) {
-        const rect = canvas.getBoundingClientRect();
-        handleShapeAdd(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-    }
-});
-
-</script>
-</body>
-</html>
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        function calculateOptimalSizes() {
+            if (shapes.length === 0) return [];
+            
+            const totalArea = canvas.width * canvas.height;
+            const usableArea = totalArea * 0.88;
+            const baseAreaPerShape = usableArea / shapes.length;
+            
+            const sizes = shapes.map((shape, index) => {
+                const phiVariation = 0.6 + (Math.sin(index * PHI * 0.3) * 0.7);
+                const phiVariation2 = 0.8 + (Math.cos(index * PHI * 0.7) * 0.4);
+                const combinedVariation = (phiVariation + phiVariation2) / 2;
+                
+                let efficiencyFactor = 1.0;
+                switch(shape.type) {
+                    case 'square': efficiencyFactor = 1.0; break;
+                    case 'circle': efficiencyFactor = 0.9; break;
+                    case 'triangle': efficiencyFactor = 1.1; break;
+                }
+                
+                const adjustedArea = baseAreaPerShape * combinedVariation * efficiencyFactor;
+                let size = Math.sqrt(adjustedArea);
+                
+                const minSize = Math.min(canvas.width, canvas.height) * 0.03;
+                const maxSize = Math.min(canvas.width, canvas.height) * (0.4 - shapes.length * 0.01);
+                size = Math.max(minSize, Math.min(size, maxSize));
+                
+                return size;
+            });
+            
+            return sizes;
+        }
+        
+        function getCollisionBounds(shape) {
+            const centerX = shape.x + shape.size / 2;
+            const centerY = shape.y + shape.size / 2;
+            
+            switch(shape.type) {
+                case 'circle':
+                    return {
+                        centerX,
+                        centerY,
+                        radius: shape.size / 2 + SEPARATION_BUFFER
+                    };
+                case 'square':
+                    return {
+                        centerX,
+                        centerY,
+                        radius: (shape.size * Math.sqrt(2)) / 2 + SEPARATION_BUFFER
+                    };
+                case 'triangle':
+                    return {
+                        centerX,
+                        centerY: centerY + shape.size * 0.1,
+                        radius: shape.size * 0.6 + SEPARATION_BUFFER
+                    };
+                default:
+                    return {
+                        centerX,
+                        centerY,
+                        radius: shape.size / 2 + SEPARATION_BUFFER
+                    };
+            }
+        }
+        
+        function checkCollision(shape1, shape2) {
+            const bounds1 = getCollisionBounds(shape1);
+            const bounds2 = getCollisionBounds(shape2);
+            
+            const dx = bounds1.centerX - bounds2.centerX;
+            const dy = bounds1.centerY - bounds2.centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const minDistance = bounds1.radius + bounds2.radius;
+            
+            return distance < minDistance;
+        }
+        
+        function resolveCollision(shape1, shape2) {
+            const bounds1 = getCollisionBounds(shape1);
+            const bounds2 = getCollisionBounds(shape2);
+            
+            const dx = bounds1.centerX - bounds2.centerX;
+            const dy = bounds1.centerY - bounds2.centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const minDistance = bounds1.radius + bounds2.radius;
+            
+            if (distance < minDistance && distance > 0) {
+                const overlap = minDistance - distance;
+                const separationX = (dx / distance) * overlap * 0.5;
+                const separationY = (dy / distance) * overlap * 0.5;
+                
+                const mass1 = shape1.size * shape1.size;
+                const mass2 = shape2.size * shape2.size;
+                const totalMass = mass1 + mass2;
+                const mass1Ratio = mass2 / totalMass;
+                const mass2Ratio = mass1 / totalMass;
+                
+                shape1.x += separationX * mass1Ratio;
+                shape1.y += separationY * mass1Ratio;
+                shape2.x -= separationX * mass2Ratio;
+                shape2.y -= separationY * mass2Ratio;
+                
+                const separationForce = overlap * 0.05;
+                const velocitySeparation = 0.02;
+                
+                shape1.vx += (dx / distance) * separationForce * mass1Ratio + (Math.random() - 0.5) * velocitySeparation;
+                shape1.vy += (dy / distance) * separationForce * mass1Ratio + (Math.random() - 0.5) * velocitySeparation;
+                shape2.vx -= (dx / distance) * separationForce * mass2Ratio + (Math.random() - 0.5) * velocitySeparation;
+                shape2.vy -= (dy / distance) * separationForce * mass2Ratio + (Math.random() - 0.5) * velocitySeparation;
+                
+                shape1.vx *= COLLISION_DAMPING;
+                shape1.vy *= COLLISION_DAMPING;
+                shape2.vx *= COLLISION_DAMPING;
+                shape2.vy *= COLLISION_DAMPING;
+                
+                shape1.settled = false;
+                shape1.settlingTimer = 0;
+                shape2.settled = false;
+                shape2.settlingTimer = 0;
+            }
+        }
+        
+        function keepInBounds(shape) {
+            let bounced = false;
+            const margin = 2;
+            
+            if (shape.x < margin) {
+                shape.x = margin;
+                shape.vx = Math.abs(shape.vx) * BOUNCE;
+                bounced = true;
+            }
+            
+            if (shape.x + shape.size > canvas.width - margin) {
+                shape.x = canvas.width - shape.size - margin;
+                shape.vx = -Math.abs(shape.vx) * BOUNCE;
+                bounced = true;
+            }
+            
+            if (shape.y < margin) {
+                shape.y = margin;
+                shape.vy = Math.abs(shape.vy) * BOUNCE;
+                bounced = true;
+            }
+            
+            if (shape.y + shape.size >= canvas.height - margin) {
+                shape.y = canvas.height - shape.size - margin;
+                shape.vy = -Math.abs(shape.vy) * BOUNCE;
+                bounced = true;
+            }
+            
+            if (bounced) {
+                shape.settled = false;
+                shape.settlingTimer = 0;
+            }
+            
+            return bounced;
+        }
+        
+        function applyPatternMode() {
+            if (shapes.length === 0) return;
+            
+            switch(currentMode) {
+                case 'spiral':
+                    applySpiral();
+                    break;
+                case 'grid':
+                    applyGrid();
+                    break;
+                case 'scatter':
+                    applySmartScatter();
+                    break;
+                case 'gravity':
+                default:
+                    break;
+            }
+            wakeUpShapes();
+        }
+        
+        function applySpiral() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            let angle = 0;
+            let radius = 50;
+            
+            shapes.forEach((shape, index) => {
+                const spiralX = centerX + Math.cos(angle) * radius - shape.size / 2;
+                const spiralY = centerY + Math.sin(angle) * radius - shape.size / 2;
+                
+                shape.x = Math.max(0, Math.min(spiralX, canvas.width - shape.size));
+                shape.y = Math.max(0, Math.min(spiralY, canvas.height - shape.size));
+                
+                angle += PHI * 0.3;
+                radius += shape.size * 0.3;
+            });
+        }
+        
+        function applyGrid() {
+            const cols = Math.ceil(Math.sqrt(shapes.length));
+            const cellWidth = canvas.width / cols;
+            const cellHeight = canvas.height / Math.ceil(shapes.length / cols);
+            
+            shapes.forEach((shape, index) => {
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+                
+                const gridX = col * cellWidth + (cellWidth - shape.size) / 2;
+                const gridY = row * cellHeight + (cellHeight - shape.size) / 2;
+                
+                shape.x = Math.max(0, Math.min(gridX, canvas.width - shape.size));
+                shape.y = Math.max(0, Math.min(gridY, canvas.height - shape.size));
+                
+                shape.vx = (Math.random() - 0.5) * 0.5;
+                shape.vy = (Math.random() - 0.5) * 0.5;
+            });
+        }
+        
+        function applySmartScatter() {
+            shapes.forEach((shape, index) => {
+                let attempts = 0;
+                let validPosition = false;
+                
+                while (!validPosition && attempts < 50) {
+                    shape.x = Math.random() * (canvas.width - shape.size);
+                    shape.y = Math.random() * (canvas.height - shape.size);
+                    
+                    validPosition = true;
+                    for (let i = 0; i < index; i++) {
+                        if (checkCollision(shape, shapes[i])) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                    attempts++;
+                }
+                
+                shape.vx = (Math.random() - 0.5) * 1;
+                shape.vy = (Math.random() - 0.5) * 1;
+            });
+        }
+        
+        function recalculateAndRepositionShapes() {
+            if (shapes.length === 0) return;
+            
+            const newSizes = calculateOptimalSizes();
+            
+            shapes.forEach((shape, index) => {
+                const oldSize = shape.size;
+                shape.targetSize = newSizes[index];
+                shape.mass = shape.targetSize * 0.01;
+                
+                const centerX = shape.x + oldSize / 2;
+                const centerY = shape.y + oldSize / 2;
+                
+                shape.x = centerX - shape.targetSize / 2;
+                shape.y = centerY - shape.targetSize / 2;
+                
+                shape.x = Math.max(0, Math.min(shape.x, canvas.width - shape.targetSize));
+                shape.y = Math.max(0, Math.min(shape.y, canvas.height - shape.targetSize));
+            });
+        }
+        
+        function wakeUpShapes() {
+            shapes.forEach(shape => {
+                shape.settled = false;
+                shape.settlingTimer = 0;
+            });
+            startAnimation();
+        }
+        
+        function createShape(x, y, type, color = currentColor) {
+            const tempShape = { type: type };
+            shapes.push(tempShape);
+            const sizes = calculateOptimalSizes();
+            shapes.pop();
+            
+            const size = sizes.length > 0 ? sizes[sizes.length - 1] : Math.min(canvas.width, canvas.height) * 0.15;
+            
+            return {
+                x: Math.max(0, Math.min(x - size/2, canvas.width - size)),
+                y: Math.max(0, Math.min(y - size/2, canvas.height - size)),
+                size: size,
+                targetSize: size,
+                type: type,
+                color: color,
+                vx: (Math.random() - 0.5) * 1.5,
+                vy: Math.random() * -1.5 - 0.5,
+                mass: size * 0.01,
+                settled: false,
+                settlingTimer: 0,
+                rotation: Math.random() * Math.PI * 2,
+                rotationSpeed: (Math.random() - 0.5) * 0.05
+            };
+        }
+        
+        function updatePhysics() {
+            let anyMoving = false;
+            
+            shapes.forEach(shape => {
+                if (Math.abs(shape.size - shape.targetSize) > 0.5) {
+                    shape.size += (shape.targetSize - shape.size) * 0.08;
+                    shape.mass = shape.size * 0.01;
+                    anyMoving = true;
+                }
+            });
+            
+            shapes.forEach((shape, i) => {
+                if (!shape.settled) {
+                    if (currentMode === 'gravity') {
+                        shape.vy += GRAVITY;
+                    }
+                    
+                    shape.x += shape.vx;
+                    shape.y += shape.vy;
+                    
+                    shape.rotation += shape.rotationSpeed;
+                    shape.rotationSpeed *= 0.99;
+                    
+                    keepInBounds(shape);
+                    
+                    shape.vx *= DAMPING;
+                    shape.vy *= DAMPING;
+                    
+                    const totalVelocity = Math.sqrt(shape.vx * shape.vx + shape.vy * shape.vy);
+                    
+                    if (totalVelocity < MIN_VELOCITY) {
+                        shape.settlingTimer++;
+                        if (shape.settlingTimer > SETTLING_TIME) {
+                            shape.settled = true;
+                            shape.vx = 0;
+                            shape.vy = 0;
+                            shape.rotationSpeed = 0;
+                        }
+                    } else {
+                        shape.settlingTimer = 0;
+                        anyMoving = true;
+                    }
+                }
+            });
+            
+            for (let pass = 0; pass < 2; pass++) {
+                for (let i = 0; i < shapes.length; i++) {
+                    for (let j = i + 1; j < shapes.length; j++) {
+                        if (checkCollision(shapes[i], shapes[j])) {
+                            resolveCollision(shapes[i], shapes[j]);
+                            anyMoving = true;
+                        }
+                    }
+                }
+            }
+            
+            shapes.forEach(shape => {
+                const totalVelocity = Math.sqrt(shape.vx * shape.vx + shape.vy * shape.vy);
+                if (totalVelocity > 0.001 || Math.abs(shape.rotationSpeed) > 0.001) {
+                    anyMoving = true;
+                }
+            });
+            
+            return anyMoving;
+        }
+        
+        function drawShape(shape) {
+            const { x, y, size, type, settled, color, rotation } = shape;
+            const alpha = settled ? 0.95 : 1.0;
+            const centerX = x + size / 2;
+            const centerY = y + size / 2;
+            
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = color;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1;
+            
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(rotation);
+            
+            switch(type) {
+                case 'square':
+                    ctx.fillRect(-size/2, -size/2, size, size);
+                    break;
+                case 'circle':
+                    ctx.beginPath();
+                    ctx.arc(0, 0, size/2, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'triangle':
+                    ctx.beginPath();
+                    ctx.moveTo(0, -size/2);
+                    ctx.lineTo(-size/2, size/2);
