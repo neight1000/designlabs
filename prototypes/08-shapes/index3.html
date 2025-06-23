@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Bauhaus Gravity Generator (Physics + Scaling)</title>
+<title>Bauhaus Gravity Generator (No Overlap, Optimized)</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color: #000; overflow: hidden; height: 100vh; display: flex; flex-direction: column;}
@@ -117,7 +117,6 @@ window.addEventListener('resize', function() {
 resizeCanvas();
 
 function calculateOptimalShapeSize() {
-    // Try to fit n shapes on the screen with a 5% margin between shapes
     if (shapes.length === 0) return 80;
     const W = canvas.width, H = canvas.height;
     const n = shapes.length;
@@ -125,12 +124,11 @@ function calculateOptimalShapeSize() {
     let rows = Math.ceil(n / cols);
     let sizeX = W / cols;
     let sizeY = H / rows;
-    let size = Math.min(sizeX, sizeY) * 0.90; // 10% margin for bouncing/physics
+    let size = Math.min(sizeX, sizeY) * 0.88;
     return Math.max(30, size);
 }
 
 function rescaleShapes() {
-    // When shape count or screen changes, make all shapes target new size
     let newSize = calculateOptimalShapeSize();
     for (let s of shapes) {
         s.targetSize = newSize;
@@ -187,13 +185,52 @@ function drawShape(shape) {
     ctx.restore();
 }
 
+// Collision resolution with minimum separation margin
+function resolveCollisions() {
+    const separationMargin = 0.08;
+    for (let i = 0; i < shapes.length; i++) {
+        let s = shapes[i];
+        for (let j = i + 1; j < shapes.length; j++) {
+            let o = shapes[j];
+            let dx = (s.x + s.size/2) - (o.x + o.size/2);
+            let dy = (s.y + s.size/2) - (o.y + o.size/2);
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let minDist = (s.size + o.size) / 2 * (1 + separationMargin);
+            if (dist < minDist && dist > 0) {
+                // Minimum translation vector
+                let overlap = minDist - dist;
+                let nx = dx / dist;
+                let ny = dy / dist;
+                let totalMass = s.mass + o.mass;
+                let pushS = (overlap * (o.mass / totalMass));
+                let pushO = (overlap * (s.mass / totalMass));
+                s.x += nx * pushS;
+                s.y += ny * pushS;
+                o.x -= nx * pushO;
+                o.y -= ny * pushO;
+                // Exchange velocities (elastic, but damped)
+                let tx = -ny, ty = nx;
+                let dpTan1 = s.vx * tx + s.vy * ty;
+                let dpTan2 = o.vx * tx + o.vy * ty;
+                let dpNorm1 = s.vx * nx + s.vy * ny;
+                let dpNorm2 = o.vx * nx + o.vy * ny;
+                let m1 = (dpNorm1 * (s.mass - o.mass) + 2 * o.mass * dpNorm2) / totalMass;
+                let m2 = (dpNorm2 * (o.mass - s.mass) + 2 * s.mass * dpNorm1) / totalMass;
+                s.vx = tx * dpTan1 + nx * m1 * 0.92;
+                s.vy = ty * dpTan1 + ny * m1 * 0.92;
+                o.vx = tx * dpTan2 + nx * m2 * 0.92;
+                o.vy = ty * dpTan2 + ny * m2 * 0.92;
+            }
+        }
+    }
+}
+
 function updatePhysics() {
     let anyMoving = false;
     // Smoothly resize all shapes to targetSize
     for (let s of shapes) {
         if (Math.abs(s.size - s.targetSize) > 0.5) {
             s.size += (s.targetSize - s.size) * 0.2;
-            // Adjust mass as size changes
             s.mass = s.size * 0.007;
         } else {
             s.size = s.targetSize;
@@ -216,32 +253,6 @@ function updatePhysics() {
         s.vy *= DAMPING;
         // Rotation
         s.rotation += s.rotationSpeed;
-        // Collision with other shapes (approximate as circles)
-        for (let j = 0; j < shapes.length; j++) {
-            if (i === j) continue;
-            let o = shapes[j];
-            let dx = (s.x + s.size/2) - (o.x + o.size/2);
-            let dy = (s.y + s.size/2) - (o.y + o.size/2);
-            let dist = Math.sqrt(dx * dx + dy * dy);
-            let minDist = (s.size + o.size) / 2 * 0.92; // 8% gap for visual separation
-            if (dist < minDist && dist > 0) {
-                // Push apart
-                let overlap = minDist - dist;
-                let pushX = dx / dist * overlap * 0.5;
-                let pushY = dy / dist * overlap * 0.5;
-                s.x += pushX;
-                s.y += pushY;
-                o.x -= pushX;
-                o.y -= pushY;
-                // Exchange velocities (elastic)
-                let tempVx = s.vx;
-                let tempVy = s.vy;
-                s.vx = o.vx;
-                s.vy = o.vy;
-                o.vx = tempVx;
-                o.vy = tempVy;
-            }
-        }
         // Settle detection
         if (Math.abs(s.vx) > 0.05 || Math.abs(s.vy) > 0.05) {
             s.settled = false;
@@ -250,6 +261,7 @@ function updatePhysics() {
             s.settled = true;
         }
     }
+    resolveCollisions();
     return anyMoving;
 }
 
@@ -286,27 +298,99 @@ function saveImage() {
     link.click();
 }
 
+// Detect click on shape, pop if hit, otherwise add new shape
+canvas.addEventListener('click', function (e) {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    // Check if click is inside any shape (reverse for topmost)
+    let popped = false;
+    for (let i = shapes.length - 1; i >= 0; i--) {
+        const s = shapes[i];
+        const cx = s.x + s.size/2;
+        const cy = s.y + s.size/2;
+        const r = s.size/2;
+        if (Math.hypot(mx - cx, my - cy) < r) {
+            shapes.splice(i, 1); // Pop the shape!
+            rescaleShapes(); // Resize remaining shapes to fit screen
+            // Shuffle: give all shapes a burst of random velocity
+            shapes.forEach(shape => {
+                shape.vx += (Math.random() - 0.5) * 10;
+                shape.vy += (Math.random() - 0.5) * 10;
+            });
+            clickCount--;
+            clickCounter.textContent = `Clicks: ${clickCount}`;
+            startAnimation();
+            popped = true;
+            break;
+        }
+    }
+    if (!popped) {
+        handleShapeAdd(mx, my);
+    }
+});
+
+canvas.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 1) {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.touches[0].clientX - rect.left;
+        const my = e.touches[0].clientY - rect.top;
+        // Same logic as click
+        let popped = false;
+        for (let i = shapes.length - 1; i >= 0; i--) {
+            const s = shapes[i];
+            const cx = s.x + s.size/2;
+            const cy = s.y + s.size/2;
+            const r = s.size/2;
+            if (Math.hypot(mx - cx, my - cy) < r) {
+                shapes.splice(i, 1);
+                rescaleShapes();
+                shapes.forEach(shape => {
+                    shape.vx += (Math.random() - 0.5) * 10;
+                    shape.vy += (Math.random() - 0.5) * 10;
+                });
+                clickCount--;
+                clickCounter.textContent = `Clicks: ${clickCount}`;
+                startAnimation();
+                popped = true;
+                break;
+            }
+        }
+        if (!popped) {
+            handleShapeAdd(mx, my);
+        }
+    }
+});
+
 function handleShapeAdd(mouseX, mouseY) {
     clickCount++;
     clickCounter.textContent = `Clicks: ${clickCount}`;
     const shapeType = getShapeType(clickCount);
     const color = colorCycling ? COLORS[(shapes.length) % COLORS.length] : "#000";
     const shape = createShape(mouseX, mouseY, shapeType, color);
+
+    // On spawn, ensure no overlap:
+    for (let tries = 0; tries < 100; tries++) {
+        let overlap = false;
+        for (let s of shapes) {
+            let dx = (shape.x + shape.size/2) - (s.x + s.size/2);
+            let dy = (shape.y + shape.size/2) - (s.y + s.size/2);
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            let minDist = (shape.size + s.size) / 2 * 1.08;
+            if (dist < minDist) {
+                let angle = Math.atan2(dy, dx);
+                shape.x += Math.cos(angle) * (minDist - dist);
+                shape.y += Math.sin(angle) * (minDist - dist);
+                overlap = true;
+            }
+        }
+        if (!overlap) break;
+    }
     shapes.push(shape);
     rescaleShapes();
     startAnimation();
 }
-
-canvas.addEventListener('click', function (e) {
-    const rect = canvas.getBoundingClientRect();
-    handleShapeAdd(e.clientX - rect.left, e.clientY - rect.top);
-});
-canvas.addEventListener('touchstart', function (e) {
-    if (e.touches.length === 1) {
-        const rect = canvas.getBoundingClientRect();
-        handleShapeAdd(e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top);
-    }
-});
 
 // Initial paint
 ctx.clearRect(0, 0, canvas.width, canvas.height);
