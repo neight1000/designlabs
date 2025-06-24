@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced 3D Portfolio Icons</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 20px;
+            font-weight: 300;
+            font-size: 32px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .subtitle {
+            color: rgba(255,255,255,0.8);
+            margin-bottom: 40px;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 25px;
+            max-width: 1200px;
+            margin-bottom: 40px;
+        }
+
+        .icon-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .icon-container:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            background: rgba(255,255,255,1);
+        }
+
+        .icon {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 15px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+
+        .icon-label {
+            color: #333;
+            font-size: 13px;
+            text-align: center;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        /* Enhanced 3D Animations */
+        .cube-float {
+            animation: cubeFloat 3s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        .cube-rotate {
+            animation: cubeRotate 4s linear infinite;
+            transform-style: preserve-3d;
+        }
+
+        .cube-pulse {
+            animation: cubePulse 2.5s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        .sphere-bounce {
+            animation: sphereBounce 2.8s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        .sphere-rotate {
+            animation: sphereRotate 3.5s linear infinite;
+            transform-style: preserve-3d;
+        }
+
+        .sphere-morph {
+            animation: sphereMorph 4s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        .pyramid-spin {
+            animation: pyramidSpin 4s linear infinite;
+            transform-style: preserve-3d;
+        }
+
+        .pyramid-tilt {
+            animation: pyramidTilt 3.2s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        .diamond-rotate {
+            animation: diamondRotate 3.8s linear infinite;
+            transform-style: preserve-3d;
+        }
+
+        .cylinder-roll {
+            animation: cylinderRoll 3.5s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        .torus-spin {
+            animation: torusSpin 4.2s linear infinite;
+            transform-style: preserve-3d;
+        }
+
+        .hexagon-flip {
+            animation: hexagonFlip 3.6s ease-in-out infinite;
+            transform-style: preserve-3d;
+        }
+
+        /* Enhanced Keyframes */
+        @keyframes cubeFloat {
+            0%, 100% { transform: perspective(200px) rotateX(-15deg) rotateY(25deg) translateY(0px); }
+            50% { transform: perspective(200px) rotateX(-15deg) rotateY(25deg) translateY(-8px); }
+        }
+
+        @keyframes cubeRotate {
+            0% { transform: perspective(200px) rotateX(-15deg) rotateY(0deg) rotateZ(0deg); }
+            100% { transform: perspective(200px) rotateX(-15deg) rotateY(360deg) rotateZ(0deg); }
+        }
+
+        @keyframes cubePulse {
+            0%, 100% { transform: perspective(200px) rotateX(-15deg) rotateY(25deg) scale(1); }
+            50% { transform: perspective(200px) rotateX(-15deg) rotateY(25deg) scale(1.15); }
+        }
+
+        @keyframes sphereBounce {
+            0%, 100% { transform: perspective(200px) rotateX(0deg) rotateY(0deg) translateY(0px); }
+            25% { transform: perspective(200px) rotateX(0deg) rotateY(90deg) translateY(-10px); }
+            50% { transform: perspective(200px) rotateX(0deg) rotateY(180deg) translateY(0px); }
+            75% { transform: perspective(200px) rotateX(0deg) rotateY(270deg) translateY(-10px); }
+        }
+
+        @keyframes sphereRotate {
+            0% { transform: perspective(200px) rotateX(0deg) rotateY(0deg) rotateZ(0deg); }
+            100% { transform: perspective(200px) rotateX(360deg) rotateY(360deg) rotateZ(0deg); }
+        }
+
+        @keyframes sphereMorph {
+            0%, 100% { transform: perspective(200px) scale(1, 1) rotateY(0deg); }
+            25% { transform: perspective(200px) scale(1.2, 0.8) rotateY(90deg); }
+            50% { transform: perspective(200px) scale(0.8, 1.2) rotateY(180deg); }
+            75% { transform: perspective(200px) scale(1.1, 0.9) rotateY(270deg); }
+        }
+
+        @keyframes pyramidSpin {
+            0% { transform: perspective(200px) rotateX(-20deg) rotateY(0deg); }
+            100% { transform: perspective(200px) rotateX(-20deg) rotateY(360deg); }
+        }
+
+        @keyframes pyramidTilt {
+            0%, 100% { transform: perspective(200px) rotateX(-20deg) rotateY(0deg) rotateZ(0deg); }
+            25% { transform: perspective(200px) rotateX(-30deg) rotateY(0deg) rotateZ(8deg); }
+            50% { transform: perspective(200px) rotateX(-15deg) rotateY(0deg) rotateZ(0deg); }
+            75% { transform: perspective(200px) rotateX(-30deg) rotateY(0deg) rotateZ(-8deg); }
+        }
+
+        @keyframes diamondRotate {
+            0% { transform: perspective(200px) rotateX(-15deg) rotateY(0deg) rotateZ(0deg); }
+            100% { transform: perspective(200px) rotateX(-15deg) rotateY(360deg) rotateZ(360deg); }
+        }
+
+        @keyframes cylinderRoll {
+            0%, 100% { transform: perspective(200px) rotateX(-10deg) rotateZ(0deg) translateX(0px); }
+            50% { transform: perspective(200px) rotateX(-10deg) rotateZ(180deg) translateX(8px); }
+        }
+
+        @keyframes torusSpin {
+            0% { transform: perspective(200px) rotateX(-20deg) rotateY(0deg) rotateZ(0deg); }
+            100% { transform: perspective(200px) rotateX(-20deg) rotateY(360deg) rotateZ(180deg); }
+        }
+
+        @keyframes hexagonFlip {
+            0%, 100% { transform: perspective(200px) rotateX(0deg) rotateY(0deg); }
+            33% { transform: perspective(200px) rotateX(180deg) rotateY(0deg); }
+            66% { transform: perspective(200px) rotateX(180deg) rotateY(180deg); }
+        }
+
+        .download-section {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+
+        .controls {
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .speed-control {
+            color: white;
+            font-size: 14px;
+            margin: 0 10px;
+        }
+
+        .speed-slider {
+            margin-left: 10px;
+            accent-color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <h1>Enhanced 3D Portfolio Icons</h1>
+    <p class="subtitle">Professional animated icons perfect for portfolios and modern web design</p>
+    
+    <div class="controls">
+        <label class="speed-control">
+            Animation Speed: 
+            <input type="range" class="speed-slider" min="0.5" max="2" step="0.1" value="1" onchange="adjustSpeed(this.value)">
+        </label>
+    </div>
+    
+    <div class="icon-grid">
+        <!-- Black Monostroke Cubes -->
+        <div class="icon-container">
+            <svg class="icon cube-float" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Top face -->
+                <path d="M12 18L24 12L36 18L24 24L12 18Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <!-- Left face -->
+                <path d="M12 18L12 30L24 36L24 24L12 18Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <!-- Right face -->
+                <path d="M24 24L24 36L36 30L36 18L24 24Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            <div class="icon-label">FLOATING CUBE</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon cube-rotate" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Wireframe cube -->
+                <path d="M10 16L24 10L38 16L24 22L10 16Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M10 16L10 32L24 38L24 22L10 16Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 22L24 38L38 32L38 16L24 22Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <!-- Grid lines -->
+                <path d="M17 13L31 19" stroke="black" stroke-width="1.5" opacity="0.6"/>
+                <path d="M31 13L17 19" stroke="black" stroke-width="1.5" opacity="0.6"/>
+            </svg>
+            <div class="icon-label">ROTATING CUBE</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon cube-pulse" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 17L24 11L37 17L24 23L11 17Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M11 17L11 31L24 37L24 23L11 17Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 23L24 37L37 31L37 17L24 23Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            <div class="icon-label">PULSING CUBE</div>
+        </div>
+
+        <!-- Black Monostroke Spheres -->
+        <div class="icon-container">
+            <svg class="icon sphere-bounce" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="22" r="15" fill="none" stroke="black" stroke-width="2"/>
+                <ellipse cx="24" cy="22" rx="15" ry="5" fill="none" stroke="black" stroke-width="1.5" opacity="0.6"/>
+                <ellipse cx="24" cy="22" rx="10" ry="3" fill="none" stroke="black" stroke-width="1.5" opacity="0.4"/>
+                <ellipse cx="24" cy="22" rx="5" ry="1.5" fill="none" stroke="black" stroke-width="1" opacity="0.3"/>
+            </svg>
+            <div class="icon-label">BOUNCING SPHERE</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon sphere-rotate" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="16" fill="none" stroke="black" stroke-width="2"/>
+                <ellipse cx="24" cy="24" rx="16" ry="6" fill="none" stroke="black" stroke-width="1.5" opacity="0.7"/>
+                <ellipse cx="24" cy="24" rx="12" ry="16" fill="none" stroke="black" stroke-width="1.5" opacity="0.7"/>
+                <ellipse cx="24" cy="24" rx="6" ry="16" fill="none" stroke="black" stroke-width="1" opacity="0.5"/>
+                <path d="M24 8L24 40" stroke="black" stroke-width="1" opacity="0.4"/>
+            </svg>
+            <div class="icon-label">ROTATING SPHERE</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon sphere-morph" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="14" fill="none" stroke="black" stroke-width="2"/>
+                <ellipse cx="24" cy="24" rx="14" ry="4" fill="none" stroke="black" stroke-width="1.5" opacity="0.6"/>
+                <ellipse cx="24" cy="24" rx="10" ry="3" fill="none" stroke="black" stroke-width="1.5" opacity="0.4"/>
+                <ellipse cx="24" cy="24" rx="6" ry="2" fill="none" stroke="black" stroke-width="1" opacity="0.3"/>
+            </svg>
+            <div class="icon-label">MORPHING SPHERE</div>
+        </div>
+
+        <!-- Black Monostroke Pyramids -->
+        <div class="icon-container">
+            <svg class="icon pyramid-spin" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 36L24 30L38 36L24 42L10 36Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M10 36L24 6L24 30L10 36Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 30L24 6L38 36L24 30Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 6L10 36L38 36L24 6Z" fill="none" stroke="black" stroke-width="1.5" opacity="0.4"/>
+            </svg>
+            <div class="icon-label">SPINNING PYRAMID</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon pyramid-tilt" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 34L24 28L36 34L24 40L12 34Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M12 34L24 8L24 28L12 34Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 28L24 8L36 34L24 28Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 8L12 34L36 34L24 8Z" fill="none" stroke="black" stroke-width="1.5" opacity="0.4"/>
+            </svg>
+            <div class="icon-label">TILTING PYRAMID</div>
+        </div>
+
+        <!-- Black Monostroke New Shapes -->
+        <div class="icon-container">
+            <svg class="icon diamond-rotate" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 4L36 16L24 28L12 16L24 4Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 28L36 16L24 44L12 16L24 28Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 4L24 28" stroke="black" stroke-width="1.5" opacity="0.6"/>
+                <path d="M12 16L36 16" stroke="black" stroke-width="1.5" opacity="0.6"/>
+                <path d="M18 10L30 22" stroke="black" stroke-width="1" opacity="0.4"/>
+                <path d="M30 10L18 22" stroke="black" stroke-width="1" opacity="0.4"/>
+            </svg>
+            <div class="icon-label">ROTATING DIAMOND</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon cylinder-roll" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ellipse cx="24" cy="12" rx="12" ry="4" fill="none" stroke="black" stroke-width="2"/>
+                <path d="M12 12L12 36" stroke="black" stroke-width="2"/>
+                <path d="M36 12L36 36" stroke="black" stroke-width="2"/>
+                <ellipse cx="24" cy="36" rx="12" ry="4" fill="none" stroke="black" stroke-width="2"/>
+                <ellipse cx="24" cy="12" rx="8" ry="2.5" fill="none" stroke="black" stroke-width="1.5" opacity="0.5"/>
+                <ellipse cx="24" cy="36" rx="8" ry="2.5" fill="none" stroke="black" stroke-width="1.5" opacity="0.5"/>
+            </svg>
+            <div class="icon-label">ROLLING CYLINDER</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon torus-spin" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="24" cy="24" r="18" fill="none" stroke="black" stroke-width="2"/>
+                <circle cx="24" cy="24" r="10" fill="none" stroke="black" stroke-width="2"/>
+                <ellipse cx="24" cy="24" rx="18" ry="6" fill="none" stroke="black" stroke-width="1.5" opacity="0.4"/>
+                <ellipse cx="24" cy="24" rx="14" ry="4" fill="none" stroke="black" stroke-width="1" opacity="0.3"/>
+                <path d="M6 24L42 24" stroke="black" stroke-width="1" opacity="0.3"/>
+            </svg>
+            <div class="icon-label">SPINNING TORUS</div>
+        </div>
+
+        <div class="icon-container">
+            <svg class="icon hexagon-flip" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M24 6L36 12L36 28L24 34L12 28L12 12L24 6Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 6L36 12L24 20L12 12L24 6Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 20L36 28L24 34L12 28L24 20Z" fill="none" stroke="black" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M24 6L24 34" stroke="black" stroke-width="1.5" opacity="0.5"/>
+                <path d="M12 12L36 28" stroke="black" stroke-width="1" opacity="0.3"/>
+                <path d="M36 12L12 28" stroke="black" stroke-width="1" opacity="0.3"/>
+            </svg>
+            <div class="icon-label">FLIPPING HEXAGON</div>
+        </div>
+    </div>
+
+    <div class="download-section">
+        <button class="download-btn" onclick="downloadSVG()">Download SVG Pack</button>
+        <button class="download-btn" onclick="downloadPNG()">Export PNG Pack</button>
+        <button class="download-btn" onclick="generateCSS()">Get CSS Code</button>
+    </div>
+
+    <script>
+        function adjustSpeed(value) {
+            const icons = document.querySelectorAll('.icon');
+            icons.forEach(icon => {
+                icon.style.animationDuration = `${parseFloat(icon.style.animationDuration || '3s') / parseFloat(value)}s`;
+            });
+        }
+
+        function downloadSVG() {
+            const svgs = document.querySelectorAll('.icon');
+            const labels = [
+                'floating-cube', 'rotating-cube', 'pulsing-cube', 
+                'bouncing-sphere', 'rotating-sphere', 'morphing-sphere',
+                'spinning-pyramid', 'tilting-pyramid', 'rotating-diamond',
+                'rolling-cylinder', 'spinning-torus', 'flipping-hexagon'
+            ];
+            
+            svgs.forEach((svg, index) => {
+                const svgClone = svg.cloneNode(true);
+                svgClone.style.animation = 'none';
+                const svgData = new XMLSerializer().serializeToString(svgClone);
+                const blob = new Blob([svgData], {type: 'image/svg+xml'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${labels[index]}.svg`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+
+        function downloadPNG() {
+            const svgs = document.querySelectorAll('.icon');
+            const labels = [
+                'floating-cube', 'rotating-cube', 'pulsing-cube', 
+                'bouncing-sphere', 'rotating-sphere', 'morphing-sphere',
+                'spinning-pyramid', 'tilting-pyramid', 'rotating-diamond',
+                'rolling-cylinder', 'spinning-torus', 'flipping-hexagon'
+            ];
+            
+            svgs.forEach((svg, index) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
