@@ -386,172 +386,108 @@
 
         async function generateVideoReal(apiKey, prompt) {
             try {
-                document.getElementById('statusText').innerHTML = '<small>Connecting via CORS proxy...</small>';
+                document.getElementById('statusText').innerHTML = '<small>Connecting to Luma AI...</small>';
                 
-                // Try multiple CORS proxy services
-                const proxies = [
-                    'https://api.allorigins.win/raw?url=',
-                    'https://corsproxy.io/?',
-                    'https://cors-anywhere.herokuapp.com/'
-                ];
+                // Try direct connection first (works in some environments)
+                try {
+                    const response = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + apiKey,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            aspect_ratio: '16:9'
+                        })
+                    });
 
-                let createData = null;
-                let workingProxy = null;
-
-                // Try each proxy until one works
-                for (const proxy of proxies) {
-                    try {
-                        document.getElementById('statusText').innerHTML = '<small>Trying proxy: ' + proxy.split('//')[1].split('/')[0] + '...</small>';
-                        
-                        const response = await fetch(proxy + encodeURIComponent('https://api.lumalabs.ai/dream-machine/v1/generations'), {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: JSON.stringify({
-                                method: 'POST',
-                                headers: {
-                                    'Authorization': 'Bearer ' + apiKey,
-                                    'Content-Type': 'application/json'
-                                },
-                                body: JSON.stringify({
-                                    prompt: prompt,
-                                    aspect_ratio: '16:9'
-                                })
-                            })
-                        });
-
-                        if (response.ok) {
-                            const responseText = await response.text();
-                            try {
-                                createData = JSON.parse(responseText);
-                                if (createData && createData.id) {
-                                    workingProxy = proxy;
-                                    break;
-                                }
-                            } catch (parseError) {
-                                // If it's not JSON, try as raw response
-                                if (responseText.includes('"id"')) {
-                                    createData = JSON.parse(responseText);
-                                    workingProxy = proxy;
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (proxyError) {
-                        console.log('Proxy failed:', proxy, proxyError.message);
-                        continue;
+                    if (response.ok) {
+                        const data = await response.json();
+                        return await pollForCompletion(data.id, apiKey, prompt);
                     }
+                } catch (directError) {
+                    console.log('Direct connection failed, trying alternatives...');
                 }
 
-                // If proxies fail, try direct call (might work in some browsers/environments)
-                if (!createData) {
-                    try {
-                        document.getElementById('statusText').innerHTML = '<small>Trying direct connection...</small>';
-                        
-                        const directResponse = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': 'Bearer ' + apiKey,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                prompt: prompt,
-                                aspect_ratio: '16:9'
-                            })
-                        });
+                // Try alternative approach with different headers
+                document.getElementById('statusText').innerHTML = '<small>Trying alternative connection method...</small>';
+                
+                try {
+                    const altResponse = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
+                        method: 'POST',
+                        mode: 'cors',
+                        credentials: 'omit',
+                        headers: {
+                            'Authorization': 'Bearer ' + apiKey,
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Origin': window.location.origin
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            aspect_ratio: '16:9'
+                        })
+                    });
 
-                        if (directResponse.ok) {
-                            createData = await directResponse.json();
-                            workingProxy = 'direct';
-                        }
-                    } catch (directError) {
-                        // Direct call failed, which is expected
+                    if (altResponse.ok) {
+                        const data = await altResponse.json();
+                        return await pollForCompletion(data.id, apiKey, prompt);
                     }
+                } catch (altError) {
+                    console.log('Alternative method failed');
                 }
 
-                if (!createData || !createData.id) {
-                    throw new Error('Unable to connect to Luma AI API.\n\n🔧 Possible solutions:\n• Check your API key is valid\n• Try Demo Mode to see how it works\n• Use a server-side implementation\n• Try again later (proxy services may be temporarily down)');
-                }
-
-                const generationId = createData.id;
-                document.getElementById('statusText').innerHTML = '<small>✅ Generation started! ID: ' + generationId.substring(0, 8) + '...</small>';
-
-                // Poll for completion
-                let attempts = 0;
-                const maxAttempts = 60;
-
-                while (attempts < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    attempts++;
-                    
-                    document.getElementById('statusText').innerHTML = '<small>🎬 Processing... (' + attempts + '/' + maxAttempts + ') - This can take 2-5 minutes</small>';
-
-                    try {
-                        let statusData = null;
-
-                        // Try the working proxy first
-                        if (workingProxy && workingProxy !== 'direct') {
-                            try {
-                                const statusResponse = await fetch(workingProxy + encodeURIComponent('https://api.lumalabs.ai/dream-machine/v1/generations/' + generationId), {
-                                    headers: {
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    }
-                                });
-
-                                if (statusResponse.ok) {
-                                    const responseText = await statusResponse.text();
-                                    statusData = JSON.parse(responseText);
-                                }
-                            } catch (proxyError) {
-                                // Proxy failed, try direct
-                            }
-                        }
-
-                        // Try direct call if proxy failed
-                        if (!statusData) {
-                            try {
-                                const directStatusResponse = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations/' + generationId, {
-                                    headers: {
-                                        'Authorization': 'Bearer ' + apiKey
-                                    }
-                                });
-
-                                if (directStatusResponse.ok) {
-                                    statusData = await directStatusResponse.json();
-                                }
-                            } catch (directError) {
-                                // Continue trying
-                            }
-                        }
-
-                        if (statusData) {
-                            if (statusData.state === 'completed') {
-                                document.getElementById('statusText').innerHTML = '<small>🎉 Generation completed!</small>';
-                                
-                                hideAllStates();
-                                document.getElementById('resultVideo').src = statusData.assets.video;
-                                document.getElementById('promptUsed').textContent = '"' + prompt + '"';
-                                document.getElementById('generationInfo').innerHTML = '<small>✅ Generated with Luma AI API • ID: ' + generationId + '</small>';
-                                document.getElementById('result').classList.add('active');
-                                return;
-                            } else if (statusData.state === 'failed') {
-                                throw new Error('Generation failed: ' + (statusData.failure_reason || 'Unknown error'));
-                            }
-                            // Still processing, continue loop
-                        }
-                    } catch (pollError) {
-                        // Continue polling even if individual requests fail
-                        console.log('Poll attempt failed:', pollError.message);
-                    }
-                }
-
-                throw new Error('Generation timed out after 5 minutes. The video might still be processing - check your Luma AI dashboard.');
+                // If all methods fail, suggest practical solutions
+                throw new Error('🚫 All connection methods failed due to CORS restrictions.\n\n💡 Quick Solutions:\n\n1️⃣ Try Demo Mode to see how it works\n2️⃣ Use browser extension: "CORS Unblock" or "Disable CORS"\n3️⃣ Launch Chrome with: --disable-web-security --user-data-dir=/tmp/chrome\n4️⃣ Use the official Luma AI website instead\n\n🎭 For now, click "Demo Mode" to test the interface!');
 
             } catch (error) {
                 throw error;
             }
+        }
+
+        async function pollForCompletion(generationId, apiKey, prompt) {
+            document.getElementById('statusText').innerHTML = '<small>✅ Generation started! ID: ' + generationId.substring(0, 8) + '...</small>';
+
+            let attempts = 0;
+            const maxAttempts = 60;
+
+            while (attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                attempts++;
+                
+                document.getElementById('statusText').innerHTML = '<small>🎬 Processing... (' + attempts + '/' + maxAttempts + ') - This can take 2-5 minutes</small>';
+
+                try {
+                    const statusResponse = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations/' + generationId, {
+                        headers: {
+                            'Authorization': 'Bearer ' + apiKey,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (statusResponse.ok) {
+                        const statusData = await statusResponse.json();
+                        
+                        if (statusData.state === 'completed') {
+                            document.getElementById('statusText').innerHTML = '<small>🎉 Generation completed!</small>';
+                            
+                            hideAllStates();
+                            document.getElementById('resultVideo').src = statusData.assets.video;
+                            document.getElementById('promptUsed').textContent = '"' + prompt + '"';
+                            document.getElementById('generationInfo').innerHTML = '<small>✅ Generated with Luma AI API • ID: ' + generationId + '</small>';
+                            document.getElementById('result').classList.add('active');
+                            return;
+                        } else if (statusData.state === 'failed') {
+                            throw new Error('Generation failed: ' + (statusData.failure_reason || 'Unknown error'));
+                        }
+                    }
+                } catch (pollError) {
+                    console.log('Poll attempt failed:', pollError.message);
+                }
+            }
+
+            throw new Error('Generation timed out after 5 minutes');
         }
 
         async function generateVideo() {
