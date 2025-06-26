@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hip Hop Studio - Intelligent Music Experience</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #fff;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            transition: all 0.5s ease;
+        }
+
+        .ai-hip-hop-player {
+            width: 380px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            color: #fff;
+            border: 2px solid #00ff88;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ai-hip-hop-player::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(0, 255, 136, 0.1) 50%, transparent 70%);
+            animation: shimmer 3s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .ai-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: rgba(0, 255, 136, 0.1);
+            border-radius: 6px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(0, 255, 136, 0.3);
+        }
+
+        .ai-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 10px;
+            color: #00ff88;
+        }
+
+        .ai-pulse {
+            width: 8px;
+            height: 8px;
+            background: #00ff88;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .listening-indicator {
+            color: #ff3366;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .app-title {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: 2px;
+            text-align: center;
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .app-subtitle {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-bottom: 20px;
+            letter-spacing: 1px;
+            text-align: center;
+            color: #888;
+        }
+
+        .voice-command-section {
+            background: rgba(0, 255, 136, 0.05);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .voice-btn {
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            border: none;
+            color: #000;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+        }
+
+        .voice-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+        }
+
+        .voice-btn.listening {
+            animation: listening-pulse 0.5s infinite alternate;
+        }
+
+        @keyframes listening-pulse {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.05); }
+        }
+
+        .voice-suggestions {
+            font-size: 9px;
+            color: #888;
+            margin-top: 8px;
+            line-height: 1.3;
+        }
+
+        .ai-recommendations {
+            background: rgba(136, 136, 136, 0.1);
+            border: 1px solid rgba(136, 136, 136, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .ai-rec-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #00ff88;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .ai-rec-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 10px;
+        }
+
+        .ai-rec-item:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateX(4px);
+        }
+
+        .mood-analyzer {
+            background: rgba(255, 51, 102, 0.1);
+            border: 1px solid rgba(255, 51, 102, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+        }
+
+        .mood-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #ff3366;
+            margin-bottom: 8px;
+        }
+
+        .mood-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .mood-emoji {
+            font-size: 24px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .mood-text {
+            font-size: 10px;
+            color: #ccc;
+        }
+
+        .eq-icon {
+            width: 100%;
+            height: 50px;
+            display: flex;
+            align-items: end;
+            gap: 3px;
+            margin: 16px 0;
+            justify-content: center;
+        }
+
+        .eq-bar {
+            background: linear-gradient(to top, #00ff88, #0088ff);
+            border-radius: 2px;
+            flex: 1;
+            max-width: 8px;
+            transition: height 0.1s ease;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .eq-icon.playing .eq-bar {
+            animation: eq-bounce 0.3s ease-in-out infinite;
+        }
+
+        .current-track {
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            text-align: center;
+            color: #00ff88;
+        }
+
+        .current-artist {
+            font-size: 10px;
+            opacity: 0.8;
+            margin-bottom: 16px;
+            text-align: center;
+            color: #ccc;
+        }
+
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 136, 0.3);
+            color: #00ff88;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 255, 136, 0.2);
+            border-color: #00ff88;
+            transform: scale(1.1);
+        }
+
+        .control-btn.play-pause {
+            padding: 16px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            color: #000;
+            border: none;
+        }
+
+        .control-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .ai-chat-section {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 16px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .chat-message {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 10px;
+            line-height: 1.4;
+        }
+
+        .chat-message.user {
+            flex-direction: row-reverse;
+        }
+
+        .chat-message.user .message-content {
+            background: rgba(0, 255, 136, 0.2);
+            text-align: right;
+        }
+
+        .chat-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #00ff88, #0088ff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            color: #000;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .message-content {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 6px 10px;
+            border-radius: 12px;
+            max-width: 200px;
+        }
+
+        .track-list {
+            width: 100%;
+            max-height: 100px;
+            overflow-y: auto;
+            border: 1px solid rgba(0, 255, 136, 0.2);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .track-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: transparent;
+            transition: all 0.3s ease;
+        }
+
+        .track-item:hover {
+            background: rgba(0, 255, 136, 0.1);
+            transform: translateX(4px);
+        }
+
+        .track-item.active {
+            background: rgba(0, 255, 136, 0.2);
+            border-left: 3px solid #00ff88;
+        }
+
+        .track-name {
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .track-meta {
+            font-size: 9px;
+            color: #888;
+        }
+
+        .ai-insights {
+            background: rgba(0, 136, 255, 0.1);
+            border: 1px solid rgba(0, 136, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+        }
+
+        .insights-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #0088ff;
+            margin-bottom: 8px;
+        }
+
+        .insight-item {
+            font-size: 9px;
+            color: #ccc;
+            margin-bottom: 4px;
+            padding-left: 12px;
+            position: relative;
+        }
+
+        .insight-item::before {
+            content: '•';
+            color: #0088ff;
+            position: absolute;
+            left: 0;
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 255, 136, 0.5);
+            border-radius: 2px;
+        }
+
+        .voice-waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
+            margin: 8px 0;
+            height: 20px;
+        }
+
+        .wave-bar {
+            width: 3px;
+            background: #00ff88;
+            border-radius: 2px;
+            height: 4px;
+            animation: wave 1s infinite ease-in-out;
+        }
+
+        .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+        .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+        .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+        .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+        @keyframes wave {
+            0%, 100% { height: 4px; }
+            50% { height: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="ai-hip-hop-player">
+        <div class="ai-status-bar">
+            <div class="ai-indicator">
+                <div class="ai-pulse"></div>
+                <span>AI ACTIVE</span>
+            </div>
+            <div class="listening-indicator" id="listeningStatus" style="display: none;">
+                ● LISTENING
+            </div>
+        </div>
+        
+        <h1 class="app-title">AI HIP HOP STUDIO</h1>
+        <p class="app-subtitle">INTELLIGENT MUSIC EXPERIENCE</p>
+        
+        <div class="voice-command-section">
+            <button class="voice-btn" id="voiceBtn" onclick="toggleVoiceCommand()">
+                🎤 VOICE COMMAND
+            </button>
+            <div class="voice-waveform" id="voiceWaveform" style="display: none;">
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+                <div class="wave-bar"></div>
+            </div>
+            <div class="voice-suggestions">
+                Try: "Play something energetic" • "Skip to next track" • "What's this song about?"
+            </div>
+        </div>
+
+        <div class="ai-recommendations">
+            <div class="ai-rec-title">
+                <span>🤖</span> AI RECOMMENDATIONS
+            </div>
+            <div class="ai-rec-item" onclick="playRecommendation(0)">
+                🔥 Based on your energy level: Trap Vibes
+            </div>
+            <div class="ai-rec-item" onclick="playRecommendation(1)">
+                🎵 Similar to your taste: Jazz Fusion Hip Hop
+            </div>
+        </div>
+
+        <div class="mood-analyzer">
+            <div class="mood-title">MOOD ANALYZER</div>
+            <div class="mood-display">
+                <div class="mood-emoji" id="moodEmoji">😎</div>
+                <div class="mood-text" id="moodText">Chill & Focused</div>
+            </div>
+        </div>
+        
+        <div class="eq-icon" id="eqIcon">
+            <div class="eq-bar" style="height: 8px;"></div>
+            <div class="eq-bar" style="height: 16px;"></div>
+            <div class="eq-bar" style="height: 12px;"></div>
+            <div class="eq-bar" style="height: 20px;"></div>
+            <div class="eq-bar" style="height: 6px;"></div>
+            <div class="eq-bar" style="height: 14px;"></div>
+            <div class="eq-bar" style="height: 18px;"></div>
+            <div class="eq-bar" style="height: 10px;"></div>
+            <div class="eq-bar" style="height: 22px;"></div>
+            <div class="eq-bar" style="height: 7px;"></div>
+            <div class="eq-bar" style="height: 15px;"></div>
+            <div class="eq-bar" style="height: 19px;"></div>
+        </div>
+        
+        <div class="current-track" id="currentTrack">Lo-Fi Hip Hop Beat</div>
+        <div class="current-artist" id="currentArtist">AI Generated • Studio Vibes</div>
+
+        <div class="player-controls">
+            <button class="control-btn" onclick="previousTrack()">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="19,20 9,12 19,4"/>
+                    <line x1="5" y1="19" x2="5" y2="5"/>
+                </svg>
+            </button>
+            <button class="control-btn play-pause" onclick="togglePlayPause()">
+                <svg id="playIcon" viewBox="0 0 24 24">
+                    <polygon points="5,3 19,12 5,21"/>
+                </svg>
+                <svg id="pauseIcon" viewBox="0 0 24 24" style="display: none;">
+                    <rect x="6" y="4" width="4" height="16"/>
+                    <rect x="14" y="4" width="4" height="16"/>
+                </svg>
+            </button>
+            <button class="control-btn" onclick="nextTrack()">
+                <svg viewBox="0 0 24 24">
+                    <polygon points="5,4 15,12 5,20"/>
+                    <line x1="19" y1="5" x2="19" y2="19"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="ai-chat-section" id="aiChat">
+            <div class="chat-message">
+                <div class="chat-avatar">AI</div>
+                <div class="message-content">
+                    Welcome! I've analyzed your music taste and found some perfect matches. Ready to explore?
+                </div>
+            </div>
+        </div>
+
+        <div class="track-list" id="trackList">
+            <div class="track-item active" data-track="0">
+                <div>
+                    <div class="track-name">Lo-Fi Hip Hop Beat</div>
+                    <div class="track-meta">Chill • 2:30 • 95% match</div>
+                </div>
+            </div>
+            <div class="track-item" data-track="1">
+                <div>
+                    <div class="track-name">Boom Bap Classic</div>
+                    <div class="track-meta">Energetic • 3:15 • 89% match</div>
+                </div>
+            </div>
+            <div class="track-item" data-track="2">
+                <div>
+                    <div class="track-name">Trap Vibes</div>
+                    <div class="track-meta">Aggressive • 2:45 • 92% match</div>
+                </div>
+            </div>
+            <div class="track-item" data-track="3">
+                <div>
+                    <div class="track-name">Jazz Fusion Hip Hop</div>
+                    <div class="track-meta">Smooth • 3:30 • 88% match</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="ai-insights">
+            <div class="insights-title">🧠 AI INSIGHTS</div>
+            <div class="insight-item">This track uses 808 drums at 85 BPM</div>
+            <div class="insight-item">Key: F# minor, perfect for late-night coding</div>
+            <div class="insight-item">Similar to artists: Nujabes, J Dilla</div>
+            <div class="insight-item">Recommended listening time: Evening/Night</div>
+        </div>
+    </div>
+
+    <script>
+        let isPlaying = false;
+        let currentTrackIndex = 0;
+        let isListening = false;
+        let eqAnimationInterval;
+
+        const tracks = [
+            { 
+                title: "Lo-Fi Hip Hop Beat", 
+                artist: "AI Generated • Studio Vibes", 
+                duration: "2:30", 
+                mood: "Chill & Focused",
+                emoji: "😎",
+                match: "95%",
+                insights: [
+                    "This track uses 808 drums at 85 BPM",
+                    "Key: F# minor, perfect for late-night coding",
+                    "Similar to artists: Nujabes, J Dilla",
+                    "Recommended listening time: Evening/Night"
+                ]
+            },
+            { 
+                title: "Boom Bap Classic", 
+                artist: "AI Generated • Studio Vibes", 
+                duration: "3:15", 
+                mood: "Energetic & Motivated",
+                emoji: "🔥",
+                match: "89%",
+                insights: [
+                    "Classic boom bap pattern at 90 BPM",
+                    "Key: C major, uplifting and energetic",
+                    "Inspired by 90s East Coast hip hop",
+                    "Perfect for workouts and motivation"
+                ]
+            },
+            { 
+                title: "Trap Vibes", 
+                artist: "AI Generated • Studio Vibes", 
+                duration: "2:45", 
+                mood: "Aggressive & Intense",
+                emoji: "💥",
+                match: "92%",
+                insights: [
+                    "Modern trap beats with 808 slides",
+                    "Key: D minor, dark and intense",
+                    "Hi-hats at double-time for energy",
+                    "Great for gaming and high-focus tasks"
+                ]
+            },
+            { 
+                title: "Jazz Fusion Hip Hop", 
+                artist: "AI Generated • Studio Vibes", 
+                duration: "3:30", 
+                mood: "Smooth & Sophisticated",
+                emoji: "🎷",
+                match: "88%",
+                insights: [
+                    "Jazz chord progressions with hip hop drums",
+                    "Key: Bb major, sophisticated and smooth",
+                    "Features virtual saxophone and piano",
+                    "Ideal for creative work and relaxation"
+                ]
+            }
+        ];
+
+        const moods = [
+            { emoji: "😎", text: "Chill & Focused" },
+            { emoji: "🔥", text: "Energetic & Motivated" },
+            { emoji: "💥", text: "Aggressive & Intense" },
+            { emoji: "🎷", text: "Smooth & Sophisticated" },
+            { emoji: "🌙", text: "Dreamy & Atmospheric" }
+        ];
+
+        const aiResponses = [
+            "Great choice! This track has been optimized for your current mood.",
+            "I've noticed you prefer tracks with strong bass lines. This one's perfect!",
+            "Based on your listening patterns, you might also like our Jazz Fusion track.",
+            "The AI engine detects you're in a creative flow state. Perfect timing!",
+            "This track's BPM matches your current energy level perfectly."
+        ];
+
+        function randomizeEqBars() {
+            const bars = document.querySelectorAll('.eq-bar');
+            bars.forEach(bar => {
+                const randomHeight = Math.floor(Math.random() * 20) + 4;
+                bar.style.height = `${randomHeight}px`;
+            });
+        }
+
+        function startEqAnimation() {
+            if (!eqAnimationInterval) {
+                document.getElementById('eqIcon').classList.add('playing');
+                eqAnimationInterval = setInterval(randomizeEqBars, 150);
+            }
+        }
+
+        function stopEqAnimation() {
+            if (eqAnimationInterval) {
+                clearInterval(eqAnimationInterval);
+                eqAnimationInterval = null;
+                document.getElementById('eqIcon').classList.remove('playing');
+            }
+        }
+
+        function toggleVoiceCommand() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            const listeningStatus = document.getElementById('listeningStatus');
+            const voiceWaveform = document.getElementById('voiceWaveform');
+            
+            if (!isListening) {
+                isListening = true;
+                voiceBtn.classList.add('listening');
+                voiceBtn.textContent = '🎤 LISTENING...';
+                listeningStatus.style.display = 'block';
+                voiceWaveform.style.display = 'flex';
+                
+                // Simulate voice recognition
+                setTimeout(() => {
+                    processVoiceCommand();
+                }, 3000);
+            }
+        }
+
+        function processVoiceCommand() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            const listeningStatus = document.getElementById('listeningStatus');
+            const voiceWaveform = document.getElementById('voiceWaveform');
+            
+            isListening = false;
+            voiceBtn.classList.remove('listening');
+            voiceBtn.textContent = '🎤 VOICE COMMAND';
+            listeningStatus.style.display = 'none';
+            voiceWaveform.style.display = 'none';
+            
+            // Simulate processing a voice command
+            const commands = [
+                "Playing something energetic for you!",
+                "Skipping to next track as requested.",
+                "I've found the perfect chill track for your mood.",
+                "Adjusting the playlist based on your energy level."
+            ];
+            
+            const randomCommand = commands[Math.floor(Math.random() * commands.length)];
+            addAIMessage(randomCommand);
+            
+            if (randomCommand.includes("energetic")) {
+                currentTrackIndex = 1; // Boom Bap Classic
+                updateTrack();
+            } else if (randomCommand.includes("next")) {
+                nextTrack();
+            }
+        }
+
+        function addAIMessage(message) {
+            const chatSection = document.getElementById('aiChat');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'chat-message';
+            messageDiv.innerHTML = `
+                <div class="chat-avatar">AI</div>
+                <div class="message-content">${message}</div>
+            `;
+            chatSection.appendChild(messageDiv);
+            chatSection.scrollTop = chatSection.scrollHeight;
+        }
+
+        function updateMood() {
+            const currentTrack = tracks[currentTrackIndex];
+            document.getElementById('moodEmoji').textContent = currentTrack.emoji;
+            document.getElementById('moodText').textContent = currentTrack.mood;
+        }
+
+        function updateInsights() {
+            const currentTrack = tracks[currentTrackIndex];
+            const insightsContainer = document.querySelector('.ai-insights');
+            const insightsHTML = currentTrack.insights.map(insight => 
+                `<div class="insight-item">${insight}</div>`
+            ).join('');
+            
+            insightsContainer.innerHTML = `
+                <div class="insights-title">🧠 AI INSIGHTS</div>
+                ${insightsHTML}
+            `;
+        }
+
+        function updateTrack() {
+            const currentTrack = tracks[currentTrackIndex];
+            document.getElementById('currentTrack').textContent = currentTrack.title;
+            document.getElementById('currentArtist').textContent = currentTrack.artist;
+            
+            updateMood();
+            updateInsights();
+            
+            // Update active track in list
+            document.querySelectorAll('.track-item').forEach((item, index) => {
+                if (index === currentTrackIndex) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // Add AI response
+            const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+            setTimeout(() => addAIMessage(randomResponse), 1000);
+        }
+
+        function playRecommendation(index) {
+            if (index === 0) {
+                currentTrackIndex = 2; // Trap Vibes
+            } else {
+                currentTrackIndex = 3; // Jazz Fusion
+            }
+            updateTrack();
+            if (!isPlaying) {
+                togglePlayPause();
+            }
+        }
+
+        function togglePlayPause() {
+            const playIcon = document.getElementById('playIcon');
+            const pauseIcon = document.getElementById('pauseIcon');
+            
+            if (isPlaying) {
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+                isPlaying = false;
+                stopEqAnimation();
+            } else {
+                playIcon.style.display = 'none';
+                pauseIcon.style.display = 'block';
+                isPlaying = true;
+                startEqAnimation();
+            }
+        }
+
+        function nextTrack() {
+            currentTrackIndex = (currentTrack
