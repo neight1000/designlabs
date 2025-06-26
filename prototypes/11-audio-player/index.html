@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hip Hop Audio Player - Full Screen</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: #fff;
+            font-family: 'Space Mono', monospace;
+            overflow: hidden;
+        }
+
+        .hip-hop-audio-player {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s ease;
+            z-index: 10000;
+            padding: 40px;
+            box-sizing: border-box;
+        }
+
+        .hip-hop-audio-player.minimized {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 280px;
+            height: auto;
+            background: #fff;
+            color: #000;
+            border: 2px solid #000;
+            padding: 16px;
+            border-radius: 0;
+        }
+
+        .collapse-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 12px;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .collapse-btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .hip-hop-audio-player.minimized .collapse-btn {
+            position: relative;
+            top: 0;
+            right: 0;
+            background: #fff;
+            border: 2px solid #000;
+            color: #000;
+            padding: 8px;
+            font-size: 12px;
+            margin-bottom: 16px;
+        }
+
+        .hip-hop-audio-player.minimized .collapse-btn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .player-content {
+            text-align: center;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        .hip-hop-audio-player.minimized .player-content {
+            max-width: none;
+        }
+
+        .app-title {
+            font-size: 4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        .app-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.7;
+            margin-bottom: 3rem;
+            letter-spacing: 2px;
+        }
+
+        .hip-hop-audio-player.minimized .app-title,
+        .hip-hop-audio-player.minimized .app-subtitle {
+            display: none;
+        }
+
+        .eq-icon {
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: end;
+            gap: 8px;
+            margin: 0 auto 3rem;
+            justify-content: center;
+        }
+
+        .hip-hop-audio-player.minimized .eq-icon {
+            width: 24px;
+            height: 24px;
+            gap: 2px;
+            margin: 0 auto 16px;
+        }
+
+        .eq-bar {
+            background: #fff;
+            border-radius: 4px;
+            animation: eq-bounce 1.5s ease-in-out infinite;
+        }
+
+        .eq-icon .eq-bar {
+            width: 12px;
+        }
+
+        .hip-hop-audio-player.minimized .eq-bar {
+            background: #000;
+            width: 3px;
+        }
+
+        .eq-bar:nth-child(1) {
+            height: 40px;
+            animation-delay: 0s;
+        }
+
+        .eq-bar:nth-child(2) {
+            height: 80px;
+            animation-delay: 0.2s;
+        }
+
+        .eq-bar:nth-child(3) {
+            height: 60px;
+            animation-delay: 0.4s;
+        }
+
+        .eq-bar:nth-child(4) {
+            height: 100px;
+            animation-delay: 0.6s;
+        }
+
+        .eq-bar:nth-child(5) {
+            height: 30px;
+            animation-delay: 0.8s;
+        }
+
+        .hip-hop-audio-player.minimized .eq-bar:nth-child(1) { height: 8px; }
+        .hip-hop-audio-player.minimized .eq-bar:nth-child(2) { height: 16px; }
+        .hip-hop-audio-player.minimized .eq-bar:nth-child(3) { height: 12px; }
+        .hip-hop-audio-player.minimized .eq-bar:nth-child(4) { height: 20px; }
+        .hip-hop-audio-player.minimized .eq-bar:nth-child(5) { height: 6px; }
+
+        @keyframes eq-bounce {
+            0%, 100% {
+                transform: scaleY(0.3);
+                opacity: 0.4;
+            }
+            50% {
+                transform: scaleY(1);
+                opacity: 1;
+            }
+        }
+
+        .current-track {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .current-artist {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 3rem;
+        }
+
+        .hip-hop-audio-player.minimized .current-track {
+            font-size: 11px;
+            margin-bottom: 8px;
+            text-shadow: none;
+        }
+
+        .hip-hop-audio-player.minimized .current-artist {
+            font-size: 10px;
+            margin-bottom: 16px;
+        }
+
+        .player-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .hip-hop-audio-player.minimized .player-controls {
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn:hover {
+            background: #fff;
+            color: #000;
+            transform: scale(1.1);
+        }
+
+        .control-btn.play-pause {
+            padding: 1.5rem;
+            border-radius: 50%;
+        }
+
+        .hip-hop-audio-player.minimized .control-btn {
+            background: #fff;
+            border: 2px solid #000;
+            color: #000;
+            padding: 8px;
+        }
+
+        .hip-hop-audio-player.minimized .control-btn:hover {
+            background: #000;
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .hip-hop-audio-player.minimized .control-btn.play-pause {
+            padding: 10px;
+        }
+
+        .control-btn svg {
+            width: 32px;
+            height: 32px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .hip-hop-audio-player.minimized .control-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke-width: 1.5;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 3rem;
+            justify-content: center;
+        }
+
+        .hip-hop-audio-player.minimized .volume-control {
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .volume-icon {
+            width: 24px;
+            height: 24px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .hip-hop-audio-player.minimized .volume-icon {
+            width: 16px;
+            height: 16px;
+            stroke-width: 1.5;
+        }
+
+        .volume-slider {
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            border-radius: 3px;
+        }
+
+        .hip-hop-audio-player.minimized .volume-slider {
+            width: 100px;
+            height: 4px;
+            background: #000;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .hip-hop-audio-player.minimized .volume-slider::-webkit-slider-thumb {
+            width: 12px;
+            height: 12px;
+            background: #000;
+            box-shadow: none;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+            border-radius: 50%;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .track-list {
+            width: 100%;
+            max-width: 600px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .hip-hop-audio-player.minimized .track-list {
+            max-width: none;
+            max-height: 120px;
+        }
+
+        .track-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .track-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateX(10px);
+        }
+
+        .track-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #fff;
+        }
+
+        .hip-hop-audio-player.minimized .track-item {
+            padding: 6px;
+            font-size: 11px;
+            border-bottom: 1px solid #000;
+            background: none;
+        }
+
+        .hip-hop-audio-player.minimized .track-item:hover {
+            background: #000;
+            color: #fff;
+            transform: none;
+        }
+
+        .hip-hop-audio-player.minimized .track-item.active {
+            background: #000;
+            color: #fff;
+            border-left: 2px solid #fff;
+        }
+
+        .track-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .track-duration {
+            opacity: 0.7;
+        }
+
+        .hip-hop-audio-player.minimized .track-name {
+            font-size: 11px;
+        }
+
+        .hip-hop-audio-player.minimized .track-duration {
+            font-size: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .app-title {
+                font-size: 2.5rem;
+                letter-spacing: 2px;
+            }
+            
+            .player-controls {
+                gap: 1rem;
+            }
+            
+            .control-btn svg {
+                width: 24px;
+                height: 24px;
+            }
+            
+            .volume-slider {
+                width: 150px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .app-title {
+                font-size: 2rem;
+                letter-spacing: 1px;
+            }
+            
+            .current-track {
+                font-size: 1.5rem;
+            }
+            
+            .hip-hop-audio-player {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="hipHopPlayer" class="hip-hop-audio-player">
+        <button class="collapse-btn" onclick="togglePlayer()">MINIMIZE</button>
+        
+        <div class="player-content">
+            <h1 class="app-title">HIP HOP STUDIO</h1>
+            <p class="app-subtitle">POWERED BY SUNO AI</p>
+            
+            <div class="eq-icon">
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+            </div>
+            
+            <div class="current-track" id="currentTrack">Lo-Fi Hip Hop Beat</div>
+            <div class="current-artist" id="currentArtist">Studio Vibes</div>
+
+            <div class="player-controls">
+                <button class="control-btn" onclick="previousTrack()">
+                    <svg viewBox="0 0 24 24">
+                        <polygon points="19,20 9,12 19,4"/>
+                        <line x1="5" y1="19" x2="5" y2="5"/>
+                    </svg>
+                </button>
+                <button class="control-btn play-pause" onclick="togglePlayPause()">
+                    <svg id="playIcon" viewBox="0 0 24 24">
+                        <polygon points="5,3 19,12 5,21"/>
+                    </svg>
+                    <svg id="pauseIcon" viewBox="0 0 24 24" style="display: none;">
+                        <rect x="6" y="4" width="4" height="16"/>
+                        <rect x="14" y="4" width="4" height="16"/>
+                    </svg>
+                </button>
+                <button class="control-btn" onclick="nextTrack()">
+                    <svg viewBox="0 0 24 24">
+                        <polygon points="5,4 15,12 5,20"/>
+                        <line x1="19" y1="5" x2="19" y2="19"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="volume-control">
+                <svg class="volume-icon" viewBox="0 0 24 24">
+                    <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                </svg>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="50">
+                <svg class="volume-icon" viewBox="0 0 24 24">
+                    <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+            </div>
+
+            <div class="track-list">
+                <div class="track-item active" data-track="0">
+                    <span class="track-name">Lo-Fi Hip Hop Beat</span>
+                    <span class="track-duration">2:30</span>
+                </div>
+                <div class="track-item" data-track="1">
+                    <span class="track-name">Boom Bap Classic</span>
+                    <span class="track-duration">3:15</span>
+                </div>
+                <div class="track-item" data-track="2">
+                    <span class="track-name">Trap Vibes</span>
+                    <span class="track-duration">2:45</span>
+                </div>
+                <div class="track-item" data-track="3">
+                    <span class="track-name">Old School Groove</span>
+                    <span class="track-duration">3:00</span>
+                </div>
+            </div>
+        </div>
+
+        <audio id="audioPlayer" preload="metadata">
+            <source src="track1.mp3" type="audio/mpeg">
+            <source src="track2.mp3" type="audio/mpeg">
+            <source src="track3.mp3" type="audio/mpeg">
+            <source src="track4.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <script>
+        let isPlaying = false;
+        let currentTrackIndex = 0;
+        let isPlayerMinimized = false;
+
+        const tracks = [
+            { title: "Lo-Fi Hip Hop Beat", artist: "Studio Vibes", duration: "2:30", src: "track1.mp3" },
+            { title: "Boom Bap Classic", artist: "Studio Vibes", duration: "3:15", src: "track2.mp3" },
+            { title: "Trap Vibes", artist: "Studio Vibes", duration: "2:45", src: "track3.mp3" },
+            { title: "Old School Groove", artist: "Studio Vibes", duration: "3:00", src: "track4.mp3" }
+        ];
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        const player = document.getElementById('hipHopPlayer');
+
+        function loadTrack(index) {
+            if (tracks[index]) {
+                audioPlayer.src = tracks[index].src;
+                audioPlayer.load();
+            }
+        }
+
+        function togglePlayer() {
+            const collapseBtn = document.querySelector('.collapse-btn');
+            
+            isPlayerMinimized = !isPlayerMinimized;
+            
+            if (isPlayerMinimized) {
+                player.classList.add('minimized');
+                collapseBtn.textContent = 'EXPAND';
+            } else {
+                player.classList.remove('minimized');
+                collapseBtn.textContent = 'MINIMIZE';
+            }
+        }
+
+        function togglePlayPause() {
+            const playIcon = document.getElementById('playIcon');
+            const pauseIcon = document.getElementById('pauseIcon');
+            
+            if (isPlaying) {
+                audioPlayer.pause();
+                playIcon.style.display = 'block';
+                pauseIcon.style.display = 'none';
+                isPlaying = false;
+            } else {
+                audioPlayer.play().then(() => {
+                    playIcon.style.display = 'none';
+                    pauseIcon.style.display = 'block';
+                    isPlaying = true;
+                }).catch(e => {
+                    console.log('Audio play failed:', e);
+                });
+            }
+        }
+
+        function nextTrack() {
+            currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
+            loadTrack(currentTrackIndex);
+            updateCurrentTrack();
+            if (isPlaying) {
+                audioPlayer.play();
+            }
+        }
+
+        function previousTrack() {
+            currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+            loadTrack(currentTrackIndex);
+            updateCurrentTrack();
+            if (isPlaying) {
+                audioPlayer.play();
+            }
+        }
+
+        function updateCurrentTrack() {
+            const currentTrackElement = document.getElementById('currentTrack');
+            const currentArtistElement = document.getElementById('currentArtist');
+            
+            currentTrackElement.textContent = tracks[currentTrackIndex].title;
+            currentArtistElement.textContent = tracks[currentTrackIndex].artist;
+            
+            // Update active track in list
+            document.querySelectorAll('.track-item').forEach((item, index) => {
+                if (index === currentTrackIndex) {
+                    item.classList.add('active');
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+        }
+
+        // Audio event listeners
+        audioPlayer.addEventListener('ended', () => {
+            nextTrack();
+        });
+
+        audioPlayer.addEventListener('pause', () => {
+            document.getElementById('playIcon').style.display = 'block';
+            document.getElementById('pauseIcon').style.display = 'none';
+            isPlaying = false;
+        });
+
+        // Track list click handlers
+        document.querySelectorAll('.track-item').forEach((item, index) => {
+            item.addEventListener('click', () => {
+                currentTrackIndex = index;
+                loadTrack(currentTrackIndex);
+                updateCurrentTrack();
+                if (isPlaying) {
+                    audioPlayer.play();
+                }
+            });
+        });
+
+        // Volume control
+        document.getElementById('volumeSlider').addEventListener('input', (e) => {
+            const volume = e.target.value / 100;
+            audioPlayer.volume = volume;
+        });
+
+        // Initialize player
+        document.addEventListener('DOMContentLoaded', () => {
+            loadTrack(0);
+            audioPlayer.volume = 0.5;
+        });
+    </script>
+</body>
+</html>
