@@ -869,8 +869,12 @@
 
     <!-- Audio element for actual playback -->
     <audio id="audioPlayer" preload="metadata">
-        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-05.wav" type="audio/wav">
-        <!-- Fallback: generate a simple tone using Web Audio API -->
+        <source src="track1.mp3" type="audio/mpeg">
+        <source src="track2.mp3" type="audio/mpeg">
+        <source src="track3.mp3" type="audio/mpeg">
+        <source src="track4.mp3" type="audio/mpeg">
+        <source src="track5.mp3" type="audio/mpeg">
+        <source src="track6.mp3" type="audio/mpeg">
     </audio>
 
     <script>
@@ -1094,16 +1098,21 @@
             }
         }
 
+        function loadTrack(index) {
+            if (tracks[index]) {
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = `track${index + 1}.mp3`;
+                audioPlayer.load();
+            }
+        }
+
         function updateProgress() {
-            if (isPlaying && currentTime < duration) {
-                currentTime += 0.1;
-                const progress = (currentTime / duration) * 100;
+            const audioPlayer = document.getElementById('audioPlayer');
+            if (audioPlayer.duration) {
+                const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
                 document.getElementById('progressFill').style.width = `${progress}%`;
-                document.getElementById('currentTime').textContent = formatTime(currentTime);
-                
-                if (currentTime >= duration) {
-                    nextTrack();
-                }
+                document.getElementById('currentTime').textContent = formatTime(audioPlayer.currentTime);
+                document.getElementById('duration').textContent = formatTime(audioPlayer.duration);
             }
         }
 
@@ -1127,15 +1136,12 @@
         }
 
         function seekAudio(event) {
+            const audioPlayer = document.getElementById('audioPlayer');
             const progressBar = event.currentTarget;
             const rect = progressBar.getBoundingClientRect();
             const clickX = event.clientX - rect.left;
             const newProgress = clickX / rect.width;
-            currentTime = newProgress * duration;
-            
-            const progress = (currentTime / duration) * 100;
-            document.getElementById('progressFill').style.width = `${progress}%`;
-            document.getElementById('currentTime').textContent = formatTime(currentTime);
+            audioPlayer.currentTime = newProgress * audioPlayer.duration;
         }
 
         function toggleFullscreen() {
