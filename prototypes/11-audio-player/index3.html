@@ -124,14 +124,13 @@
         }
 
         .eq-icon {
-            width: 100%;
+            width: calc(100% - 40px);
             height: 40px;
             display: flex;
             align-items: end;
             gap: 4px;
             margin: 0 auto 16px;
-            justify-content: space-around;
-            padding: 0 20px;
+            justify-content: center;
         }
 
         body.fullscreen .eq-icon {
@@ -139,7 +138,7 @@
             height: 80px;
             gap: 8px;
             margin: 0 auto 3rem;
-            padding: 0 40px;
+            justify-content: center;
         }
 
         .eq-bar {
@@ -481,16 +480,65 @@
             opacity: 0.7;
         }
 
-        .status-section {
+        .status-toggle {
             margin-top: 16px;
+            padding: 8px;
+            border: 2px solid #000;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .status-toggle:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        body.fullscreen .status-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            margin-top: 0;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            backdrop-filter: blur(10px);
+        }
+
+        body.fullscreen .status-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .status-icon {
+            width: 12px;
+            height: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .status-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .status-section {
+            margin-top: 8px;
             padding: 12px;
             border: 2px solid #000;
             background: #fff;
+            display: none;
+        }
+
+        .status-section.expanded {
+            display: block;
         }
 
         body.fullscreen .status-section {
             position: absolute;
-            bottom: 20px;
+            bottom: 60px;
             right: 20px;
             margin-top: 0;
             padding: 16px;
@@ -499,6 +547,13 @@
             color: #fff;
             backdrop-filter: blur(10px);
             max-width: 300px;
+        }
+
+        .status-credit {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            font-style: italic;
         }
 
         .status-title {
@@ -646,16 +701,49 @@
                     <span class="track-name">Jazz Fusion Hip Hop</span>
                     <span class="track-duration">3:30</span>
                 </div>
+                <div class="track-item" data-track="5">
+                    <span class="track-name">Chill Wave Beats</span>
+                    <span class="track-duration">2:15</span>
+                </div>
+                <div class="track-item" data-track="6">
+                    <span class="track-name">Underground Flow</span>
+                    <span class="track-duration">3:45</span>
+                </div>
+                <div class="track-item" data-track="7">
+                    <span class="track-name">Retro Funk Mix</span>
+                    <span class="track-duration">2:55</span>
+                </div>
+                <div class="track-item" data-track="8">
+                    <span class="track-name">Modern Beats</span>
+                    <span class="track-duration">3:20</span>
+                </div>
+                <div class="track-item" data-track="9">
+                    <span class="track-name">Studio Sessions</span>
+                    <span class="track-duration">4:10</span>
+                </div>
             </div>
         </div>
 
-        <div class="status-section">
+        <div class="status-toggle" onclick="toggleStatus()">
+            <svg class="status-icon" id="statusIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+            <span>SYSTEM STATUS</span>
+        </div>
+
+        <div class="status-section" id="statusSection">
+            <div class="status-credit">Designed and developed by Nate Thousand</div>
             <div class="status-title">System Status</div>
             <div class="status-info">• Audio Engine: Active</div>
             <div class="status-info">• Sample Rate: 44.1kHz</div>
             <div class="status-info">• Bit Depth: 16-bit</div>
             <div class="status-info">• Latency: 12ms</div>
             <div class="status-info">• Buffer: 256 samples</div>
+            <div class="status-info">• DSP Load: 23%</div>
+            <div class="status-info">• Memory Usage: 184MB</div>
+            <div class="status-info">• Output Device: Default</div>
+            <div class="status-info">• MIDI Input: None</div>
+            <div class="status-info">• Track Count: 10</div>
         </div>
 
         <audio id="audioPlayer" preload="metadata">
@@ -664,6 +752,11 @@
             <source src="track3.mp3" type="audio/mpeg">
             <source src="track4.mp3" type="audio/mpeg">
             <source src="track5.mp3" type="audio/mpeg">
+            <source src="track6.mp3" type="audio/mpeg">
+            <source src="track7.mp3" type="audio/mpeg">
+            <source src="track8.mp3" type="audio/mpeg">
+            <source src="track9.mp3" type="audio/mpeg">
+            <source src="track10.mp3" type="audio/mpeg">
         </audio>
     </div>
 
@@ -677,7 +770,12 @@
             { title: "Boom Bap Classic", artist: "Studio Vibes", duration: "3:15", src: "track2.mp3" },
             { title: "Trap Vibes", artist: "Studio Vibes", duration: "2:45", src: "track3.mp3" },
             { title: "Old School Groove", artist: "Studio Vibes", duration: "3:00", src: "track4.mp3" },
-            { title: "Jazz Fusion Hip Hop", artist: "Studio Vibes", duration: "3:30", src: "track5.mp3" }
+            { title: "Jazz Fusion Hip Hop", artist: "Studio Vibes", duration: "3:30", src: "track5.mp3" },
+            { title: "Chill Wave Beats", artist: "Studio Vibes", duration: "2:15", src: "track6.mp3" },
+            { title: "Underground Flow", artist: "Studio Vibes", duration: "3:45", src: "track7.mp3" },
+            { title: "Retro Funk Mix", artist: "Studio Vibes", duration: "2:55", src: "track8.mp3" },
+            { title: "Modern Beats", artist: "Studio Vibes", duration: "3:20", src: "track9.mp3" },
+            { title: "Studio Sessions", artist: "Studio Vibes", duration: "4:10", src: "track10.mp3" }
         ];
 
         const audioPlayer = document.getElementById('audioPlayer');
@@ -712,6 +810,14 @@
                 eqAnimationInterval = null;
                 eqIcon.classList.remove('playing');
             }
+        }
+
+        function toggleStatus() {
+            const statusSection = document.getElementById('statusSection');
+            const statusIcon = document.getElementById('statusIcon');
+            
+            statusSection.classList.toggle('expanded');
+            statusIcon.classList.toggle('expanded');
         }
 
         function loadTrack(index) {
