@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D-pad Synthesizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Basic Variables */
+        :root {
+            --font-size-base: 12pt;
+            --font-size-lg: 19pt;
+            --font-size-xl: 31pt;
+            --space-sm: 10px;
+            --space-md: 16px;
+            --space-lg: 26px;
+            --space-xl: 42px;
+        }
+        /* Global Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #fff;
+            color: #000;
+            font-family: 'Space Mono', monospace;
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: var(--space-md);
+        }
+        /* Typography */
+        h1 {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            margin-bottom: var(--space-lg);
+            text-align: center;
+        }
+        h2 {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+        }
+        h3, h4, h5, h6 {
+            font-size: var(--font-size-base);
+            font-weight: 400;
+            margin-bottom: var(--space-sm);
+        }
+        p {
+            margin-bottom: var(--space-md);
+        }
+        /* Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 var(--space-md);
+        }
+        /* Cards */
+        .card {
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+        .synth-container {
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-xl);
+            margin: var(--space-lg);
+            max-width: 800px;
+            width: 100%;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: var(--space-lg);
+            padding: var(--space-md);
+            background: #fff;
+            border: 1px solid #000;
+        }
+        .gamepad-status {
+            margin-top: var(--space-sm);
+            font-size: var(--font-size-base);
+            opacity: 0.8;
+        }
+        .feedback-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            margin: var(--space-lg) 0;
+        }
+        .feedback-section {
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-lg);
+        }
+        .feedback-title {
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+        .controller-visual {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: var(--space-lg);
+            margin-bottom: var(--space-md);
+            align-items: center;
+        }
+        .dpad-container, .face-container {
+            display: grid;
+            grid-template-columns: repeat(3, 30px);
+            grid-template-rows: repeat(3, 30px);
+            gap: 2px;
+            justify-self: center;
+        }
+        .controller-btn {
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: all 0.1s ease;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .controller-btn.active {
+            background: #000;
+            color: #fff;
+        }
+        .shoulder-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-sm);
+        }
+        .shoulder-btn {
+            width: 50px;
+            height: 20px;
+            background: #fff;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            transition: all 0.1s ease;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .shoulder-btn.active {
+            background: #000;
+            color: #fff;
+        }
+        .parameter-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-sm);
+            font-size: var(--font-size-base);
+            margin: var(--space-md) 0;
+        }
+        .param-item {
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-sm);
+            text-align: center;
+        }
+        .param-label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            margin-bottom: var(--space-sm);
+        }
+        .param-value {
+            font-weight: 700;
+            font-size: var(--font-size-base);
+        }
+        .frequency-display {
+            text-align: center;
+            margin: var(--space-md) 0;
+        }
+        .note-display {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        .freq-value {
+            font-size: var(--font-size-base);
+            margin-top: var(--space-sm);
+        }
+        .waveform-display {
+            width: 100%;
+            height: 80px;
+            background: #fff;
+            border: 1px solid #000;
+            margin: var(--space-sm) 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .waveform-canvas {
+            position: relative;
+            z-index: 1;
+        }
+        .input-log {
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 11px;
+            line-height: 1.4;
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-sm);
+        }
+        .log-entry {
+            margin: 3px 0;
+            opacity: 0.8;
+        }
+        .log-entry.new {
+            font-weight: 700;
+            opacity: 1;
+        }
+        .waveform-buttons {
+            display: flex;
+            gap: var(--space-sm);
+            justify-content: center;
+            margin: var(--space-lg) 0;
+        }
+        .wave-btn {
+            background: #fff;
+            border: 1px solid #000;
+            color: #000;
+            padding: var(--space-sm) var(--space-md);
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        .wave-btn:hover {
+            background: #000;
+            color: #fff;
+        }
+        .wave-btn.active {
+            background: #000;
+            color: #fff;
+        }
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: var(--space-sm);
+            margin: var(--space-lg) 0;
+            max-width: 600px;
+        }
+        .key {
+            height: 80px;
+            background: #fff;
+            border: 1px solid #000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: var(--space-sm);
+            cursor: pointer;
+            transition: all 0.1s ease;
+            font-weight: 700;
+            font-size: var(--font-size-base);
+        }
+        .key:hover {
+            background: #000;
+            color: #fff;
+        }
+        .key.active {
+            background: #000;
+            color: #fff;
+            transform: translateY(2px);
+        }
+        .collapsible {
+            background: #fff;
+            border: 1px solid #000;
+            margin: var(--space-lg) 0;
+            overflow: hidden;
+            max-width: 600px;
+        }
+        .collapsible-header {
+            padding: var(--space-md) var(--space-lg);
+            cursor: pointer;
+            background: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s ease;
+            font-weight: 700;
+        }
+        .collapsible-header:hover {
+            background: #000;
+            color: #fff;
+        }
+        .collapsible-content {
+            padding: 0 var(--space-lg);
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease, padding 0.3s ease;
+        }
+        .collapsible.open .collapsible-content {
+            max-height: 200px;
+            padding: var(--space-lg);
+        }
+        .chevron {
+            transition: transform 0.3s ease;
+            font-size: var(--font-size-lg);
+        }
+        .collapsible.open .chevron {
+            transform: rotate(180deg);
+        }
+        .instructions {
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="synth-container">
+        <h1>🎹 D-pad Synthesizer</h1>
+        
+        <div class="status">
+            <div>Current Note: <span id="currentNote">C4</span></div>
+            <div class="gamepad-status" id="gamepadStatus">Connect a gamepad and press any button</div>
+        </div>
+        
+        <div class="feedback-panel">
+            <div class="feedback-section">
+                <div class="feedback-title">🎮 Controller Input</div>
+                
+                <div class="shoulder-buttons">
+                    <div class="shoulder-btn" id="l1">L1</div>
+                    <div class="shoulder-btn" id="l2">L2</div>
+                    <div class="shoulder-btn" id="r1">R1</div>
+                    <div class="shoulder-btn" id="r2">R2</div>
+                </div>
+                
+                <div class="controller-visual">
+                    <div class="dpad-container">
+                        <div></div>
+                        <div class="controller-btn" id="up">↑</div>
+                        <div></div>
+                        <div class="controller-btn" id="left">←</div>
+                        <div></div>
+                        <div class="controller-btn" id="right">→</div>
+                        <div></div>
+                        <div class="controller-btn" id="down">↓</div>
+                        <div></div>
+                    </div>
+                    
+                    <div style="text-align: center; font-size: 12px;">CONTROLLER</div>
+                    
+                    <div class="face-container">
+                        <div></div>
+                        <div class="controller-btn" id="y">Y</div>
+                        <div></div>
+                        <div class="controller-btn" id="x">X</div>
+                        <div></div>
+                        <div class="controller-btn" id="b">B</div>
+                        <div></div>
+                        <div class="controller-btn" id="a">A</div>
+                        <div></div>
+                    </div>
+                </div>
+                
+                <div class="input-log" id="inputLog">
+                    <div class="log-entry">Ready for input...</div>
+                </div>
+            </div>
+            
+            <div class="feedback-section">
+                <div class="feedback-title">📊 Audio Parameters</div>
+                
+                <div class="parameter-display">
+                    <div class="param-item">
+                        <span class="param-label">Volume</span>
+                        <div class="param-value" id="volumeDisplay">50%</div>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Waveform</span>
+                        <div class="param-value" id="waveDisplay">Sine</div>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Attack</span>
+                        <div class="param-value" id="attackDisplay">0.10s</div>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Release</span>
+                        <div class="param-value" id="releaseDisplay">0.30s</div>
+                    </div>
+                </div>
+                
+                <div class="frequency-display">
+                    <div class="note-display" id="noteDisplay">C4</div>
+                    <div class="freq-value" id="freqDisplay">261.63 Hz</div>
+                </div>
+                
+                <div class="waveform-display">
+                    <canvas id="waveformCanvas" class="waveform-canvas" width="280" height="80"></canvas>
+                    <canvas id="particleCanvas" class="particle-canvas" width="280" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="waveform-buttons">
+            <button class="wave-btn active" data-wave="sine">Sine</button>
+            <button class="wave-btn" data-wave="square">Square</button>
+            <button class="wave-btn" data-wave="sawtooth">Sawtooth</button>
+            <button class="wave-btn" data-wave="triangle">Triangle</button>
+        </div>
+        
+        <div class="keyboard">
+            <div class="key" data-note="C4" data-index="0">C</div>
+            <div class="key" data-note="D4" data-index="1">D</div>
+            <div class="key" data-note="E4" data-index="2">E</div>
+            <div class="key" data-note="F4" data-index="3">F</div>
+            <div class="key" data-note="G4" data-index="4">G</div>
+            <div class="key" data-note="A4" data-index="5">A</div>
+            <div class="key" data-note="B4" data-index="6">B</div>
+            <div class="key" data-note="C5" data-index="0">C5</div>
+        </div>
+        
+        <div class="collapsible" id="instructionsPanel">
+            <div class="collapsible-header" onclick="toggleInstructions()">
+                <span><strong>🎮 Controller Instructions</strong></span>
+                <span class="chevron">▼</span>
+            </div>
+            <div class="collapsible-content">
+                <p><strong>D-pad:</strong> Left/Right = Previous/Next note, Up/Down = Octave up/down</p>
+                <p><strong>Face buttons:</strong> A = Play note, B = Stop, X/Y = Change waveform</p>
+                <p><strong>Shoulder buttons:</strong> L1/R1 = Volume, L2/R2 = Attack/Release</p>
+                <p><strong>Analog sticks:</strong> Left stick = Fine frequency, Right stick = Oscillation/Vibrato</p>
+                <p><strong>Keyboard fallback:</strong> Space = Play, Arrows = Navigate, Q = Wave, W/S = Volume, A/D = Attack, 1-7 = Notes</p>
+                <p><em>Click anywhere to enable audio, then use controller or keyboard!</em></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class SimpleSynth {
+            constructor() {
+                this.audioContext = null;
+                this.oscillators = {}; // For polyphony
+                this.gainNodes = {}; // Per-voice gain
+                this.filterNode = null;
+                this.reverbNode = null;
+                this.delayNode = null;
+                this.masterGain = null;
+                this.lfoOsc = null;
+                this.lfoGain = null;
+                this.isPlaying = false;
+                this.activeVoices = new Set(); // Track active notes
+                
+                // Parameters
+                this.waveform = 'sine';
+                this.volume = 0.5;
+                this.attack = 0.1;
+                this.release = 0.3;
+                this.frequency = 261.63;
+                this.oscillation = 0;
+                this.frequencyOffset = 0;
+                
+                // Effects parameters
+                this.reverbLevel = 0.2;
+                this.delayLevel = 0.1;
+                this.filterFreq = 2000;
+                
+                // Audio analysis
+                this.analyser = null;
+                this.dataArray = null;
+                
+                // Particle system
+                this.particles = [];
+                this.particleCanvas = null;
+                this.particleContext = null;
+                
+                // State
+                this.currentNoteIndex = 0;
+                this.currentOctave = 4;
+                this.gamepadIndex = -1;
+                this.buttonStates = {};
+                this.inputLog = [];
+                this.lastInputTime = {};
+                
+                // Notes
+                this.notes = [
+                    { name: 'C', freq: 261.63, color: '#ff6b6b' },
+                    { name: 'D', freq: 293.66, color: '#ffa726' },
+                    { name: 'E', freq: 329.63, color: '#ffee58' },
+                    { name: 'F', freq: 349.23, color: '#66bb6a' },
+                    { name: 'G', freq: 392.00, color: '#42a5f5' },
+                    { name: 'A', freq: 440.00, color: '#ab47bc' },
+                    { name: 'B', freq: 493.88, color: '#ec407a' }
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                console.log('Initializing synthesizer...');
+                this.setupAudio();
+                this.setupEventListeners();
+                this.setupCanvas();
+                this.updateDisplay();
+                this.gamepadLoop();
+                this.startWaveformAnimation();
+                console.log('Synthesizer initialized');
+            }
+            
+            setupAudio() {
+                // Audio will be initialized on first user interaction
+                document.addEventListener('click', this.initAudio.bind(this), { once: true });
+            }
+            
+            async initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Create simplified audio chain first
+                    this.masterGain = this.audioContext.createGain();
+                    this.filterNode = this.audioContext.createBiquadFilter();
+                    this.analyser = this.audioContext.createAnalyser();
+                    
+                    // Configure filter
+                    this.filterNode.type = 'lowpass';
+                    this.filterNode.frequency.value = this.filterFreq;
+                    this.filterNode.Q.value = 1;
+                    
+                    // Set up analyser
+                    this.analyser.fftSize = 256;
+                    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                    
+                    // Simple chain for now: filter -> masterGain -> analyser -> destination
+                    this.filterNode.connect(this.masterGain);
+                    this.masterGain.connect(this.analyser);
+                    this.analyser.connect(this.audioContext.destination);
+                    
+                    this.masterGain.gain.value = this.volume;
+                    
+                    console.log('Enhanced audio initialized');
+                } catch (error) {
+                    console.error('Audio init failed:', error);
+                }
+            }
+            
+            setupCanvas() {
+                this.canvas = document.getElementById('waveformCanvas');
+                if (this.canvas) {
+                    this.canvasContext = this.canvas.getContext('2d');
+                    this.canvas.width = 280;
+                    this.canvas.height = 80;
+                }
+                
+                // Setup particle canvas
+                this.particleCanvas = document.getElementById('particleCanvas');
+                if (this.particleCanvas) {
+                    this.particleContext = this.particleCanvas.getContext('2d');
+                    this.particleCanvas.width = 280;
+                    this.particleCanvas.height = 80;
+                    console.log('Particle canvas initialized:', this.particleCanvas.width, 'x', this.particleCanvas.height);
+                    this.startParticleSystem();
+                } else {
+                    console.warn('Particle canvas not found');
+                }
+            }
+            
+            setupEventListeners() {
+                console.log('Setting up event listeners...');
+                
+                // Waveform buttons
+                document.querySelectorAll('.wave-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelector('.wave-btn.active')?.classList.remove('active');
+                        btn.classList.add('active');
+                        this.waveform = btn.dataset.wave;
+                        this.updateParameterDisplay();
+                        this.logInput(`Waveform: ${this.waveform}`);
+                    });
+                });
+                
+                // Virtual keyboard with proper index handling
+                document.querySelectorAll('.key').forEach((key, domIndex) => {
+                    key.addEventListener('mousedown', (e) => {
+                        console.log('Key clicked:', domIndex, key.textContent);
+                        
+                        // Get note index from data attribute or use DOM index
+                        const noteIndex = key.dataset.index ? parseInt(key.dataset.index) : domIndex;
+                        this.currentNoteIndex = Math.min(noteIndex, this.notes.length - 1);
+                        
+                        // Handle C5 octave change
+                        if (domIndex === 7) { // C5 key
+                            this.currentOctave = 5;
+                            this.currentNoteIndex = 0; // C note
+                        } else if (this.currentOctave === 5 && domIndex !== 7) {
+                            this.currentOctave = 4; // Back to octave 4 for other notes
+                        }
+                        
+                        console.log('Playing note index:', this.currentNoteIndex, 'octave:', this.currentOctave);
+                        this.playNote();
+                        key.classList.add('active');
+                        
+                        const note = this.notes[this.currentNoteIndex];
+                        const noteName = note ? note.name : `Note${this.currentNoteIndex}`;
+                        this.logInput(`Key: ${noteName}${this.currentOctave}`);
+                    });
+                    
+                    key.addEventListener('mouseup', () => {
+                        this.stopNote();
+                        key.classList.remove('active');
+                    });
+                    
+                    key.addEventListener('mouseleave', () => {
+                        key.classList.remove('active');
+                    });
+                });
+                
+                // Keyboard controls as fallback
+                document.addEventListener('keydown', (e) => {
+                    this.handleKeyboardInput(e);
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space') {
+                        this.stopNote();
+                    }
+                });
+                
+                // Gamepad events with comprehensive error handling
+                try {
+                    if (navigator.getGamepads) {
+                        console.log('Setting up gamepad event listeners...');
+                        
+                        window.addEventListener('gamepadconnected', (e) => {
+                            console.log('Gamepad connected event:', e.gamepad.id);
+                            this.gamepadIndex = e.gamepad.index;
+                            const name = e.gamepad.id.substring(0, 30);
+                            const statusEl = document.getElementById('gamepadStatus');
+                            if (statusEl) statusEl.textContent = `Connected: ${name}`;
+                            this.logInput(`Controller connected: ${name}`);
+                            
+                            // Test the gamepad immediately
+                            setTimeout(() => {
+                                const testGamepad = navigator.getGamepads()[e.gamepad.index];
+                                if (testGamepad) {
+                                    console.log('Gamepad test - buttons:', testGamepad.buttons.length, 'axes:', testGamepad.axes.length);
+                                    this.logInput(`Controller ready - ${testGamepad.buttons.length} buttons, ${testGamepad.axes.length} axes`);
+                                }
+                            }, 100);
+                        });
+                        
+                        window.addEventListener('gamepaddisconnected', (e) => {
+                            console.log('Gamepad disconnected event:', e.gamepad.index);
+                            if (this.gamepadIndex === e.gamepad.index) {
+                                this.gamepadIndex = -1;
+                                const statusEl = document.getElementById('gamepadStatus');
+                                if (statusEl) statusEl.textContent = 'Controller disconnected - use keyboard';
+                                this.logInput('Controller disconnected');
+                                
+                                // Clear button states
+                                this.buttonStates = {};
+                                
+                                // Clear visual indicators
+                                document.querySelectorAll('.controller-btn, .shoulder-btn').forEach(btn => {
+                                    btn.classList.remove('active');
+                                });
+                            }
+                        });
+                        
+                        console.log('Gamepad event listeners set up successfully');
+                    } else {
+                        const statusEl = document.getElementById('gamepadStatus');
+                        if (statusEl) statusEl.textContent = 'Gamepad API not supported - use keyboard';
+                        this.logInput('Gamepad API not available');
+                        console.warn('Gamepad API not supported');
+                    }
+                } catch (error) {
+                    const statusEl = document.getElementById('gamepadStatus');
+                    if (statusEl) statusEl.textContent = 'Gamepad blocked - use keyboard controls';
+                    this.logInput('Gamepad API blocked');
+                    console.error('Gamepad setup error:', error);
+                }
+                
+                console.log('Event listeners set up complete');
+            }
+            
+            gamepadLoop() {
+                try {
+                    // Check for gamepad support first
+                    if (!navigator.getGamepads) {
+                        const statusEl = document.getElementById('gamepadStatus');
+                        if (statusEl) statusEl.textContent = 'Gamepad API not supported - use keyboard';
+                        return;
+                    }
+                    
+                    const gamepads = navigator.getGamepads();
+                    
+                    // Auto-detect any connected gamepad
+                    if (this.gamepadIndex === -1) {
+                        for (let i = 0; i < gamepads.length; i++) {
+                            if (gamepads[i] && gamepads[i].connected) {
+                                this.gamepadIndex = i;
+                                const statusEl = document.getElementById('gamepadStatus');
+                                if (statusEl) statusEl.textContent = `Auto-detected: ${gamepads[i].id.substring(0, 25)}...`;
+                                console.log('Auto-detected gamepad at index', i, ':', gamepads[i].id);
+                                this.logInput(`Controller auto-detected: ${gamepads[i].id.substring(0, 20)}...`);
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Handle input from connected gamepad
+                    if (this.gamepadIndex >= 0 && gamepads[this.gamepadIndex] && gamepads[this.gamepadIndex].connected) {
+                        const gamepad = gamepads[this.gamepadIndex];
+                        this.handleGamepadInput(gamepad);
+                        this.updateControllerVisual(gamepad);
+                    } else if (this.gamepadIndex >= 0) {
+                        // Gamepad was disconnected
+                        this.gamepadIndex = -1;
+                        const statusEl = document.getElementById('gamepadStatus');
+                        if (statusEl) statusEl.textContent = 'Controller disconnected - use keyboard';
+                        this.logInput('Controller disconnected');
+                    }
+                    
+                } catch (error) {
+                    if (error.name === 'SecurityError') {
+                        const statusEl = document.getElementById('gamepadStatus');
+                        if (statusEl) statusEl.textContent = 'Gamepad blocked - use keyboard: Space=Play, Arrows=Navigate';
+                        console.log('Gamepad access blocked by browser policy');
+                        return; // Stop trying
+                    }
+                    console.warn('Gamepad error:', error);
+                }
+                
+                requestAnimationFrame(() => this.gamepadLoop());
+            }
+            
+            handleGamepadInput(gamepad) {
+                if (!gamepad || !gamepad.buttons) {
+                    console.warn('Invalid gamepad object');
+                    return;
+                }
+                
+                const now = Date.now();
+                
+                // Log gamepad state periodically for debugging
+                if (now % 1000 < 16) { // Roughly once per second
+                    console.log('Gamepad active, buttons:', gamepad.buttons.length, 'axes:', gamepad.axes?.length || 0);
+                }
+                
+                // Analog sticks with deadzone and safety checks
+                const deadzone = 0.15;
+                if (gamepad.axes && gamepad.axes.length >= 4) {
+                    const leftStickX = Math.abs(gamepad.axes[0]) > deadzone ? gamepad.axes[0] : 0;
+                    const rightStickX = Math.abs(gamepad.axes[2]) > deadzone ? gamepad.axes[2] : 0;
+                    const rightStickY = Math.abs(gamepad.axes[3]) > deadzone ? gamepad.axes[3] : 0;
+                    
+                    // Left stick X controls fine frequency adjustment
+                    this.frequencyOffset = leftStickX * 50; // ±50 Hz adjustment
+                    
+                    // Right stick controls oscillation/vibrato
+                    this.oscillation = Math.sqrt(rightStickX * rightStickX + rightStickY * rightStickY) * 10;
+                    
+                    // Update frequency if playing
+                    if (this.isPlaying && this.audioContext && this.frequencyOffset !== 0) {
+                        try {
+                            const baseFreq = this.notes[this.currentNoteIndex]?.freq || 261.63;
+                            const octaveMultiplier = Math.pow(2, this.currentOctave - 4);
+                            const targetFreq = (baseFreq * octaveMultiplier) + this.frequencyOffset;
+                            
+                            Object.values(this.oscillators).forEach(oscillator => {
+                                if (oscillator) {
+                                    oscillator.frequency.setValueAtTime(targetFreq, this.audioContext.currentTime);
+                                }
+                            });
+                        } catch (error) {
+                            console.warn('Frequency update failed:', error);
+                        }
+                    }
+                }
+                
+                // Button mappings with improved debouncing
+                const buttonMappings = [
+                    { id: 'a', index: 0, action: () => this.playNote(), name: 'A (Play)', delay: 100 },
+                    { id: 'b', index: 1, action: () => this.stopNote(), name: 'B (Stop)', delay: 100 },
+                    { id: 'x', index: 2, action: () => this.changeWaveform(), name: 'X (Wave)', delay: 250 },
+                    { id: 'y', index: 3, action: () => this.changeWaveform(), name: 'Y (Wave)', delay: 250 },
+                    { id: 'l1', index: 4, action: () => this.adjustVolume(-0.05), name: 'L1 (Vol-)', delay: 150 },
+                    { id: 'r1', index: 5, action: () => this.adjustVolume(0.05), name: 'R1 (Vol+)', delay: 150 },
+                    { id: 'l2', index: 6, action: () => this.adjustAttack(-0.02), name: 'L2 (Att-)', delay: 150 },
+                    { id: 'r2', index: 7, action: () => this.adjustAttack(0.02), name: 'R2 (Att+)', delay: 150 },
+                    { id: 'up', index: 12, action: () => this.changeOctave(1), name: 'Up (Oct+)', delay: 200 },
+                    { id: 'down', index: 13, action: () => this.changeOctave(-1), name: 'Down (Oct-)', delay: 200 },
+                    { id: 'left', index: 14, action: () => this.changeNote(-1), name: 'Left (Note-)', delay: 200 },
+                    { id: 'right', index: 15, action: () => this.changeNote(1), name: 'Right (Note+)', delay: 200 }
+                ];
+                
+                buttonMappings.forEach(({ id, index, action, name, delay }) => {
+                    try {
+                        if (index < gamepad.buttons.length) {
+                            const button = gamepad.buttons[index];
+                            const pressed = button.pressed;
+                            const wasPressed = this.buttonStates[id] || false;
+                            const lastTime = this.lastInputTime[id] || 0;
+                            
+                            // Trigger action on button press (not hold)
+                            if (pressed && !wasPressed && (now - lastTime) > delay) {
+                                console.log(`Button ${name} pressed`);
+                                action();
+                                this.logInput(name);
+                                this.lastInputTime[id] = now;
+                            }
+                            
+                            this.buttonStates[id] = pressed;
+                        }
+                    } catch (error) {
+                        console.warn(`Button ${index} (${id}) error:`, error);
+                    }
+                });
+            }
+            
+            updateControllerVisual(gamepad) {
+                if (!gamepad || !gamepad.buttons) {
+                    console.warn('Invalid gamepad for visual update');
+                    return;
+                }
+                
+                const buttonMap = {
+                    'a': 0, 'b': 1, 'x': 2, 'y': 3,
+                    'l1': 4, 'r1': 5, 'l2': 6, 'r2': 7,
+                    'up': 12, 'down': 13, 'left': 14, 'right': 15
+                };
+                
+                Object.entries(buttonMap).forEach(([id, index]) => {
+                    try {
+                        const element = document.getElementById(id);
+                        if (element && index < gamepad.buttons.length) {
+                            const pressed = gamepad.buttons[index].pressed;
+                            
+                            // Update visual state
+                            if (pressed) {
+                                element.classList.add('active');
+                            } else {
+                                element.classList.remove('active');
+                            }
+                        }
+                    } catch (error) {
+                        console.warn(`Visual update error for button ${id}:`, error);
+                    }
+                });
+            }
+            
+            changeNote(direction) {
+                this.currentNoteIndex = Math.max(0, Math.min(6, this.currentNoteIndex + direction));
+                this.updateDisplay();
+            }
+            
+            changeOctave(direction) {
+                this.currentOctave = Math.max(1, Math.min(7, this.currentOctave + direction));
+                this.updateDisplay();
+            }
+            
+            changeWaveform() {
+                const waveforms = ['sine', 'square', 'sawtooth', 'triangle'];
+                const currentIndex = waveforms.indexOf(this.waveform);
+                const nextIndex = (currentIndex + 1) % waveforms.length;
+                this.waveform = waveforms[nextIndex];
+                
+                document.querySelector('.wave-btn.active')?.classList.remove('active');
+                document.querySelector(`[data-wave="${this.waveform}"]`)?.classList.add('active');
+                this.updateParameterDisplay();
+            }
+            
+            adjustVolume(delta) {
+                this.volume = Math.max(0, Math.min(1, this.volume + delta));
+                if (this.masterGain) {
+                    this.masterGain.gain.value = this.volume;
+                }
+                this.updateParameterDisplay();
+            }
+            
+            adjustAttack(delta) {
+                this.attack = Math.max(0.01, Math.min(2, this.attack + delta));
+                this.updateParameterDisplay();
+            }
+            
+            playNote() {
+                console.log('PlayNote called - current note index:', this.currentNoteIndex);
+                
+                if (!this.audioContext) {
+                    console.warn('No audio context available');
+                    return;
+                }
+                
+                const noteKey = `${this.currentNoteIndex}-${this.currentOctave}`;
+                console.log('Playing note key:', noteKey);
+                
+                // Stop existing note if playing (for single note mode)
+                if (this.oscillators[noteKey]) {
+                    this.stopNote(noteKey);
+                }
+                
+                this.isPlaying = true;
+                this.activeVoices.add(noteKey);
+                
+                try {
+                    const note = this.notes[this.currentNoteIndex];
+                    if (!note) {
+                        console.error('No note found at index:', this.currentNoteIndex);
+                        return;
+                    }
+                    
+                    console.log('Playing note:', note.name, 'at octave:', this.currentOctave);
+                    
+                    const baseFreq = note.freq;
+                    const octaveMultiplier = Math.pow(2, this.currentOctave - 4);
+                    this.frequency = (baseFreq * octaveMultiplier) + this.frequencyOffset;
+                    
+                    // Create oscillator and gain for this voice
+                    const oscillator = this.audioContext.createOscillator();
+                    const gainNode = this.audioContext.createGain();
+                    
+                    oscillator.type = this.waveform;
+                    oscillator.frequency.setValueAtTime(this.frequency, this.audioContext.currentTime);
+                    
+                    // Envelope
+                    const now = this.audioContext.currentTime;
+                    gainNode.gain.setValueAtTime(0, now);
+                    gainNode.gain.linearRampToValueAtTime(this.volume * 0.3, now + this.attack);
+                    
+                    // Connect to audio chain
+                    oscillator.connect(gainNode);
+                    gainNode.connect(this.filterNode);
+                    
+                    // Store references
+                    this.oscillators[noteKey] = oscillator;
+                    this.gainNodes[noteKey] = gainNode;
+                    
+                    // Start oscillator
+                    oscillator.start();
+                    console.log('Oscillator started for', noteKey);
+                    
+                    // Create particles for this note
+                    console.log('Creating particles...');
+                    this.createNoteParticles();
+                    
+                    this.updateKeyHighlight();
+                    this.updateDisplay();
+                } catch (error) {
+                    console.error('Play note error:', error);
+                }
+            }
+            
+            stopNote(specificNote = null) {
+                if (!this.audioContext) return;
+                
+                if (specificNote) {
+                    // Stop specific note
+                    const oscillator = this.oscillators[specificNote];
+                    const gainNode = this.gainNodes[specificNote];
+                    
+                    if (oscillator && gainNode) {
+                        const now = this.audioContext.currentTime;
+                        gainNode.gain.linearRampToValueAtTime(0, now + this.release);
+                        oscillator.stop(now + this.release);
+                        
+                        delete this.oscillators[specificNote];
+                        delete this.gainNodes[specificNote];
+                        this.activeVoices.delete(specificNote);
+                    }
+                } else {
+                    // Stop all notes
+                    Object.keys(this.oscillators).forEach(noteKey => {
+                        this.stopNote(noteKey);
+                    });
+                    
+                    this.isPlaying = false;
+                    document.querySelectorAll('.key').forEach(key => key.classList.remove('active'));
+                }
+                
+                // Update playing state
+                this.isPlaying = this.activeVoices.size > 0;
+            }
+            
+            updateDisplay() {
+                try {
+                    const note = this.notes[this.currentNoteIndex];
+                    if (!note) {
+                        console.warn('Note not found for index:', this.currentNoteIndex);
+                        return;
+                    }
+                    
+                    const noteName = note.name + this.currentOctave;
+                    const baseFreq = note.freq;
+                    const octaveMultiplier = Math.pow(2, this.currentOctave - 4);
+                    const frequency = baseFreq * octaveMultiplier;
+                    
+                    const currentNoteEl = document.getElementById('currentNote');
+                    const noteDisplayEl = document.getElementById('noteDisplay');
+                    const freqDisplayEl = document.getElementById('freqDisplay');
+                    
+                    if (currentNoteEl) currentNoteEl.textContent = noteName;
+                    if (noteDisplayEl) noteDisplayEl.textContent = noteName;
+                    if (freqDisplayEl) freqDisplayEl.textContent = frequency.toFixed(2) + ' Hz';
+                    
+                    // Update parameter displays
+                    this.updateParameterDisplay();
+                } catch (error) {
+                    console.warn('Display update error:', error);
+                }
+            }
+            
+            updateParameterDisplay() {
+                try {
+                    const elements = {
+                        volumeDisplay: Math.round(this.volume * 100) + '%',
+                        waveDisplay: this.waveform.charAt(0).toUpperCase() + this.waveform.slice(1),
+                        attackDisplay: this.attack.toFixed(2) + 's',
+                        releaseDisplay: this.release.toFixed(2) + 's'
+                    };
+                    
+                    Object.entries(elements).forEach(([id, value]) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = value;
+                    });
+                } catch (error) {
+                    console.warn('Parameter display update error:', error);
+                }
+            }
+            
+            updateKeyHighlight() {
+                document.querySelectorAll('.key').forEach(key => key.classList.remove('active'));
+                const keys = document.querySelectorAll('.key');
+                if (keys[this.currentNoteIndex]) {
+                    keys[this.currentNoteIndex].classList.add('active');
+                }
+            }
+            
+            logInput(message) {
+                try {
+                    this.inputLog.unshift({ text: message, timestamp: Date.now() });
+                    if (this.inputLog.length > 6) this.inputLog.pop();
+                    this.updateInputLog();
+                } catch (error) {
+                    console.warn('Log input error:', error);
+                }
+            }
+            
+            updateInputLog() {
+                try {
+                    const logElement = document.getElementById('inputLog');
+                    if (logElement && this.inputLog) {
+                        logElement.innerHTML = this.inputLog.map((entry, index) => 
+                            `<div class="log-entry ${index === 0 ? 'new' : ''}">${entry.text}</div>`
+                        ).join('');
+                    }
+                } catch (error) {
+                    console.warn('Update log error:', error);
+                }
+            }
+            
+            handleKeyboardInput(e) {
+                try {
+                    const keyMap = {
+                        'ArrowLeft': () => this.changeNote(-1),
+                        'ArrowRight': () => this.changeNote(1),
+                        'ArrowUp': () => this.changeOctave(1),
+                        'ArrowDown': () => this.changeOctave(-1),
+                        'Space': () => this.playNote(),
+                        'KeyQ': () => this.changeWaveform(),
+                        'KeyW': () => this.adjustVolume(0.05),
+                        'KeyS': () => this.adjustVolume(-0.05),
+                        'KeyA': () => this.adjustAttack(-0.02),
+                        'KeyD': () => this.adjustAttack(0.02),
+                        'Digit1': () => { this.currentNoteIndex = 0; this.updateDisplay(); },
+                        'Digit2': () => { this.currentNoteIndex = 1; this.updateDisplay(); },
+                        'Digit3': () => { this.currentNoteIndex = 2; this.updateDisplay(); },
+                        'Digit4': () => { this.currentNoteIndex = 3; this.updateDisplay(); },
+                        'Digit5': () => { this.currentNoteIndex = 4; this.updateDisplay(); },
+                        'Digit6': () => { this.currentNoteIndex = 5; this.updateDisplay(); },
+                        'Digit7': () => { this.currentNoteIndex = 6; this.updateDisplay(); }
+                    };
+                    
+                    const action = keyMap[e.code];
+                    if (action) {
+                        e.preventDefault();
+                        action();
+                        this.logInput(`Keyboard: ${e.code}`);
+                    }
+                } catch (error) {
+                    console.warn('Keyboard input error:', error);
+                }
+            }
+            
+            startParticleSystem() {
+                if (!this.particleContext) {
+                    console.warn('Particle context not available');
+                    return;
+                }
+                
+                console.log('Starting particle system');
+                
+                const animate = () => {
+                    this.updateParticles();
+                    this.renderParticles();
+                    requestAnimationFrame(animate);
+                };
+                animate();
+            }
+            
+            createNoteParticles() {
+                console.log('createNoteParticles called');
+                console.log('Particle context available:', !!this.particleContext);
+                console.log('Particle canvas available:', !!this.particleCanvas);
+                
+                if (!this.particleContext || !this.particleCanvas) {
+                    console.error('Particle system not properly initialized');
+                    return;
+                }
+                
+                try {
+                    const note = this.notes[this.currentNoteIndex];
+                    if (!note) {
+                        console.error('No note found for particle creation at index:', this.currentNoteIndex);
+                        return;
+                    }
+                    
+                    console.log('Creating particles for note:', note.name, 'color:', note.color);
+                    
+                    const centerX = this.particleCanvas.width / 2;
+                    const centerY = this.particleCanvas.height / 2;
+                    
+                    // Create 10-15 particles per note for visibility
+                    const particleCount = 10 + Math.floor(Math.random() * 6);
+                    console.log('Creating', particleCount, 'particles');
+                    
+                    for (let i = 0; i < particleCount; i++) {
+                        const particle = {
+                            x: centerX + (Math.random() - 0.5) * 80,
+                            y: centerY + (Math.random() - 0.5) * 50,
+                            vx: (Math.random() - 0.5) * 6,
+                            vy: (Math.random() - 0.5) * 6,
+                            size: 4 + Math.random() * 6,
+                            color: note.color || '#ff6b6b',
+                            alpha: 1,
+                            life: 1,
+                            decay: 0.005 + Math.random() * 0.01,
+                            frequency: this.frequency,
+                            birthTime: Date.now()
+                        };
+                        
+                        this.particles.push(particle);
+                        console.log('Created particle:', i, 'at', particle.x, particle.y, 'color:', particle.color);
+                    }
+                    
+                    console.log('Total particles after creation:', this.particles.length);
+                } catch (error) {
+                    console.error('Particle creation error:', error);
+                }
+            }
+            
+            updateParticles() {
+                // Update existing particles
+                this.particles = this.particles.filter(particle => {
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+                    particle.life -= particle.decay;
+                    particle.alpha = particle.life;
+                    
+                    // Add frequency-based movement
+                    if (this.isPlaying) {
+                        particle.y += Math.sin(Date.now() * 0.01 + particle.x * 0.1) * 0.5;
+                        particle.size += Math.sin(Date.now() * 0.02) * 0.1;
+                    }
+                    
+                    return particle.life > 0;
+                });
+                
+                // Add ambient particles when playing
+                if (this.isPlaying && Math.random() < 0.3) {
+                    try {
+                        const note = this.notes[this.currentNoteIndex];
+                        if (note) {
+                            this.particles.push({
+                                x: Math.random() * this.particleCanvas.width,
+                                y: this.particleCanvas.height + 10,
+                                vx: (Math.random() - 0.5) * 2,
+                                vy: -1 - Math.random() * 2,
+                                size: 1 + Math.random() * 2,
+                                color: note.color || '#ff6b6b',
+                                alpha: 0.6,
+                                life: 0.6,
+                                decay: 0.005,
+                                frequency: this.frequency
+                            });
+                        }
+                    } catch (error) {
+                        console.warn('Ambient particle error:', error);
+                    }
+                }
+            }
+            
+            renderParticles() {
+                if (!this.particleContext || !this.particles) return;
+                
+                try {
+                    const ctx = this.particleContext;
+                    ctx.clearRect(0, 0, this.particleCanvas.width, this.particleCanvas.height);
+                    
+                    if (this.particles.length > 0) {
+                        console.log('Rendering', this.particles.length, 'particles');
+                    }
+                    
+                    this.particles.forEach((particle, index) => {
+                        if (particle && particle.alpha > 0) {
+                            ctx.save();
+                            ctx.globalAlpha = Math.max(0, Math.min(1, particle.alpha));
+                            ctx.fillStyle = particle.color || '#ff6b6b';
+                            ctx.shadowBlur = 12;
+                            ctx.shadowColor = particle.color || '#ff6b6b';
+                            
+                            ctx.beginPath();
+                            ctx.arc(particle.x, particle.y, Math.max(1, particle.size), 0, Math.PI * 2);
+                            ctx.fill();
+                            
+                            ctx.restore();
+                        }
+                    });
+                } catch (error) {
+                    console.error('Particle render error:', error);
+                }
+            }
+            
+            startWaveformAnimation() {
+                if (!this.canvasContext) return;
+                
+                const animate = () => {
+                    this.drawWaveform();
+                    requestAnimationFrame(animate);
+                };
+                animate();
+            }
+            
+            drawWaveform() {
+                if (!this.canvasContext) return;
+                
+                const ctx = this.canvasContext;
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                
+                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+                ctx.fillRect(0, 0, width, height);
+                
+                if (this.isPlaying && this.analyser && this.dataArray) {
+                    // Draw real audio frequency data
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    
+                    ctx.strokeStyle = '#000';
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    
+                    const barWidth = width / this.dataArray.length;
+                    let x = 0;
+                    
+                    ctx.moveTo(0, height);
+                    
+                    for (let i = 0; i < this.dataArray.length; i++) {
+                        const barHeight = (this.dataArray[i] / 255) * height * 0.8;
+                        const y = height - barHeight;
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                        x += barWidth;
+                    }
+                    
+                    // Complete the fill area
+                    ctx.lineTo(width, height);
+                    ctx.lineTo(0, height);
+                    ctx.closePath();
+                    ctx.fill();
+                    
+                    // Draw the line
+                    ctx.beginPath();
+                    x = 0;
+                    for (let i = 0; i < this.dataArray.length; i++) {
+                        const barHeight = (this.dataArray[i] / 255) * height * 0.8;
+                        const y = height - barHeight;
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                        x += barWidth;
+                    }
+                    ctx.stroke();
+                    
+                } else {
+                    // Draw theoretical waveform when not playing
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    
+                    const samples = 150;
+                    const amplitude = height * 0.3;
+                    const centerY = height / 2;
+                    const time = Date.now() * 0.003;
+                    
+                    for (let i = 0; i < samples; i++) {
+                        const x = (i / samples) * width;
+                        const t = (i / samples) * 4 * Math.PI + time;
+                        let y;
+                        
+                        switch (this.waveform) {
+                            case 'sine':
+                                y = Math.sin(t);
+                                break;
+                            case 'square':
+                                y = Math.sign(Math.sin(t));
+                                break;
+                            case 'sawtooth':
+                                y = 2 * ((t / (2 * Math.PI)) % 1) - 1;
+                                break;
+                            case 'triangle':
+                                y = 2 * Math.abs(2 * ((t / (2 * Math.PI)) % 1) - 1) - 1;
+                                break;
+                            default:
+                                y = Math.sin(t);
+                        }
+                        
+                        const plotY = centerY + y * amplitude * 0.5;
+                        
+                        if (i === 0) {
+                            ctx.moveTo(x, plotY);
+                        } else {
+                            ctx.lineTo(x, plotY);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                
+                // Draw center line
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(0, height / 2);
+                ctx.lineTo(width, height / 2);
+                ctx.stroke();
+            }
+        }
+        
+        // Collapsible instructions function
+        function toggleInstructions() {
+            const panel = document.getElementById('instructionsPanel');
+            panel.classList.toggle('open');
+        }
+        
+        // Start the app
+        document.addEventListener('DOMContentLoaded', () => {
+            new SimpleSynth();
+        });
+    </script>
+</body>
+</html>
