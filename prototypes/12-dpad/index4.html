@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D-pad Synthesizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* Basic Variables */
+        :root {
+            --font-size-base: 12pt;
+            --font-size-lg: 19pt;
+            --font-size-xl: 31pt;
+            --space-sm: 10px;
+            --space-md: 16px;
+            --space-lg: 26px;
+            --space-xl: 42px;
+        }
+        /* Global Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #fff;
+            color: #000;
+            font-family: 'Space Mono', monospace;
+            font-size: var(--font-size-base);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: var(--space-md);
+        }
+        /* Typography */
+        h1 {
+            font-size: var(--font-size-xl);
+            font-weight: 700;
+            margin-bottom: var(--space-lg);
+            text-align: center;
+        }
+        .synth-container {
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-xl);
+            margin: var(--space-lg);
+            max-width: 800px;
+            width: 100%;
+        }
+        .status {
+            text-align: center;
+            margin-bottom: var(--space-lg);
+            padding: var(--space-md);
+            background: #fff;
+            border: 1px solid #000;
+        }
+        .gamepad-status {
+            margin-top: var(--space-sm);
+            font-size: var(--font-size-base);
+            opacity: 0.8;
+        }
+        .feedback-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-lg);
+            margin: var(--space-lg) 0;
+        }
+        .feedback-section {
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-lg);
+        }
+        .feedback-title {
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            margin-bottom: var(--space-md);
+            text-align: center;
+        }
+        .controller-visual {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: var(--space-lg);
+            margin-bottom: var(--space-md);
+            align-items: center;
+        }
+        .dpad-container, .face-container {
+            display: grid;
+            grid-template-columns: repeat(3, 30px);
+            grid-template-rows: repeat(3, 30px);
+            gap: 2px;
+            justify-self: center;
+        }
+        .controller-btn {
+            width: 30px;
+            height: 30px;
+            background: #fff;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            transition: all 0.1s ease;
+            font-weight: 700;
+        }
+        .controller-btn.active {
+            background: #000;
+            color: #fff;
+        }
+        .shoulder-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: var(--space-sm);
+        }
+        .shoulder-btn {
+            width: 50px;
+            height: 20px;
+            background: #fff;
+            border: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            transition: all 0.1s ease;
+            font-weight: 700;
+        }
+        .shoulder-btn.active {
+            background: #000;
+            color: #fff;
+        }
+        .parameter-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-sm);
+            font-size: var(--font-size-base);
+            margin: var(--space-md) 0;
+        }
+        .param-item {
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-sm);
+            text-align: center;
+        }
+        .param-label {
+            display: block;
+            font-size: 10px;
+            font-weight: 700;
+            margin-bottom: var(--space-sm);
+        }
+        .param-value {
+            font-weight: 700;
+            font-size: var(--font-size-base);
+        }
+        .frequency-display {
+            text-align: center;
+            margin: var(--space-md) 0;
+        }
+        .note-display {
+            font-size: var(--font-size-lg);
+            font-weight: 700;
+        }
+        .freq-value {
+            font-size: var(--font-size-base);
+            margin-top: var(--space-sm);
+        }
+        .waveform-display {
+            width: 100%;
+            height: 80px;
+            background: #fff;
+            border: 1px solid #000;
+            margin: var(--space-sm) 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .particle-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .waveform-canvas {
+            position: relative;
+            z-index: 1;
+        }
+        .input-log {
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 11px;
+            line-height: 1.4;
+            background: #fff;
+            border: 1px solid #000;
+            padding: var(--space-sm);
+        }
+        .log-entry {
+            margin: 3px 0;
+            opacity: 0.8;
+        }
+        .log-entry.new {
+            font-weight: 700;
+            opacity: 1;
+        }
+        .waveform-buttons {
+            display: flex;
+            gap: var(--space-sm);
+            justify-content: center;
+            margin: var(--space-lg) 0;
+        }
+        .wave-btn {
+            background: #fff;
+            border: 1px solid #000;
+            color: #000;
+            padding: var(--space-sm) var(--space-md);
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-size: var(--font-size-base);
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        .wave-btn:hover {
+            background: #000;
+            color: #fff;
+        }
+        .wave-btn.active {
+            background: #000;
+            color: #fff;
+        }
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: var(--space-sm);
+            margin: var(--space-lg) 0;
+            max-width: 600px;
+        }
+        .key {
+            height: 80px;
+            background: #fff;
+            border: 1px solid #000;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: var(--space-sm);
+            cursor: pointer;
+            transition: all 0.1s ease;
+            font-weight: 700;
+            font-size: var(--font-size-base);
+        }
+        .key:hover {
+            background: #000;
+            color: #fff;
+        }
+        .key.active {
+            background: #000;
+            color: #fff;
+            transform: translateY(2px);
+        }
+        .fullscreen-visualizer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #fff;
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .fullscreen-visualizer.active {
+            display: flex;
+        }
+        .fullscreen-canvas {
+            width: 90vw;
+            height: 70vh;
+            border: 2px solid #000;
+            background: #fff;
+        }
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #fff;
+            border: 2px solid #000;
+            color: #000;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+        }
+        .close-btn:hover {
+            background: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="synth-container">
+        <h1>🎹 D-pad Synthesizer</h1>
+        
+        <div class="status">
+            <div>Current Note: <span id="currentNote">C4</span></div>
+            <div class="gamepad-status" id="gamepadStatus">Connect a gamepad and press any button</div>
+        </div>
+        
+        <div class="feedback-panel">
+            <div class="feedback-section">
+                <div class="feedback-title">🎮 Controller Input</div>
+                
+                <div class="shoulder-buttons">
+                    <div class="shoulder-btn" id="l1">L1</div>
+                    <div class="shoulder-btn" id="l2">L2</div>
+                    <div class="shoulder-btn" id="r1">R1</div>
+                    <div class="shoulder-btn" id="r2">R2</div>
+                </div>
+                
+                <div class="controller-visual">
+                    <div class="dpad-container">
+                        <div></div>
+                        <div class="controller-btn" id="up">↑</div>
+                        <div></div>
+                        <div class="controller-btn" id="left">←</div>
+                        <div></div>
+                        <div class="controller-btn" id="right">→</div>
+                        <div></div>
+                        <div class="controller-btn" id="down">↓</div>
+                        <div></div>
+                    </div>
+                    
+                    <div style="text-align: center; font-size: 12px;">CONTROLLER</div>
+                    
+                    <div class="face-container">
+                        <div></div>
+                        <div class="controller-btn" id="y">Y</div>
+                        <div></div>
+                        <div class="controller-btn" id="x">X</div>
+                        <div></div>
+                        <div class="controller-btn" id="b">B</div>
+                        <div></div>
+                        <div class="controller-btn" id="a">A</div>
+                        <div></div>
+                    </div>
+                </div>
+                
+                <div class="input-log" id="inputLog">
+                    <div class="log-entry">Ready for input...</div>
+                </div>
+            </div>
+            
+            <div class="feedback-section">
+                <div class="feedback-title">📊 Audio Parameters</div>
+                
+                <div class="parameter-display">
+                    <div class="param-item">
+                        <span class="param-label">Volume</span>
+                        <div class="param-value" id="volumeDisplay">70%</div>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Waveform</span>
+                        <div class="param-value" id="waveDisplay">Sawtooth</div>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Filter</span>
+                        <div class="param-value" id="filterDisplay">800Hz</div>
+                    </div>
+                    <div class="param-item">
+                        <span class="param-label">Release</span>
+                        <div class="param-value" id="releaseDisplay">0.80s</div>
+                    </div>
+                </div>
+                
+                <div class="frequency-display">
+                    <div class="note-display" id="noteDisplay">C4</div>
+                    <div class="freq-value" id="freqDisplay">261.63 Hz</div>
+                </div>
+                
+                <div class="waveform-display">
+                    <canvas id="waveformCanvas" class="waveform-canvas" width="280" height="80"></canvas>
+                    <canvas id="particleCanvas" class="particle-canvas" width="280" height="80"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div class="waveform-buttons">
+            <button class="wave-btn" data-wave="sine">Sine</button>
+            <button class="wave-btn active" data-wave="sawtooth">Sawtooth</button>
+            <button class="wave-btn" data-wave="square">Square</button>
+            <button class="wave-btn" data-wave="triangle">Triangle</button>
+            <button class="wave-btn" onclick="toggleFullscreen()">📺 Fullscreen</button>
+        </div>
+        
+        <div class="keyboard">
+            <div class="key" data-index="0">C</div>
+            <div class="key" data-index="1">D</div>
+            <div class="key" data-index="2">E</div>
+            <div class="key" data-index="3">F</div>
+            <div class="key" data-index="4">G</div>
+            <div class="key" data-index="5">A</div>
+            <div class="key" data-index="6">B</div>
+            <div class="key" data-index="0" data-octave="5">C5</div>
+        </div>
+    </div>
+
+    <!-- Fullscreen Visualizer -->
+    <div class="fullscreen-visualizer" id="fullscreenViz">
+        <button class="close-btn" onclick="toggleFullscreen()">✕ Close</button>
+        <canvas id="fullscreenCanvas" class="fullscreen-canvas" width="1200" height="600"></canvas>
+        <canvas id="fullscreenParticles" class="fullscreen-canvas" width="1200" height="600" style="position: absolute;"></canvas>
+    </div>
+
+    <script>
+        class SimpleSynth {
+            constructor() {
+                // Audio
+                this.audioContext = null;
+                this.oscillator = null;
+                this.subOsc = null;
+                this.gainNode = null;
+                this.subGain = null;
+                this.filterNode = null;
+                this.masterGain = null;
+                this.analyser = null;
+                this.dataArray = null;
+                this.isPlaying = false;
+                
+                // Parameters
+                this.waveform = 'sawtooth';
+                this.volume = 0.7;
+                this.attack = 0.05;
+                this.release = 0.8;
+                this.filterCutoff = 800;
+                this.subLevel = 0.3;
+                
+                // State
+                this.currentNote = 0;
+                this.currentOctave = 4;
+                this.frequency = 261.63;
+                this.frequencyOffset = 0;
+                
+                // Controller
+                this.gamepadIndex = -1;
+                this.buttonStates = {};
+                this.lastInputTime = {};
+                this.inputLog = [];
+                
+                // Visuals
+                this.particles = [];
+                this.isFullscreen = false;
+                
+                // Notes
+                this.notes = [
+                    { name: 'C', freq: 261.63, color: '#ff6b6b' },
+                    { name: 'D', freq: 293.66, color: '#ffa726' },
+                    { name: 'E', freq: 329.63, color: '#ffee58' },
+                    { name: 'F', freq: 349.23, color: '#66bb6a' },
+                    { name: 'G', freq: 392.00, color: '#42a5f5' },
+                    { name: 'A', freq: 440.00, color: '#ab47bc' },
+                    { name: 'B', freq: 493.88, color: '#ec407a' }
+                ];
+                
+                this.init();
+            }
+            
+            init() {
+                console.log('Initializing synthesizer...');
+                this.setupAudio();
+                this.setupEventListeners();
+                this.setupCanvases();
+                this.updateDisplay();
+                this.gamepadLoop();
+                this.startAnimations();
+                console.log('Synthesizer ready!');
+            }
+            
+            setupAudio() {
+                document.addEventListener('click', this.initAudio.bind(this), { once: true });
+            }
+            
+            async initAudio() {
+                try {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Master gain
+                    this.masterGain = this.audioContext.createGain();
+                    this.masterGain.gain.value = this.volume;
+                    
+                    // Filter
+                    this.filterNode = this.audioContext.createBiquadFilter();
+                    this.filterNode.type = 'lowpass';
+                    this.filterNode.frequency.value = this.filterCutoff;
+                    this.filterNode.Q.value = 8;
+                    
+                    // Analyser
+                    this.analyser = this.audioContext.createAnalyser();
+                    this.analyser.fftSize = 256;
+                    this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                    
+                    // Connect chain
+                    this.filterNode.connect(this.masterGain);
+                    this.masterGain.connect(this.analyser);
+                    this.analyser.connect(this.audioContext.destination);
+                    
+                    console.log('Audio initialized');
+                } catch (error) {
+                    console.error('Audio failed:', error);
+                }
+            }
+            
+            setupEventListeners() {
+                // Waveform buttons
+                document.querySelectorAll('.wave-btn[data-wave]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelector('.wave-btn.active')?.classList.remove('active');
+                        btn.classList.add('active');
+                        this.waveform = btn.dataset.wave;
+                        this.updateDisplay();
+                        this.logInput(`Wave: ${this.waveform}`);
+                    });
+                });
+                
+                // Piano keys
+                document.querySelectorAll('.key').forEach((key, index) => {
+                    let isPressed = false;
+                    
+                    const startNote = () => {
+                        if (isPressed) return;
+                        isPressed = true;
+                        
+                        this.currentNote = parseInt(key.dataset.index) || index;
+                        this.currentOctave = parseInt(key.dataset.octave) || 4;
+                        
+                        this.playNote();
+                        key.classList.add('active');
+                        this.logInput(`Key: ${this.notes[this.currentNote].name}${this.currentOctave}`);
+                    };
+                    
+                    const endNote = () => {
+                        if (!isPressed) return;
+                        isPressed = false;
+                        
+                        this.stopNote();
+                        key.classList.remove('active');
+                    };
+                    
+                    key.addEventListener('mousedown', startNote);
+                    key.addEventListener('mouseup', endNote);
+                    key.addEventListener('mouseleave', endNote);
+                    key.addEventListener('touchstart', startNote);
+                    key.addEventListener('touchend', endNote);
+                });
+                
+                // Keyboard controls
+                document.addEventListener('keydown', (e) => {
+                    if (e.repeat) return;
+                    const keyMap = {
+                        'Space': () => this.playNote(),
+                        'ArrowLeft': () => this.changeNote(-1),
+                        'ArrowRight': () => this.changeNote(1),
+                        'ArrowUp': () => this.changeOctave(1),
+                        'ArrowDown': () => this.changeOctave(-1),
+                        'KeyQ': () => this.changeWaveform(),
+                        'KeyW': () => this.adjustVolume(0.1),
+                        'KeyS': () => this.adjustVolume(-0.1),
+                        'Digit1': () => this.selectNote(0),
+                        'Digit2': () => this.selectNote(1),
+                        'Digit3': () => this.selectNote(2),
+                        'Digit4': () => this.selectNote(3),
+                        'Digit5': () => this.selectNote(4),
+                        'Digit6': () => this.selectNote(5),
+                        'Digit7': () => this.selectNote(6)
+                    };
+                    
+                    if (keyMap[e.code]) {
+                        e.preventDefault();
+                        keyMap[e.code]();
+                        this.logInput(`Keyboard: ${e.code}`);
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space') {
+                        this.stopNote();
+                    }
+                });
+                
+                // Gamepad events
+                window.addEventListener('gamepadconnected', (e) => {
+                    this.gamepadIndex = e.gamepad.index;
+                    document.getElementById('gamepadStatus').textContent = `Connected: ${e.gamepad.id.substring(0, 25)}`;
+                    this.logInput('Controller connected');
+                });
+                
+                window.addEventListener('gamepaddisconnected', (e) => {
+                    if (this.gamepadIndex === e.gamepad.index) {
+                        this.gamepadIndex = -1;
+                        document.getElementById('gamepadStatus').textContent = 'Controller disconnected';
+                        this.logInput('Controller disconnected');
+                    }
+                });
+            }
+            
+            gamepadLoop() {
+                if (this.gamepadIndex >= 0) {
+                    try {
+                        const gamepads = navigator.getGamepads();
+                        const gamepad = gamepads[this.gamepadIndex];
+                        if (gamepad && gamepad.connected) {
+                            this.handleGamepad(gamepad);
+                            this.updateVisuals(gamepad);
+                        }
+                    } catch (error) {
+                        // Gamepad access blocked
+                    }
+                } else {
+                    // Auto-detect gamepad
+                    try {
+                        const gamepads = navigator.getGamepads();
+                        for (let i = 0; i < gamepads.length; i++) {
+                            if (gamepads[i] && gamepads[i].connected) {
+                                this.gamepadIndex = i;
+                                break;
+                            }
+                        }
+                    } catch (error) {
+                        // Gamepad API not available
+                    }
+                }
+                
+                requestAnimationFrame(() => this.gamepadLoop());
+            }
+            
+            handleGamepad(gamepad) {
+                const now = Date.now();
+                
+                // Analog sticks
+                if (gamepad.axes && gamepad.axes.length >= 4) {
+                    const deadzone = 0.1;
+                    const leftX = Math.abs(gamepad.axes[0]) > deadzone ? gamepad.axes[0] : 0;
+                    const rightX = Math.abs(gamepad.axes[2]) > deadzone ? gamepad.axes[2] : 0;
+                    const rightY = Math.abs(gamepad.axes[3]) > deadzone ? gamepad.axes[3] : 0;
+                    
+                    this.frequencyOffset = leftX * 50;
+                    
+                    if (this.isPlaying && this.oscillator && Math.abs(this.frequencyOffset) > 1) {
+                        const targetFreq = this.frequency + this.frequencyOffset;
+                        this.oscillator.frequency.setValueAtTime(targetFreq, this.audioContext.currentTime);
+                    }
+                }
+                
+                // Buttons
+                const buttons = [
+                    { id: 'a', index: 0, action: () => this.playNote(), release: () => this.stopNote(), name: 'A (Play)' },
+                    { id: 'b', index: 1, action: () => this.stopNote(), name: 'B (Stop)' },
+                    { id: 'x', index: 2, action: () => this.changeWaveform(), name: 'X (Wave)' },
+                    { id: 'y', index: 3, action: () => this.changeWaveform(), name: 'Y (Wave)' },
+                    { id: 'l1', index: 4, action: () => this.adjustVolume(-0.05), name: 'L1 (Vol-)' },
+                    { id: 'r1', index: 5, action: () => this.adjustVolume(0.05), name: 'R1 (Vol+)' },
+                    { id: 'l2', index: 6, action: () => this.adjustFilter(-50), name: 'L2 (Filter-)' },
+                    { id: 'r2', index: 7, action: () => this.adjustFilter(50), name: 'R2 (Filter+)' },
+                    { id: 'up', index: 12, action: () => this.changeOctave(1), name: 'Up (Oct+)' },
+                    { id: 'down', index: 13, action: () => this.changeOctave(-1), name: 'Down (Oct-)' },
+                    { id: 'left', index: 14, action: () => this.changeNote(-1), name: 'Left (Note-)' },
+                    { id: 'right', index: 15, action: () => this.changeNote(1), name: 'Right (Note+)' }
+                ];
+                
+                buttons.forEach(({ id, index, action, release, name }) => {
+                    if (index < gamepad.buttons.length) {
+                        const pressed = gamepad.buttons[index].pressed;
+                        const wasPressed = this.buttonStates[id] || false;
+                        const lastTime = this.lastInputTime[id] || 0;
+                        
+                        if (pressed && !wasPressed && (now - lastTime) > 100) {
+                            action();
+                            this.logInput(name);
+                            this.lastInputTime[id] = now;
+                        }
+                        
+                        if (!pressed && wasPressed && release) {
+                            release();
+                        }
+                        
+                        this.buttonStates[id] = pressed;
+                    }
+                });
+            }
+            
+            updateVisuals(gamepad) {
+                const buttonMap = {
+                    'a': 0, 'b': 1, 'x': 2, 'y': 3,
+                    'l1': 4, 'r1': 5, 'l2': 6, 'r2': 7,
+                    'up': 12, 'down': 13, 'left': 14, 'right': 15
+                };
+                
+                Object.entries(buttonMap).forEach(([id, index]) => {
+                    const element = document.getElementById(id);
+                    if (element && index < gamepad.buttons.length) {
+                        const pressed = gamepad.buttons[index].pressed;
+                        element.classList.toggle('active', pressed);
+                    }
+                });
+            }
+            
+            playNote() {
+                if (!this.audioContext || this.isPlaying) return;
+                
+                this.isPlaying = true;
+                
+                // Calculate frequency
+                const baseFreq = this.notes[this.currentNote].freq;
+                const octaveMultiplier = Math.pow(2, this.currentOctave - 4);
+                this.frequency = baseFreq * octaveMultiplier;
+                
+                // Main oscillator
+                this.oscillator = this.audioContext.createOscillator();
+                this.gainNode = this.audioContext.createGain();
+                this.oscillator.type = this.waveform;
+                this.oscillator.frequency.setValueAtTime(this.frequency, this.audioContext.currentTime);
+                
+                // Sub oscillator
+                this.subOsc = this.audioContext.createOscillator();
+                this.subGain = this.audioContext.createGain();
+                this.subOsc.type = 'square';
+                this.subOsc.frequency.setValueAtTime(this.frequency * 0.5, this.audioContext.currentTime);
+                this.subGain.gain.value = this.subLevel;
+                
+                // Envelope
+                const now = this.audioContext.currentTime;
+                this.gainNode.gain.setValueAtTime(0, now);
+                this.gainNode.gain.linearRampToValueAtTime(this.volume, now + this.attack);
+                
+                // Filter envelope
+                this.filterNode.frequency.setValueAtTime(this.filterCutoff, now);
+                this.filterNode.frequency.linearRampToValueAtTime(this.filterCutoff * 3, now + this.attack);
+                
+                // Connect
+                this.oscillator.connect(this.gainNode);
+                this.subOsc.connect(this.subGain);
+                this.gainNode.connect(this.filterNode);
+                this.subGain.connect(this.filterNode);
+                
+                // Start
+                this.oscillator.start();
+                this.subOsc.start();
+                
+                // Create particles
+                this.createParticles();
+                this.updateDisplay();
+            }
+            
+            stopNote() {
+                if (!this.isPlaying || !this.oscillator) return;
+                
+                const now = this.audioContext.currentTime;
+                this.gainNode.gain.linearRampToValueAtTime(0, now + this.release);
+                
+                this.oscillator.stop(now + this.release);
+                this.subOsc.stop(now + this.release);
+                
+                this.oscillator = null;
+                this.subOsc = null;
+                this.isPlaying = false;
+                
+                document.querySelectorAll('.key.active').forEach(k => k.classList.remove('active'));
+            }
+            
+            changeNote(direction) {
+                this.currentNote = Math.max(0, Math.min(6, this.currentNote + direction));
+                this.updateDisplay();
+            }
+            
+            changeOctave(direction) {
+                this.currentOctave = Math.max(1, Math.min(8, this.currentOctave + direction));
+                this.updateDisplay();
+            }
+            
+            selectNote(index) {
+                this.currentNote = index;
+                this.updateDisplay();
+            }
+            
+            changeWaveform() {
+                const waves = ['sine', 'sawtooth', 'square', 'triangle'];
+                const current = waves.indexOf(this.waveform);
+                const next = (current + 1) % waves.length;
+                this.waveform = waves[next];
+                
+                document.querySelector('.wave-btn.active')?.classList.remove('active');
+                document.querySelector(`[data-wave="${this.waveform}"]`)?.classList.add('active');
+                this.updateDisplay();
+            }
+            
+            adjustVolume(delta) {
+                this.volume = Math.max(0, Math.min(1, this.volume + delta));
+                if (this.masterGain) {
+                    this.masterGain.gain.value = this.volume;
+                }
+                this.updateDisplay();
+            }
+            
+            adjustFilter(delta) {
+                this.filterCutoff = Math.max(100, Math.min(5000, this.filterCutoff + delta));
+                if (this.filterNode) {
+                    this.filterNode.frequency.setValueAtTime(this.filterCutoff, this.audioContext.currentTime);
+                }
+                this.updateDisplay();
+            }
+            
+            updateDisplay() {
+                const note = this.notes[this.currentNote];
+                const noteName = note.name + this.currentOctave;
+                const freq = note.freq * Math.pow(2, this.currentOctave - 4);
+                
+                document.getElementById('currentNote').textContent = noteName;
+                document.getElementById('noteDisplay').textContent = noteName;
+                document.getElementById('freqDisplay').textContent = freq.toFixed(2) + ' Hz';
+                document.getElementById('volumeDisplay').textContent = Math.round(this.volume * 100) + '%';
+                document.getElementById('waveDisplay').textContent = this.waveform.charAt(0).toUpperCase() + this.waveform.slice(1);
+                document.getElementById('filterDisplay').textContent = Math.round(this.filterCutoff) + 'Hz';
+                document.getElementById('releaseDisplay').textContent = this.release.toFixed(2) + 's';
+            }
+            
+            logInput(message) {
+                this.inputLog.unshift({ text: message, time: Date.now() });
+                if (this.inputLog.length > 6) this.inputLog.pop();
+                
+                const logEl = document.getElementById('inputLog');
+                if (logEl) {
+                    logEl.innerHTML = this.inputLog.map((entry, i) => 
+                        `<div class="log-entry ${i === 0 ? 'new' : ''}">${entry.text}</div>`
+                    ).join('');
+                }
+            }
+            
+            setupCanvases() {
+                // Main canvas
+                this.canvas = document.getElementById('waveformCanvas');
+                this.particleCanvas = document.getElementById('particleCanvas');
+                
+                if (this.canvas) {
+                    this.ctx = this.canvas.getContext('2d');
+                }
+                if (this.particleCanvas) {
+                    this.particleCtx = this.particleCanvas.getContext('2d');
+                }
+                
+                // Fullscreen canvas
+                this.fullscreenCanvas = document.getElementById('fullscreenCanvas');
+                this.fullscreenParticleCanvas = document.getElementById('fullscreenParticles');
+                
+                if (this.fullscreenCanvas) {
+                    this.fullscreenCtx = this.fullscreenCanvas.getContext('2d');
+                }
+                if (this.fullscreenParticleCanvas) {
+                    this.fullscreenParticleCtx = this.fullscreenParticleCanvas.getContext('2d');
+                }
+            }
+            
+            startAnimations() {
+                const animate = () => {
+                    this.drawWaveform();
+                    this.updateParticles();
+                    this.renderParticles();
+                    
+                    if (this.isFullscreen) {
+                        this.drawFullscreenWaveform();
+                        this.renderFullscreenParticles();
+                    }
+                    
+                    requestAnimationFrame(animate);
+                };
+                animate();
+            }
+            
+            drawWaveform() {
+                if (!this.ctx) return;
+                
+                const width = this.canvas.width;
+                const height = this.canvas.height;
+                
+                this.ctx.fillStyle = '#fff';
+                this.ctx.fillRect(0, 0, width, height);
+                
+                if (this.isPlaying && this.analyser && this.dataArray) {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    
+                    const barWidth = width / this.dataArray.length;
+                    for (let i = 0; i < this.dataArray.length; i++) {
+                        const barHeight = (this.dataArray[i] / 255) * height * 0.8;
+                        const x = i * barWidth;
+                        const y = height - barHeight;
+                        
+                        if (i === 0) {
+                            this.ctx.moveTo(x, y);
+                        } else {
+                            this.ctx.lineTo(x, y);
+                        }
+                    }
+                    this.ctx.stroke();
+                } else {
+                    // Draw theoretical waveform
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    
+                    const samples = 100;
+                    const amplitude = height * 0.3;
+                    const centerY = height / 2;
+                    const time = Date.now() * 0.002;
+                    
+                    for (let i = 0; i < samples; i++) {
+                        const x = (i / samples) * width;
+                        const t = (i / samples) * 4 * Math.PI + time;
+                        let y;
+                        
+                        switch (this.waveform) {
+                            case 'sine':
+                                y = Math.sin(t);
+                                break;
+                            case 'square':
+                                y = Math.sign(Math.sin(t));
+                                break;
+                            case 'sawtooth':
+                                y = 2 * ((t / (2 * Math.PI)) % 1) - 1;
+                                break;
+                            case 'triangle':
+                                y = 2 * Math.abs(2 * ((t / (2 * Math.PI)) % 1) - 1) - 1;
+                                break;
+                            default:
+                                y = Math.sin(t);
+                        }
+                        
+                        const plotY = centerY + y * amplitude;
+                        
+                        if (i === 0) {
+                            this.ctx.moveTo(x, plotY);
+                        } else {
+                            this.ctx.lineTo(x, plotY);
+                        }
+                    }
+                    this.ctx.stroke();
+                }
+                
+                // Center line
+                this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                this.ctx.lineWidth = 1;
+                this.ctx.beginPath();
+                this.ctx.moveTo(0, height / 2);
+                this.ctx.lineTo(width, height / 2);
+                this.ctx.stroke();
+            }
+            
+            drawFullscreenWaveform() {
+                if (!this.fullscreenCtx) return;
+                
+                const width = this.fullscreenCanvas.width;
+                const height = this.fullscreenCanvas.height;
+                
+                this.fullscreenCtx.fillStyle = '#fff';
+                this.fullscreenCtx.fillRect(0, 0, width, height);
+                
+                if (this.isPlaying && this.analyser && this.dataArray) {
+                    this.analyser.getByteFrequencyData(this.dataArray);
+                    
+                    this.fullscreenCtx.strokeStyle = '#000';
+                    this.fullscreenCtx.lineWidth = 4;
+                    this.fullscreenCtx.beginPath();
+                    
+                    const barWidth = width / this.dataArray.length;
+                    for (let i = 0; i < this.dataArray.length; i++) {
+                        const barHeight = (this.dataArray[i] / 255) * height * 0.8;
+                        const x = i * barWidth;
+                        const y = height - barHeight;
+                        
+                        if (i === 0) {
+                            this.fullscreenCtx.moveTo(x, y);
+                        } else {
+                            this.fullscreenCtx.lineTo(x, y);
+                        }
+                    }
+                    this.fullscreenCtx.stroke();
+                }
+                
+                // Center line
+                this.fullscreenCtx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                this.fullscreenCtx.lineWidth = 2;
+                this.fullscreenCtx.beginPath();
+                this.fullscreenCtx.moveTo(0, height / 2);
+                this.fullscreenCtx.lineTo(width, height / 2);
+                this.fullscreenCtx.stroke();
+            }
+            
+            createParticles() {
+                if (!this.particleCtx) return;
+                
+                const note = this.notes[this.currentNote];
+                const centerX = this.particleCanvas.width / 2;
+                const centerY = this.particleCanvas.height / 2;
+                
+                for (let i = 0; i < 15; i++) {
+                    const angle = (Math.PI * 2 * i) / 15;
+                    const speed = 2 + Math.random() * 3;
+                    const distance = 10 + Math.random() * 20;
+                    
+                    this.particles.push({
+                        x: centerX + Math.cos(angle) * distance,
+                        y: centerY + Math.sin(angle) * distance,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: 2 + Math.random() * 3,
+                        color: note.color,
+                        alpha: 1,
+                        life: 1,
+                        decay: 0.01 + Math.random() * 0.02
+                    });
+                }
+            }
+            
+            updateParticles() {
+                this.particles = this.particles.filter(p => {
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= p.decay;
+                    p.alpha = p.life;
+                    p.vy += 0.1; // gravity
+                    p.vx *= 0.98; // air resistance
+                    p.vy *= 0.98;
+                    
+                    if (this.isPlaying) {
+                        p.y += Math.sin(Date.now() * 0.01 + p.x * 0.1) * 0.5;
+                    }
+                    
+                    return p.life > 0;
+                });
+                
+                // Add ambient particles when playing
+                if (this.isPlaying && Math.random() < 0.3) {
+                    const note = this.notes[this.currentNote];
+                    const edge = Math.floor(Math.random() * 4);
+                    let x, y, vx, vy;
+                    
+                    switch (edge) {
+                        case 0: // top
+                            x = Math.random() * this.particleCanvas.width;
+                            y = -5;
+                            vx = (Math.random() - 0.5) * 2;
+                            vy = 1 + Math.random();
+                            break;
+                        case 1: // right
+                            x = this.particleCanvas.width + 5;
+                            y = Math.random() * this.particleCanvas.height;
+                            vx = -1 - Math.random();
+                            vy = (Math.random() - 0.5) * 2;
+                            break;
+                        case 2: // bottom
+                            x = Math.random() * this.particleCanvas.width;
+                            y = this.particleCanvas.height + 5;
+                            vx = (Math.random() - 0.5) * 2;
+                            vy = -1 - Math.random();
+                            break;
+                        case 3: // left
+                            x = -5;
+                            y = Math.random() * this.particleCanvas.height;
+                            vx = 1 + Math.random();
+                            vy = (Math.random() - 0.5) * 2;
+                            break;
+                    }
+                    
+                    this.particles.push({
+                        x, y, vx, vy,
+                        size: 1 + Math.random() * 2,
+                        color: note.color,
+                        alpha: 0.8,
+                        life: 0.8,
+                        decay: 0.005
+                    });
+                }
+            }
+            
+            renderParticles() {
+                if (!this.particleCtx) return;
+                
+                this.particleCtx.clearRect(0, 0, this.particleCanvas.width, this.particleCanvas.height);
+                
+                this.particles.forEach(p => {
+                    if (p.alpha > 0.01) {
+                        this.particleCtx.save();
+                        this.particleCtx.globalAlpha = p.alpha;
+                        this.particleCtx.fillStyle = p.color;
+                        this.particleCtx.shadowBlur = 10;
+                        this.particleCtx.shadowColor = p.color;
+                        
+                        this.particleCtx.beginPath();
+                        this.particleCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                        this.particleCtx.fill();
+                        
+                        this.particleCtx.restore();
+                    }
+                });
+            }
+            
+            renderFullscreenParticles() {
+                if (!this.fullscreenParticleCtx) return;
+                
+                this.fullscreenParticleCtx.clearRect(0, 0, this.fullscreenParticleCanvas.width, this.fullscreenParticleCanvas.height);
+                
+                const scaleX = this.fullscreenParticleCanvas.width / this.particleCanvas.width;
+                const scaleY = this.fullscreenParticleCanvas.height / this.particleCanvas.height;
+                
+                this.particles.forEach(p => {
+                    if (p.alpha > 0.01) {
+                        this.fullscreenParticleCtx.save();
+                        this.fullscreenParticleCtx.globalAlpha = p.alpha;
+                        this.fullscreenParticleCtx.fillStyle = p.color;
+                        this.fullscreenParticleCtx.shadowBlur = 20;
+                        this.fullscreenParticleCtx.shadowColor = p.color;
+                        
+                        const x = p.x * scaleX;
+                        const y = p.y * scaleY;
+                        const size = p.size * Math.min(scaleX, scaleY);
+                        
+                        this.fullscreenParticleCtx.beginPath();
+                        this.fullscreenParticleCtx.arc(x, y, size, 0, Math.PI * 2);
+                        this.fullscreenParticleCtx.fill();
+                        
+                        this.fullscreenParticleCtx.restore();
+                    }
+                });
+            }
+        }
+        
+        // Global functions
+        function toggleFullscreen() {
+            const viz = document.getElementById('fullscreenViz');
+            const synth = window.synthInstance;
+            
+            if (viz.classList.contains('active')) {
+                viz.classList.remove('active');
+                if (synth) synth.isFullscreen = false;
+            } else {
+                viz.classList.add('active');
+                if (synth) synth.isFullscreen = true;
+            }
+        }
+        
+        // Start the synthesizer
+        document.addEventListener('DOMContentLoaded', () => {
+            window.synthInstance = new SimpleSynth();
+        });
+    </script>
+</body>
+</html>
