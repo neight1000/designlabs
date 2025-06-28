@@ -136,15 +136,20 @@
 
         .dragon-icon {
             position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 16px;
-            height: 16px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px;
+            height: 64px;
             opacity: 0;
             transition: opacity 0.1s ease;
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
+            font-size: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .dragon-icon.animate {
