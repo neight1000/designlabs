@@ -426,6 +426,7 @@
                 <p><strong>Face buttons:</strong> A = Play note, B = Stop, X/Y = Change waveform</p>
                 <p><strong>Shoulder buttons:</strong> L1/R1 = Volume, L2/R2 = Attack/Release</p>
                 <p><strong>Analog sticks:</strong> Left stick = Fine frequency, Right stick = Oscillation/Vibrato</p>
+                <p><strong>Keyboard fallback:</strong> Arrow keys = Navigate, Space = Play, Q = Wave, W/S = Volume, A/D = Attack, 1-7 = Notes</p>
                 <p><em>Click anywhere to enable audio, then use controller or keyboard!</em></p>
             </div>
         </div>
@@ -475,6 +476,35 @@
                 ];
                 
                 this.init();
+            }
+            
+            handleKeyboardInput(e) {
+                const keyMap = {
+                    'ArrowLeft': () => this.changeNote(-1),
+                    'ArrowRight': () => this.changeNote(1),
+                    'ArrowUp': () => this.changeOctave(1),
+                    'ArrowDown': () => this.changeOctave(-1),
+                    'Space': () => this.playNote(),
+                    'KeyQ': () => this.changeWaveform(),
+                    'KeyW': () => this.adjustVolume(0.05),
+                    'KeyS': () => this.adjustVolume(-0.05),
+                    'KeyA': () => this.adjustAttack(-0.02),
+                    'KeyD': () => this.adjustAttack(0.02),
+                    'Digit1': () => { this.currentNoteIndex = 0; this.updateDisplay(); },
+                    'Digit2': () => { this.currentNoteIndex = 1; this.updateDisplay(); },
+                    'Digit3': () => { this.currentNoteIndex = 2; this.updateDisplay(); },
+                    'Digit4': () => { this.currentNoteIndex = 3; this.updateDisplay(); },
+                    'Digit5': () => { this.currentNoteIndex = 4; this.updateDisplay(); },
+                    'Digit6': () => { this.currentNoteIndex = 5; this.updateDisplay(); },
+                    'Digit7': () => { this.currentNoteIndex = 6; this.updateDisplay(); }
+                };
+                
+                const action = keyMap[e.code];
+                if (action) {
+                    e.preventDefault();
+                    action();
+                    this.logInput(`Keyboard: ${e.code}`);
+                }
             }
             
             init() {
@@ -554,29 +584,55 @@
                     });
                 });
                 
-                // Gamepad events
-                window.addEventListener('gamepadconnected', (e) => {
-                    this.gamepadIndex = e.gamepad.index;
-                    const name = e.gamepad.id.substring(0, 30);
-                    document.getElementById('gamepadStatus').textContent = `Connected: ${name}`;
-                    this.logInput(`Controller connected: ${name}`);
+                // Keyboard controls as fallback
+                document.addEventListener('keydown', (e) => {
+                    this.handleKeyboardInput(e);
                 });
                 
-                window.addEventListener('gamepaddisconnected', () => {
-                    this.gamepadIndex = -1;
-                    document.getElementById('gamepadStatus').textContent = 'Controller disconnected';
-                    this.logInput('Controller disconnected');
+                document.addEventListener('keyup', (e) => {
+                    if (e.code === 'Space') {
+                        this.stopNote();
+                    }
                 });
+                
+                // Gamepad events with error handling
+                try {
+                    window.addEventListener('gamepadconnected', (e) => {
+                        this.gamepadIndex = e.gamepad.index;
+                        const name = e.gamepad.id.substring(0, 30);
+                        document.getElementById('gamepadStatus').textContent = `Connected: ${name}`;
+                        this.logInput(`Controller connected: ${name}`);
+                    });
+                    
+                    window.addEventListener('gamepaddisconnected', () => {
+                        this.gamepadIndex = -1;
+                        document.getElementById('gamepadStatus').textContent = 'Controller disconnected';
+                        this.logInput('Controller disconnected');
+                    });
+                } catch (error) {
+                    document.getElementById('gamepadStatus').textContent = 'Gamepad not supported - use keyboard';
+                    this.logInput('Gamepad API not available');
+                }
             }
             
             gamepadLoop() {
-                if (this.gamepadIndex >= 0) {
-                    const gamepads = navigator.getGamepads();
-                    const gamepad = gamepads[this.gamepadIndex];
-                    if (gamepad) {
-                        this.handleGamepadInput(gamepad);
-                        this.updateControllerVisual(gamepad);
+                try {
+                    if (this.gamepadIndex >= 0 && navigator.getGamepads) {
+                        const gamepads = navigator.getGamepads();
+                        const gamepad = gamepads[this.gamepadIndex];
+                        if (gamepad) {
+                            this.handleGamepadInput(gamepad);
+                            this.updateControllerVisual(gamepad);
+                        }
                     }
+                } catch (error) {
+                    if (error.name === 'SecurityError') {
+                        // Gamepad access blocked by permissions policy
+                        document.getElementById('gamepadStatus').textContent = 'Gamepad access blocked - use keyboard controls';
+                        this.logInput('Gamepad blocked by browser policy');
+                        return; // Stop trying to access gamepad
+                    }
+                    console.warn('Gamepad error:', error);
                 }
                 requestAnimationFrame(() => this.gamepadLoop());
             }
