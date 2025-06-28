@@ -502,6 +502,11 @@
                 clearInterval(eqAnimationInterval);
                 eqAnimationInterval = null;
                 eqIcon.classList.remove('playing');
+                // Reset EQ bars to black when stopped
+                const bars = eqIcon.querySelectorAll('.eq-bar');
+                bars.forEach(bar => {
+                    bar.style.backgroundColor = '#000';
+                });
             }
         }
 
@@ -532,6 +537,12 @@
                 padElement.style.color = '#fff';
                 padElement.classList.add('playing');
                 dragonElement.classList.add('animate');
+                
+                // Update EQ bars to match the pad color
+                const bars = eqIcon.querySelectorAll('.eq-bar');
+                bars.forEach(bar => {
+                    bar.style.backgroundColor = randomColor;
+                });
                 
                 pressedPads.add(padIndex);
                 activePads.add(padIndex);
