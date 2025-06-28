@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJ Sample Pads - Live Mixing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 10px;
+            background: #fff;
+            color: #000;
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            transition: all 0.5s ease;
+            overflow-x: hidden;
+        }
+
+        body.fullscreen {
+            padding: 0;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .dj-sample-player {
+            max-width: 400px;
+            background: #fff;
+            color: #000;
+            border: 2px solid #000;
+            padding: 16px;
+            border-radius: 0;
+            margin: 0 auto;
+            transition: all 0.5s ease;
+        }
+
+        body.fullscreen .dj-sample-player {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a1a1a 0%, #000 100%);
+            color: #fff;
+            border: none;
+            padding: 20px;
+            max-width: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .collapse-btn {
+            background: #fff;
+            border: 2px solid #000;
+            color: #000;
+            padding: 8px;
+            cursor: pointer;
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+            width: 100%;
+            touch-action: manipulation;
+        }
+
+        .collapse-btn:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        body.fullscreen .collapse-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid #fff;
+            color: #fff;
+            padding: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        body.fullscreen .collapse-btn:hover {
+            background: #fff;
+            color: #000;
+        }
+
+        .player-content {
+            text-align: center;
+        }
+
+        body.fullscreen .player-content {
+            max-width: 100%;
+            width: 100%;
+        }
+
+        .app-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+
+        .app-subtitle {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 16px;
+            letter-spacing: 1px;
+        }
+
+        body.fullscreen .app-title {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: 3px;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+        }
+
+        body.fullscreen .app-subtitle {
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            letter-spacing: 2px;
+        }
+
+        .eq-icon {
+            width: calc(100% - 40px);
+            height: 40px;
+            display: flex;
+            align-items: end;
+            gap: 4px;
+            margin: 0 auto 16px;
+            justify-content: center;
+        }
+
+        body.fullscreen .eq-icon {
+            width: 300px;
+            height: 60px;
+            gap: 6px;
+            margin: 0 auto 2rem;
+        }
+
+        .eq-bar {
+            background: #000;
+            border-radius: 1px;
+            flex: 1;
+            max-width: 12px;
+            transition: height 0.1s ease;
+        }
+
+        body.fullscreen .eq-bar {
+            background: #fff;
+            max-width: 16px;
+        }
+
+        .eq-icon.playing .eq-bar {
+            animation: eq-bounce 0.3s ease-in-out infinite;
+        }
+
+        .eq-icon:not(.playing) .eq-bar {
+            height: 4px !important;
+            animation: none;
+        }
+
+        body.fullscreen .eq-icon:not(.playing) .eq-bar {
+            height: 6px !important;
+        }
+
+        .eq-bar:nth-child(1) { height: 8px; }
+        .eq-bar:nth-child(2) { height: 16px; }
+        .eq-bar:nth-child(3) { height: 12px; }
+        .eq-bar:nth-child(4) { height: 20px; }
+        .eq-bar:nth-child(5) { height: 6px; }
+        .eq-bar:nth-child(6) { height: 14px; }
+        .eq-bar:nth-child(7) { height: 18px; }
+        .eq-bar:nth-child(8) { height: 10px; }
+        .eq-bar:nth-child(9) { height: 22px; }
+        .eq-bar:nth-child(10) { height: 7px; }
+        .eq-bar:nth-child(11) { height: 15px; }
+        .eq-bar:nth-child(12) { height: 19px; }
+        .eq-bar:nth-child(13) { height: 9px; }
+        .eq-bar:nth-child(14) { height: 17px; }
+        .eq-bar:nth-child(15) { height: 11px; }
+
+        @keyframes eq-bounce {
+            0%, 100% {
+                transform: scaleY(0.2);
+                opacity: 0.3;
+            }
+            50% {
+                transform: scaleY(1);
+                opacity: 1;
+            }
+        }
+
+        .sample-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            width: 100%;
+            max-width: 350px;
+            margin: 0 auto 16px;
+        }
+
+        body.fullscreen .sample-grid {
+            max-width: 600px;
+            gap: 15px;
+        }
+
+        .sample-pad {
+            aspect-ratio: 1;
+            background: #fff;
+            border: 2px solid #000;
+            color: #000;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-align: center;
+            transition: all 0.1s ease;
+            user-select: none;
+            touch-action: manipulation;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sample-pad:active,
+        .sample-pad.playing {
+            background: #000;
+            color: #fff;
+            transform: scale(0.95);
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+        body.fullscreen .sample-pad {
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 12px;
+            backdrop-filter: blur(5px);
+        }
+
+        body.fullscreen .sample-pad:active,
+        body.fullscreen .sample-pad.playing {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: #fff;
+            transform: scale(0.95);
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.4);
+        }
+
+        .pad-number {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        body.fullscreen .pad-number {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .pad-label {
+            font-size: 8px;
+            opacity: 0.8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        body.fullscreen .pad-label {
+            font-size: 10px;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            justify-content: center;
+        }
+
+        body.fullscreen .volume-control {
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .volume-icon {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        body.fullscreen .volume-icon {
+            width: 20px;
+            height: 20px;
+            stroke-width: 2;
+        }
+
+        .volume-slider {
+            width: 100px;
+            height: 4px;
+            background: rgba(0, 0, 0, 0.2);
+            border: none;
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+            border-radius: 2px;
+        }
+
+        body.fullscreen .volume-slider {
+            width: 150px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #000;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 12px;
+            height: 12px;
+            background: #000;
+            cursor: pointer;
+            border: none;
+            border-radius: 50%;
+        }
+
+        body.fullscreen .volume-slider::-webkit-slider-thumb {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        body.fullscreen .volume-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .status-toggle {
+            margin-top: 16px;
+            padding: 8px;
+            border: 2px solid #000;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            touch-action: manipulation;
+        }
+
+        .status-toggle:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        body.fullscreen .status-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            margin-top: 0;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            backdrop-filter: blur(10px);
+        }
+
+        body.fullscreen .status-toggle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .status-icon {
+            width: 12px;
+            height: 12px;
+            transition: transform 0.3s ease;
+        }
+
+        .status-icon.expanded {
+            transform: rotate(180deg);
+        }
+
+        .status-section {
+            margin-top: 8px;
+            padding: 12px;
+            border: 2px solid #000;
+            background: #fff;
+            display: none;
+        }
+
+        .status-section.expanded {
+            display: block;
+        }
+
+        body.fullscreen .status-section {
+            position: absolute;
+            bottom: 60px;
+            right: 20px;
+            margin-top: 0;
+            padding: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            backdrop-filter: blur(10px);
+            max-width: 250px;
+        }
+
+        .status-credit {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            font-style: italic;
+        }
+
+        .status-title {
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .status-info {
+            font-size: 10px;
+            line-height: 1.6;
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .dj-sample-player {
+                width: 100%;
+                padding: 12px;
+            }
+
+            .sample-grid {
+                gap: 6px;
+                max-width: 100%;
+            }
+
+            .pad-number {
+                font-size: 16px;
+            }
+
+            .pad-label {
+                font-size: 7px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .sample-grid {
+                gap: 4px;
+            }
+            
+            .pad-number {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="djSamplePlayer" class="dj-sample-player">
+        <button class="collapse-btn" onclick="toggleFullscreen()">EXPAND TO FULLSCREEN</button>
+        
+        <div class="player-content">
+            <h1 class="app-title">DJ SAMPLE PADS</h1>
+            <p class="app-subtitle">LIVE MIXING STATION</p>
+            
+            <div class="eq-icon" id="eqIcon">
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+                <div class="eq-bar"></div>
+            </div>
+            
+            <div class="sample-grid" id="sampleGrid">
+                <div class="sample-pad" data-pad="0">
+                    <div class="pad-number">1</div>
+                </div>
+                <div class="sample-pad" data-pad="1">
+                    <div class="pad-number">2</div>
+                </div>
+                <div class="sample-pad" data-pad="2">
+                    <div class="pad-number">3</div>
+                </div>
+                <div class="sample-pad" data-pad="3">
+                    <div class="pad-number">4</div>
+                </div>
+                <div class="sample-pad" data-pad="4">
+                    <div class="pad-number">5</div>
+                </div>
+                <div class="sample-pad" data-pad="5">
+                    <div class="pad-number">6</div>
+                </div>
+                <div class="sample-pad" data-pad="6">
+                    <div class="pad-number">7</div>
+                </div>
+                <div class="sample-pad" data-pad="7">
+                    <div class="pad-number">8</div>
+                </div>
+                <div class="sample-pad" data-pad="8">
+                    <div class="pad-number">9</div>
+                </div>
+            </div>
+
+            <div class="volume-control">
+                <svg class="volume-icon" viewBox="0 0 24 24">
+                    <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                </svg>
+                <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="70">
+                <svg class="volume-icon" viewBox="0 0 24 24">
+                    <polygon points="11,5 6,9 2,9 2,15 6,15 11,19"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                </svg>
+            </div>
+        </div>
+
+        <div class="status-toggle" onclick="toggleStatus()">
+            <svg class="status-icon" id="statusIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6,9 12,15 18,9"></polyline>
+            </svg>
+            <span>SYSTEM STATUS</span>
+        </div>
+
+        <div class="status-section" id="statusSection">
+            <div class="status-credit">Designed and developed by Nate Thousand</div>
+            <div class="status-title">System Status</div>
+            <div class="status-info">• Audio Engine: Active</div>
+            <div class="status-info">• Sample Rate: 44.1kHz</div>
+            <div class="status-info">• Bit Depth: 16-bit</div>
+            <div class="status-info">• Latency: 8ms</div>
+            <div class="status-info">• Buffer: 128 samples</div>
+            <div class="status-info">• DSP Load: 15%</div>
+            <div class="status-info">• Memory Usage: 96MB</div>
+            <div class="status-info">• Active Pads: 9</div>
+            <div class="status-info">• Output Device: Default</div>
+            <div class="status-info">• Samples Loaded: 9/9</div>
+        </div>
+
+        <!-- Audio elements for each sample pad -->
+        <audio id="sample0" preload="auto">
+            <source src="track1.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample1" preload="auto">
+            <source src="track2.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample2" preload="auto">
+            <source src="track3.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample3" preload="auto">
+            <source src="track4.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample4" preload="auto">
+            <source src="track5.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample5" preload="auto">
+            <source src="track6.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample6" preload="auto">
+            <source src="track7.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample7" preload="auto">
+            <source src="track8.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="sample8" preload="auto">
+            <source src="track9.mp3" type="audio/mpeg">
+        </audio>
+    </div>
+
+    <script>
+        let eqAnimationInterval;
+        let activePads = new Set();
+        let globalVolume = 0.7;
+
+        const samplePads = [
+            { id: 'sample0', label: 'KICK', src: 'kick.mp3' },
+            { id: 'sample1', label: 'SNARE', src: 'snare.mp3' },
+            { id: 'sample2', label: 'HIHAT', src: 'hihat.mp3' },
+            { id: 'sample3', label: 'CRASH', src: 'crash.mp3' },
+            { id: 'sample4', label: 'VOCAL', src: 'vocal.mp3' },
+            { id: 'sample5', label: 'HORN', src: 'horn.mp3' },
+            { id: 'sample6', label: 'BASS', src: 'bass.mp3' },
+            { id: 'sample7', label: 'LOOP', src: 'loop.mp3' },
+            { id: 'sample8', label: 'FX', src: 'fx.mp3' }
+        ];
+
+        const eqIcon = document.getElementById('eqIcon');
+
+        function randomizeEqBars() {
+            const bars = eqIcon.querySelectorAll('.eq-bar');
+            bars.forEach(bar => {
+                const randomHeight = Math.floor(Math.random() * 20) + 4;
+                const randomDelay = Math.random() * 0.5;
+                bar.style.height = `${randomHeight}px`;
+                bar.style.animationDelay = `${randomDelay}s`;
+            });
+        }
+
+        function startEqAnimation() {
+            if (!eqAnimationInterval) {
+                eqIcon.classList.add('playing');
+                randomizeEqBars();
+                eqAnimationInterval = setInterval(() => {
+                    randomizeEqBars();
+                }, 120);
+            }
+        }
+
+        function stopEqAnimation() {
+            if (eqAnimationInterval && activePads.size === 0) {
+                clearInterval(eqAnimationInterval);
+                eqAnimationInterval = null;
+                eqIcon.classList.remove('playing');
+            }
+        }
+
+        function toggleStatus() {
+            const statusSection = document.getElementById('statusSection');
+            const statusIcon = document.getElementById('statusIcon');
+            
+            statusSection.classList.toggle('expanded');
+            statusIcon.classList.toggle('expanded');
+        }
+
+        function toggleFullscreen() {
+            document.body.classList.toggle('fullscreen');
+            const collapseBtn = document.querySelector('.collapse-btn');
+            
+            if (document.body.classList.contains('fullscreen')) {
+                collapseBtn.textContent = 'MINIMIZE';
+            } else {
+                collapseBtn.textContent = 'EXPAND TO FULLSCREEN';
+            }
+        }
+
+        function playSample(padIndex) {
+            const audioElement = document.getElementById(`sample${padIndex}`);
+            const padElement = document.querySelector(`[data-pad="${padIndex}"]`);
+            
+            if (audioElement && padElement) {
+                // Reset audio to beginning for instant retrigger
+                audioElement.currentTime = 0;
+                audioElement.volume = globalVolume;
+                
+                // Play the sample
+                audioElement.play().then(() => {
+                    // Add visual feedback
+                    padElement.classList.add('playing');
+                    activePads.add(padIndex);
+                    startEqAnimation();
+                }).catch(e => {
+                    console.log('Audio play failed:', e);
+                });
+
+                // Remove visual feedback when audio ends
+                audioElement.addEventListener('ended', () => {
+                    padElement.classList.remove('playing');
+                    activePads.delete(padIndex);
+                    stopEqAnimation();
+                }, { once: true });
+            }
+        }
+
+        function stopSample(padIndex) {
+            const audioElement = document.getElementById(`sample${padIndex}`);
+            const padElement = document.querySelector(`[data-pad="${padIndex}"]`);
+            
+            if (audioElement && padElement) {
+                audioElement.pause();
+                audioElement.currentTime = 0;
+                padElement.classList.remove('playing');
+                activePads.delete(padIndex);
+                stopEqAnimation();
+            }
+        }
+
+        // Add event listeners to sample pads
+        document.querySelectorAll('.sample-pad').forEach((pad, index) => {
+            let pressTimer;
+            let isPressed = false;
+
+            // Mouse events
+            pad.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                if (!isPressed) {
+                    isPressed = true;
+                    playSample(index);
+                }
+            });
+
+            pad.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                isPressed = false;
+            });
+
+            pad.addEventListener('mouseleave', (e) => {
+                e.preventDefault();
+                isPressed = false;
+            });
+
+            // Touch events for mobile
+            pad.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (!isPressed) {
+                    isPressed = true;
+                    playSample(index);
+                }
+            });
+
+            pad.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                isPressed = false;
+            });
+
+            pad.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                isPressed = false;
+            });
+
+            // Click event as fallback
+            pad.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (!isPressed) {
+                    playSample(index);
+                }
+            });
+        });
+
+        // Volume control
+        document.getElementById('volumeSlider').addEventListener('input', (e) => {
+            globalVolume = e.target.value / 100;
+            
+            // Update volume for all audio elements
+            samplePads.forEach((sample, index) => {
+                const audioElement = document.getElementById(`sample${index}`);
+                if (audioElement) {
+                    audioElement.volume = globalVolume;
+                }
+            });
+        });
+
+        // Keyboard support for desktop (optional)
+        document.addEventListener('keydown', (e) => {
+            const keyMap = {
+                '1': 0, '2': 1, '3': 2,
+                '4': 3, '5': 4, '6': 5,
+                '7': 6, '8': 7, '9': 8
+            };
+            
+            if (keyMap.hasOwnProperty(e.key)) {
+                e.preventDefault();
+                playSample(keyMap[e.key]);
+            }
+        });
+
+        // Initialize player
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set initial volume for all audio elements
+            samplePads.forEach((sample, index) => {
+                const audioElement = document.getElementById(`sample${index}`);
+                if (audioElement) {
+                    audioElement.volume = globalVolume;
+                    audioElement.preload = 'auto';
+                }
+            });
+        });
+
+        // Prevent context menu on long press
+        document.addEventListener('contextmenu', (e) => {
+            if (e.target.closest('.sample-pad')) {
+                e.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>
