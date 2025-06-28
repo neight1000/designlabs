@@ -758,32 +758,34 @@
                 const now = Date.now();
                 
                 // Log gamepad state periodically for debugging
-                if (now % 1000 < 16) { // Roughly once per second
-                    console.log('Gamepad active, buttons:', gamepad.buttons.length, 'axes:', gamepad.axes?.length || 0);
+                if (now % 2000 < 16) { // Every 2 seconds
+                    console.log('PS5 Controller - Buttons:', gamepad.buttons.length, 'Axes:', gamepad.axes?.length || 0);
+                    console.log('Current note:', this.currentNoteIndex, 'octave:', this.currentOctave);
                 }
                 
-                // Analog sticks with deadzone and safety checks
-                const deadzone = 0.15;
+                // PS5 Controller analog sticks with proper deadzone
+                const deadzone = 0.1;
                 if (gamepad.axes && gamepad.axes.length >= 4) {
                     const leftStickX = Math.abs(gamepad.axes[0]) > deadzone ? gamepad.axes[0] : 0;
+                    const leftStickY = Math.abs(gamepad.axes[1]) > deadzone ? gamepad.axes[1] : 0;
                     const rightStickX = Math.abs(gamepad.axes[2]) > deadzone ? gamepad.axes[2] : 0;
                     const rightStickY = Math.abs(gamepad.axes[3]) > deadzone ? gamepad.axes[3] : 0;
                     
                     // Left stick X controls fine frequency adjustment
-                    this.frequencyOffset = leftStickX * 50; // ±50 Hz adjustment
+                    this.frequencyOffset = leftStickX * 50;
                     
                     // Right stick controls oscillation/vibrato
                     this.oscillation = Math.sqrt(rightStickX * rightStickX + rightStickY * rightStickY) * 10;
                     
-                    // Update frequency if playing
-                    if (this.isPlaying && this.audioContext && this.frequencyOffset !== 0) {
+                    // Apply real-time frequency changes if playing
+                    if (this.isPlaying && this.audioContext && Math.abs(this.frequencyOffset) > 1) {
                         try {
                             const baseFreq = this.notes[this.currentNoteIndex]?.freq || 261.63;
                             const octaveMultiplier = Math.pow(2, this.currentOctave - 4);
                             const targetFreq = (baseFreq * octaveMultiplier) + this.frequencyOffset;
                             
                             Object.values(this.oscillators).forEach(oscillator => {
-                                if (oscillator) {
+                                if (oscillator && oscillator.frequency) {
                                     oscillator.frequency.setValueAtTime(targetFreq, this.audioContext.currentTime);
                                 }
                             });
@@ -793,44 +795,102 @@
                     }
                 }
                 
-                // Button mappings with improved debouncing
+                // PS5 Controller button mappings (standard gamepad layout)
                 const buttonMappings = [
-                    { id: 'a', index: 0, action: () => this.playNote(), name: 'A (Play)', delay: 100 },
-                    { id: 'b', index: 1, action: () => this.stopNote(), name: 'B (Stop)', delay: 100 },
-                    { id: 'x', index: 2, action: () => this.changeWaveform(), name: 'X (Wave)', delay: 250 },
-                    { id: 'y', index: 3, action: () => this.changeWaveform(), name: 'Y (Wave)', delay: 250 },
-                    { id: 'l1', index: 4, action: () => this.adjustVolume(-0.05), name: 'L1 (Vol-)', delay: 150 },
-                    { id: 'r1', index: 5, action: () => this.adjustVolume(0.05), name: 'R1 (Vol+)', delay: 150 },
-                    { id: 'l2', index: 6, action: () => this.adjustAttack(-0.02), name: 'L2 (Att-)', delay: 150 },
-                    { id: 'r2', index: 7, action: () => this.adjustAttack(0.02), name: 'R2 (Att+)', delay: 150 },
-                    { id: 'up', index: 12, action: () => this.changeOctave(1), name: 'Up (Oct+)', delay: 200 },
-                    { id: 'down', index: 13, action: () => this.changeOctave(-1), name: 'Down (Oct-)', delay: 200 },
-                    { id: 'left', index: 14, action: () => this.changeNote(-1), name: 'Left (Note-)', delay: 200 },
-                    { id: 'right', index: 15, action: () => this.changeNote(1), name: 'Right (Note+)', delay: 200 }
+                    // Face buttons (Cross, Circle, Square, Triangle on PS5)
+                    { id: 'a', index: 0, action: () => this.playNote(), name: 'Cross (Play)', delay: 50 },
+                    { id: 'b', index: 1, action: () => this.stopNote(), name: 'Circle (Stop)', delay: 50 },
+                    { id: 'x', index: 2, action: () => this.changeWaveform(), name: 'Square (Wave)', delay: 200 },
+                    { id: 'y', index: 3, action: () => this.changeWaveform(), name: 'Triangle (Wave)', delay: 200 },
+                    
+                    // Shoulder buttons
+                    { id: 'l1', index: 4, action: () => this.adjustVolume(-0.05), name: 'L1 (Vol-)', delay: 100 },
+                    { id: 'r1', index: 5, action: () => this.adjustVolume(0.05), name: 'R1 (Vol+)', delay: 100 },
+                    { id: 'l2', index: 6, action: () => this.adjustAttack(-0.02), name: 'L2 (Att-)', delay: 100 },
+                    { id: 'r2', index: 7, action: () => this.adjustAttack(0.02), name: 'R2 (Att+)', delay: 100 },
+                    
+                    // System buttons
+                    { id: 'select', index: 8, action: () => this.logInput('Share pressed'), name: 'Share', delay: 300 },
+                    { id: 'start', index: 9, action: () => this.logInput('Options pressed'), name: 'Options', delay: 300 },
+                    
+                    // Stick clicks
+                    { id: 'l3', index: 10, action: () => this.logInput('L3 clicked'), name: 'L3', delay: 200 },
+                    { id: 'r3', index: 11, action: () => this.logInput('R3 clicked'), name: 'R3', delay: 200 },
+                    
+                    // D-pad (most important for note navigation)
+                    { id: 'up', index: 12, action: () => { this.changeOctave(1); console.log('D-pad Up: Octave+'); }, name: 'D-Up (Oct+)', delay: 150 },
+                    { id: 'down', index: 13, action: () => { this.changeOctave(-1); console.log('D-pad Down: Octave-'); }, name: 'D-Down (Oct-)', delay: 150 },
+                    { id: 'left', index: 14, action: () => { this.changeNote(-1); console.log('D-pad Left: Note-'); }, name: 'D-Left (Note-)', delay: 150 },
+                    { id: 'right', index: 15, action: () => { this.changeNote(1); console.log('D-pad Right: Note+'); }, name: 'D-Right (Note+)', delay: 150 },
+                    
+                    // PS button (if available)
+                    { id: 'ps', index: 16, action: () => this.logInput('PS button pressed'), name: 'PS Button', delay: 500 }
                 ];
                 
+                // Process all button inputs with proper debouncing
                 buttonMappings.forEach(({ id, index, action, name, delay }) => {
                     try {
-                        if (index < gamepad.buttons.length) {
+                        if (index < gamepad.buttons.length && gamepad.buttons[index]) {
                             const button = gamepad.buttons[index];
                             const pressed = button.pressed;
                             const wasPressed = this.buttonStates[id] || false;
                             const lastTime = this.lastInputTime[id] || 0;
                             
-                            // Trigger action on button press (not hold)
+                            // Trigger on button press (edge detection)
                             if (pressed && !wasPressed && (now - lastTime) > delay) {
-                                console.log(`Button ${name} pressed`);
+                                console.log(`PS5 Controller: ${name} pressed`);
                                 action();
                                 this.logInput(name);
                                 this.lastInputTime[id] = now;
                             }
                             
+                            // Update button state
                             this.buttonStates[id] = pressed;
                         }
                     } catch (error) {
-                        console.warn(`Button ${index} (${id}) error:`, error);
+                        console.warn(`PS5 Button ${index} (${id}) error:`, error);
                     }
                 });
+                
+                // Additional PS5-specific features
+                this.handlePS5SpecificFeatures(gamepad);
+            }
+            
+            handlePS5SpecificFeatures(gamepad) {
+                // Handle touchpad if available (some browsers expose it)
+                if (gamepad.buttons[17]) {
+                    const touchpadPressed = gamepad.buttons[17].pressed;
+                    const wasTouchpadPressed = this.buttonStates['touchpad'] || false;
+                    
+                    if (touchpadPressed && !wasTouchpadPressed) {
+                        this.logInput('Touchpad clicked');
+                        console.log('PS5 Touchpad clicked');
+                    }
+                    
+                    this.buttonStates['touchpad'] = touchpadPressed;
+                }
+                
+                // Handle trigger pressure (L2/R2 analog values)
+                if (gamepad.buttons[6] && gamepad.buttons[7]) {
+                    const l2Pressure = gamepad.buttons[6].value || 0;
+                    const r2Pressure = gamepad.buttons[7].value || 0;
+                    
+                    // Use pressure for fine control (when not using binary press)
+                    if (l2Pressure > 0.1 && l2Pressure < 0.9) {
+                        // Fine attack adjustment based on trigger pressure
+                        const attackAdjust = (l2Pressure - 0.5) * 0.001;
+                        this.attack = Math.max(0.01, Math.min(2, this.attack + attackAdjust));
+                    }
+                    
+                    if (r2Pressure > 0.1 && r2Pressure < 0.9) {
+                        // Fine volume adjustment based on trigger pressure
+                        const volumeAdjust = (r2Pressure - 0.5) * 0.002;
+                        this.volume = Math.max(0, Math.min(1, this.volume + volumeAdjust));
+                        if (this.masterGain) {
+                            this.masterGain.gain.value = this.volume;
+                        }
+                    }
+                }
             }
             
             updateControllerVisual(gamepad) {
@@ -865,37 +925,69 @@
             }
             
             changeNote(direction) {
+                const oldIndex = this.currentNoteIndex;
                 this.currentNoteIndex = Math.max(0, Math.min(6, this.currentNoteIndex + direction));
-                this.updateDisplay();
+                
+                if (oldIndex !== this.currentNoteIndex) {
+                    console.log(`Note changed from ${this.notes[oldIndex].name} to ${this.notes[this.currentNoteIndex].name}`);
+                    this.updateDisplay();
+                    this.updateParameterDisplay();
+                }
             }
             
             changeOctave(direction) {
-                this.currentOctave = Math.max(1, Math.min(7, this.currentOctave + direction));
-                this.updateDisplay();
+                const oldOctave = this.currentOctave;
+                this.currentOctave = Math.max(1, Math.min(8, this.currentOctave + direction));
+                
+                if (oldOctave !== this.currentOctave) {
+                    console.log(`Octave changed from ${oldOctave} to ${this.currentOctave}`);
+                    this.updateDisplay();
+                    this.updateParameterDisplay();
+                }
             }
             
             changeWaveform() {
                 const waveforms = ['sine', 'square', 'sawtooth', 'triangle'];
                 const currentIndex = waveforms.indexOf(this.waveform);
                 const nextIndex = (currentIndex + 1) % waveforms.length;
+                const oldWaveform = this.waveform;
                 this.waveform = waveforms[nextIndex];
                 
+                console.log(`Waveform changed from ${oldWaveform} to ${this.waveform}`);
+                
+                // Update UI
                 document.querySelector('.wave-btn.active')?.classList.remove('active');
-                document.querySelector(`[data-wave="${this.waveform}"]`)?.classList.add('active');
+                const newWaveBtn = document.querySelector(`[data-wave="${this.waveform}"]`);
+                if (newWaveBtn) {
+                    newWaveBtn.classList.add('active');
+                }
+                
                 this.updateParameterDisplay();
+                this.logInput(`Waveform: ${this.waveform}`);
             }
             
             adjustVolume(delta) {
+                const oldVolume = this.volume;
                 this.volume = Math.max(0, Math.min(1, this.volume + delta));
-                if (this.masterGain) {
-                    this.masterGain.gain.value = this.volume;
+                
+                if (Math.abs(oldVolume - this.volume) > 0.01) {
+                    console.log(`Volume changed from ${Math.round(oldVolume * 100)}% to ${Math.round(this.volume * 100)}%`);
+                    
+                    if (this.masterGain) {
+                        this.masterGain.gain.value = this.volume;
+                    }
+                    this.updateParameterDisplay();
                 }
-                this.updateParameterDisplay();
             }
             
             adjustAttack(delta) {
+                const oldAttack = this.attack;
                 this.attack = Math.max(0.01, Math.min(2, this.attack + delta));
-                this.updateParameterDisplay();
+                
+                if (Math.abs(oldAttack - this.attack) > 0.005) {
+                    console.log(`Attack changed from ${oldAttack.toFixed(2)}s to ${this.attack.toFixed(2)}s`);
+                    this.updateParameterDisplay();
+                }
             }
             
             playNote() {
