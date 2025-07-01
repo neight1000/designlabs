@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Business Archetype Generator</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0b0b0b;
+      color: #fff;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .selectors, .result, .tools, .desc, .dice-box, .footer {
+      margin-top: 20px;
+    }
+    select, button {
+      padding: 10px 15px;
+      font-size: 1rem;
+      margin: 0 10px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #333;
+      border: 1px solid #666;
+      color: #fff;
+    }
+    button:hover {
+      background-color: #555;
+    }
+    .result, .desc, .tools, .dice-roll {
+      font-size: 1.1rem;
+      color: #00ffcc;
+    }
+    .footer {
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+  <h1>🃏 Archetype Business Generator</h1>
+
+  <div class="selectors">
+    <label for="archetype">Archetype:</label>
+    <select id="archetype">
+      <option value="Echo Wraith">Echo Wraith</option>
+      <option value="Relicmancer">Relicmancer</option>
+      <option value="Netstalker">Netstalker</option>
+      <option value="Hearthbound Seer">Hearthbound Seer</option>
+    </select>
+
+    <label for="businessType">Business Type:</label>
+    <select id="businessType">
+      <option value="Studio">Studio</option>
+      <option value="Workshop">Workshop</option>
+      <option value="Service">Service</option>
+      <option value="Channel">Channel</option>
+      <option value="Shop">Shop</option>
+    </select>
+
+    <button onclick="generateName()">🎲 Randomize</button>
+    <button onclick="rollDice()">🧠 Oracle Roll</button>
+  </div>
+
+  <div class="result" id="result"></div>
+  <div class="desc" id="desc"></div>
+  <div class="tools" id="tools"></div>
+  <div class="dice-roll" id="dice"></div>
+
+  <div class="footer">Complete all four to unlock your final worksheet.</div>
+
+  <script>
+    const adjectives = {
+      "Echo Wraith": ["Sonic", "Echoing", "Resonant", "Phantom"],
+      "Relicmancer": ["Fragrant", "Alchemical", "Sacred", "Runed"],
+      "Netstalker": ["Glitched", "Viral", "Encrypted", "Hyper"],
+      "Hearthbound Seer": ["Rooted", "Hearthlight", "Kindled", "Ancient"]
+    };
+
+    const nouns = {
+      "Studio": ["Sanctum", "Forge", "Lab", "Chamber"],
+      "Workshop": ["Circle", "Camp", "Hub", "Den"],
+      "Service": ["Bloom", "Flow", "Link", "Nest"],
+      "Channel": ["Signal", "Path", "Echo", "Voice"],
+      "Shop": ["Market", "Vault", "Cabinet", "Corner"]
+    };
+
+    const descriptions = {
+      "Studio": "A creative lab or ritual space for building custom products.",
+      "Workshop": "A teaching hub for sharing knowledge or skills.",
+      "Service": "A support or creative offering tailored to others.",
+      "Channel": "A stream of expression, music, or storytelling.",
+      "Shop": "A curated place to sell unique designs or digital goods."
+    };
+
+    const tools = {
+      "Echo Wraith": ["VoiceMod", "Soundtrap", "Canva"],
+      "Relicmancer": ["ChatGPT", "Midjourney", "Printful"],
+      "Netstalker": ["Substack", "Pinterest AI", "Notion"],
+      "Hearthbound Seer": ["Google Forms", "Canva", "ChatGPT"]
+    };
+
+    function generateName() {
+      const arch = document.getElementById('archetype').value;
+      const type = document.getElementById('businessType').value;
+      const adj = adjectives[arch];
+      const noun = nouns[type];
+
+      const randAdj = adj[Math.floor(Math.random() * adj.length)];
+      const randNoun = noun[Math.floor(Math.random() * noun.length)];
+      const result = `${randAdj} ${randNoun}`;
+
+      document.getElementById('result').innerText = `✨ Your Business Name: ${result}`;
+      document.getElementById('desc').innerText = `🧾 Description: ${result} is ${descriptions[type].toLowerCase()}`;
+      document.getElementById('tools').innerText = `🔧 Suggested Tools: ${tools[arch].join(", ")}`;
+      document.getElementById('dice').innerText = '';
+    }
+
+    function rollDice() {
+      const rolls = [
+        "Try swapping business type.",
+        "Add a color to the name.",
+        "Make it a subscription.",
+        "Add your first name to the brand.",
+        "Use emojis in your logo.",
+        "Merge two archetypes." 
+      ];
+      const result = rolls[Math.floor(Math.random() * rolls.length)];
+      document.getElementById('dice').innerText = `🎲 Oracle Bonus: ${result}`;
+    }
+  </script>
+</body>
+</html>
