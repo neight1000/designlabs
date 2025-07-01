@@ -36,11 +36,6 @@
       max-width: 500px;
       border-radius: 18px;
       margin-top: 20px;
-      transition: transform 0.6s;
-      transform-style: preserve-3d;
-    }
-    .card:hover {
-      transform: rotateY(180deg);
     }
     select, button {
       padding: 10px 15px;
@@ -170,13 +165,6 @@
       "Hearthbound Seer": "The Seers tend the ember of tradition, their tools rooted in warmth, care, and long-form vision."
     };
 
-    const artUrls = {
-      "Echo Wraith": "https://placekitten.com/420/280",
-      "Relicmancer": "https://placebear.com/420/280",
-      "Netstalker": "https://baconmockup.com/420/280",
-      "Hearthbound Seer": "https://www.fillmurray.com/420/280"
-    };
-
     function generateName() {
       const arch = document.getElementById('archetype').value;
       const type = document.getElementById('businessType').value;
@@ -193,9 +181,8 @@
       document.getElementById('tools').innerText = `🔧 Suggested Tools: ${tools[arch].join(", ")}`;
       document.getElementById('trait').innerText = `🧙 Strategic Tip: ${traits[arch]}`;
       document.getElementById('lore').innerText = `📜 Lore: ${lores[arch]}`;
-      document.getElementById('art').src = artUrls[arch];
-      document.getElementById('art').style.display = 'block';
-      document.getElementById('dice').innerText = '';
+
+      generateDalleImage(result, arch, type);
     }
 
     function rollDice() {
@@ -230,6 +217,22 @@
       win.document.close();
       win.print();
     }
+
+    function generateDalleImage(name, archetype, businessType) {
+      const prompt = `Black and white fantasy trading card illustration of \"${name}\", a ${archetype} business for ${businessType}. Include mystical engraved border, parchment texture, central sigil or emblem. Fine line art, print-ready.`;
+      fetch("YOUR_BACKEND_ENDPOINT", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("art").src = data.url;
+        document.getElementById("art").style.display = "block";
+      })
+      .catch(err => console.error("Image generation error:", err));
+    }
   </script>
 </body>
 </html>
+
