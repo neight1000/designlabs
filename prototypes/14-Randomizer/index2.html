@@ -36,6 +36,11 @@
       max-width: 500px;
       border-radius: 18px;
       margin-top: 20px;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    .card:hover {
+      transform: rotateY(180deg);
     }
     select, button {
       padding: 10px 15px;
@@ -57,6 +62,13 @@
       padding: 10px;
       background: rgba(255,255,255,0.05);
       border-left: 4px solid #ccc;
+    }
+    .art {
+      width: 100%;
+      height: auto;
+      margin-top: 10px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(255,255,255,0.1);
     }
     .footer {
       font-size: 0.9rem;
@@ -92,6 +104,7 @@
     <button onclick="downloadCard()">📜 Export Card</button>
 
     <div class="result" id="result"></div>
+    <img class="art" id="art" src="" alt="Archetype Art" style="display:none;">
     <div class="desc" id="desc"></div>
     <div class="tools" id="tools"></div>
     <div class="trait" id="trait"></div>
@@ -157,6 +170,13 @@
       "Hearthbound Seer": "The Seers tend the ember of tradition, their tools rooted in warmth, care, and long-form vision."
     };
 
+    const artUrls = {
+      "Echo Wraith": "https://placekitten.com/420/280",
+      "Relicmancer": "https://placebear.com/420/280",
+      "Netstalker": "https://baconmockup.com/420/280",
+      "Hearthbound Seer": "https://www.fillmurray.com/420/280"
+    };
+
     function generateName() {
       const arch = document.getElementById('archetype').value;
       const type = document.getElementById('businessType').value;
@@ -173,6 +193,8 @@
       document.getElementById('tools').innerText = `🔧 Suggested Tools: ${tools[arch].join(", ")}`;
       document.getElementById('trait').innerText = `🧙 Strategic Tip: ${traits[arch]}`;
       document.getElementById('lore').innerText = `📜 Lore: ${lores[arch]}`;
+      document.getElementById('art').src = artUrls[arch];
+      document.getElementById('art').style.display = 'block';
       document.getElementById('dice').innerText = '';
     }
 
