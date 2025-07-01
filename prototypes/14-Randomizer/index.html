@@ -1,185 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Business Archetype Generator</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap');
-
-    body {
-      font-family: 'Cinzel', serif;
-      background: radial-gradient(circle at center, #111, #000);
-      color: #fff;
-      margin: 0;
-      padding: 40px 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 20px;
-      letter-spacing: 2px;
-      border: 3px double #888;
-      padding: 10px 30px;
-      border-radius: 12px;
-      background: rgba(255,255,255,0.05);
-    }
-    .card {
-      border: 4px solid #aaa;
-      border-image: repeating-linear-gradient(45deg, #ccc, #ccc 5px, #555 5px, #555 10px) 1;
-      background: #1a1a1a;
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.2);
-      padding: 20px;
-      width: 90%;
-      max-width: 500px;
-      border-radius: 16px;
-      margin-top: 20px;
-    }
-    select, button {
-      padding: 10px 15px;
-      font-size: 1rem;
-      margin: 10px 10px;
-      border: 2px solid #888;
-      background: #222;
-      color: #fff;
-      font-family: 'Cinzel', serif;
-    }
-    button:hover {
-      background-color: #333;
-      border-color: #ccc;
-    }
-    .result, .desc, .tools, .dice-roll, .trait {
-      font-size: 1.1rem;
-      color: #fefefe;
-      margin-top: 10px;
-      padding: 10px;
-      background: rgba(255,255,255,0.05);
-      border-left: 4px solid #ccc;
-    }
-    .footer {
-      font-size: 0.9rem;
-      color: #aaa;
-      margin-top: 30px;
-      text-align: center;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fantasy Card Generator</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🃏 Archetype Business Generator</h1>
+  <div class="container">
+    <h1>Fantasy Card Generator</h1>
 
-  <div class="card">
-    <label for="archetype">Archetype:</label>
-    <select id="archetype">
-      <option value="Echo Wraith">Echo Wraith</option>
-      <option value="Relicmancer">Relicmancer</option>
-      <option value="Netstalker">Netstalker</option>
-      <option value="Hearthbound Seer">Hearthbound Seer</option>
-    </select>
+    <div class="dropdowns">
+      <select id="archetype">
+        <option value="Echo Wraith">Echo Wraith</option>
+        <option value="Forge Beast">Forge Beast</option>
+        <option value="Civic Golem">Civic Golem</option>
+        <option value="Lore Seer">Lore Seer</option>
+      </select>
+      <button onclick="generateCard()">Randomize</button>
+    </div>
 
-    <label for="businessType">Business Type:</label>
-    <select id="businessType">
-      <option value="Studio">Studio</option>
-      <option value="Workshop">Workshop</option>
-      <option value="Service">Service</option>
-      <option value="Channel">Channel</option>
-      <option value="Shop">Shop</option>
-    </select>
-
-    <button onclick="generateName()">🎲 Randomize</button>
-    <button onclick="rollDice()">🧠 Oracle Roll</button>
-
-    <div class="result" id="result"></div>
-    <div class="desc" id="desc"></div>
-    <div class="tools" id="tools"></div>
-    <div class="trait" id="trait"></div>
-    <div class="dice-roll" id="dice"></div>
+    <div class="card">
+      <h2 id="cardTitle">Your Card Title</h2>
+      <img id="cardImage" src="" alt="Generated Art" />
+    </div>
   </div>
 
-  <div class="footer">Complete all four to unlock your final worksheet.</div>
-
-  <script>
-    const adjectives = {
-      "Echo Wraith": ["Echoing", "Sonic", "Resonant", "Phantom"],
-      "Relicmancer": ["Fragrant", "Runed", "Mystic", "Alchemical"],
-      "Netstalker": ["Encrypted", "Glitched", "Pixel", "Hyper"],
-      "Hearthbound Seer": ["Kindled", "Rooted", "Hearthlight", "Ashen"]
-    };
-
-    const modifiers = {
-      "Echo Wraith": ["Velvet", "Glass", "Shadow", "Signal"],
-      "Relicmancer": ["Gilded", "Crystal", "Herbal", "Arcane"],
-      "Netstalker": ["Cyber", "Neon", "Quantum", "Hex"],
-      "Hearthbound Seer": ["Ember", "Bloom", "Flame", "Quiet"]
-    };
-
-    const nouns = {
-      "Studio": ["Sanctum", "Forge", "Lab", "Chamber"],
-      "Workshop": ["Circle", "Camp", "Hub", "Den"],
-      "Service": ["Bloom", "Flow", "Link", "Nest"],
-      "Channel": ["Signal", "Path", "Echo", "Voice"],
-      "Shop": ["Market", "Vault", "Cabinet", "Corner"]
-    };
-
-    const suffixes = ["Works", "Nest", "System", "Syndicate", "Vault", "Cult", "Verse"];
-
-    const descriptions = {
-      "Studio": "A creative lab or ritual space for building custom products.",
-      "Workshop": "A teaching hub for sharing knowledge or skills.",
-      "Service": "A support or creative offering tailored to others.",
-      "Channel": "A stream of expression, music, or storytelling.",
-      "Shop": "A curated place to sell unique designs or digital goods."
-    };
-
-    const tools = {
-      "Echo Wraith": ["VoiceMod", "Soundtrap", "Canva"],
-      "Relicmancer": ["ChatGPT", "Midjourney", "Printful"],
-      "Netstalker": ["Substack", "Pinterest AI", "Notion"],
-      "Hearthbound Seer": ["Google Forms", "Canva", "ChatGPT"]
-    };
-
-    const traits = {
-      "Echo Wraith": "Use trends, remix culture, and sound-based branding.",
-      "Relicmancer": "Focus on handmade, aesthetic, or sensory-driven offerings.",
-      "Netstalker": "Use viral tools, automation, and digital reach hacks.",
-      "Hearthbound Seer": "Leverage emotional storytelling and audience rituals."
-    };
-
-    function generateName() {
-      const arch = document.getElementById('archetype').value;
-      const type = document.getElementById('businessType').value;
-
-      const adj = adjectives[arch];
-      const mod = modifiers[arch];
-      const noun = nouns[type];
-      const suff = suffixes;
-
-      const result = `${random(adj)} ${random(mod)} ${random(noun)} ${Math.random() < 0.5 ? '' : random(suff)}`.trim();
-
-      document.getElementById('result').innerText = `✨ Your Business Name: ${result}`;
-      document.getElementById('desc').innerText = `🧾 Description: ${result} is ${descriptions[type].toLowerCase()}`;
-      document.getElementById('tools').innerText = `🔧 Suggested Tools: ${tools[arch].join(", ")}`;
-      document.getElementById('trait').innerText = `🧙 Strategic Tip: ${traits[arch]}`;
-      document.getElementById('dice').innerText = '';
-    }
-
-    function rollDice() {
-      const rolls = [
-        "Try swapping business type.",
-        "Add a color to the name.",
-        "Make it a subscription.",
-        "Add your first name to the brand.",
-        "Use emojis in your logo.",
-        "Merge two archetypes." 
-      ];
-      const result = rolls[Math.floor(Math.random() * rolls.length)];
-      document.getElementById('dice').innerText = `🎲 Oracle Bonus: ${result}`;
-    }
-
-    function random(arr) {
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
-  </script>
+  <script src="main.js"></script>
 </body>
 </html>
