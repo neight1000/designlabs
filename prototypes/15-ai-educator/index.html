@@ -1,0 +1,1932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Business Builder - The Hearthbound Seer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Cinzel', serif;
+            background: radial-gradient(ellipse at center, #1a1a1a 0%, #0a0a0a 100%);
+            color: #e0e0e0;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        /* Start Screen Styles */
+        .start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(ellipse at center, #2a2a2a 0%, #0f0f0f 100%);
+            z-index: 1000;
+            transition: opacity 1.5s ease-out;
+        }
+        
+        .wolf-oracle-card {
+            width: 400px;
+            height: 600px;
+            background: linear-gradient(145deg, #f5f5f5, #d0d0d0);
+            border: 8px solid #333;
+            border-radius: 20px;
+            position: relative;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.3);
+            margin-bottom: 40px;
+            overflow: hidden;
+        }
+        
+        .card-border {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            bottom: 15px;
+            border: 3px solid #222;
+            border-radius: 12px;
+        }
+        
+        .wolf-illustration {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 300px;
+            height: 350px;
+            background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 350'%3E%3Cg fill='none' stroke='%23222' stroke-width='2'%3E%3C!-- Wolf head --%3E%3Cpath d='M150 80 C120 80, 100 100, 100 130 C100 160, 120 180, 150 180 C180 180, 200 160, 200 130 C200 100, 180 80, 150 80 Z'/%3E%3C!-- Eyes --%3E%3Ccircle cx='130' cy='120' r='8' fill='%23222'/%3E%3Ccircle cx='170' cy='120' r='8' fill='%23222'/%3E%3C!-- Nose --%3E%3Cpath d='M150 135 L145 145 L155 145 Z' fill='%23222'/%3E%3C!-- Ears --%3E%3Cpath d='M120 90 L110 70 L135 85 Z' fill='%23f0f0f0' stroke='%23222'/%3E%3Cpath d='M180 90 L190 70 L165 85 Z' fill='%23f0f0f0' stroke='%23222'/%3E%3C!-- Cloak --%3E%3Cpath d='M80 200 C80 180, 100 170, 150 170 C200 170, 220 180, 220 200 L220 300 C220 320, 200 330, 150 330 C100 330, 80 320, 80 300 Z' fill='%23f0f0f0'/%3E%3C!-- Runes on cloak --%3E%3Cpath d='M120 220 L140 230 L120 240' stroke='%23333'/%3E%3Cpath d='M180 220 L160 230 L180 240' stroke='%23333'/%3E%3Ccircle cx='150' cy='260' r='12' fill='none'/%3E%3C!-- Scrolls --%3E%3Crect x='60' y='180' width='30' height='80' rx='5' fill='%23f8f8f8'/%3E%3Crect x='210' y='190' width='25' height='70' rx='4' fill='%23f8f8f8'/%3E%3C!-- Fire marks --%3E%3Cpath d='M110 100 Q108 95 112 92 Q115 95 112 100' fill='%23666'/%3E%3Cpath d='M188 100 Q186 95 190 92 Q193 95 190 100' fill='%23666'/%3E%3C/g%3E%3C/svg%3E") center/contain no-repeat;
+        }
+        
+        .card-title {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: #222;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+        
+        .start-content {
+            text-align: center;
+            max-width: 600px;
+        }
+        
+        .game-title {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #f0f0f0;
+            text-shadow: 0 0 20px rgba(255,255,255,0.3);
+            letter-spacing: 3px;
+        }
+        
+        .game-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            color: #c0c0c0;
+            line-height: 1.6;
+        }
+        
+        .begin-button {
+            background: linear-gradient(145deg, #333, #111);
+            border: 3px solid #666;
+            color: #f0f0f0;
+            padding: 15px 40px;
+            font-family: 'Cinzel', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .begin-button:hover {
+            box-shadow: 0 0 30px rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+        
+        .begin-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .begin-button:hover::before {
+            left: 100%;
+        }
+        
+        /* Main UI Styles */
+        .main-ui {
+            display: none;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .ui-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: linear-gradient(145deg, #222, #111);
+            border: 4px solid #444;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+            position: relative;
+        }
+        
+        .ui-container::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 2px solid #333;
+            border-radius: 16px;
+            pointer-events: none;
+        }
+        
+        .screen {
+            display: none;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .screen-title {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #f0f0f0;
+            text-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+        
+        /* Archetype Selection */
+        .archetype-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .archetype-card {
+            background: linear-gradient(145deg, #f5f5f5, #d0d0d0);
+            border: 4px solid #333;
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.4s ease;
+            position: relative;
+            overflow: hidden;
+            transform-style: preserve-3d;
+            height: 200px;
+            perspective: 1000px;
+        }
+        
+        .archetype-card:hover {
+            transform: rotateY(5deg) scale(1.05);
+            box-shadow: 0 0 30px rgba(255,255,255,0.3);
+        }
+        
+        .card-front, .card-back {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 20px;
+            border-radius: 11px;
+            backface-visibility: hidden;
+            transition: transform 0.6s ease;
+        }
+        
+        .card-back {
+            background: linear-gradient(145deg, #e0e0e0, #c0c0c0);
+            transform: rotateY(180deg);
+        }
+        
+        .archetype-card.flipped .card-front {
+            transform: rotateY(-180deg);
+        }
+        
+        .archetype-card.flipped .card-back {
+            transform: rotateY(0deg);
+        }
+        
+        .archetype-name {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 1.3rem;
+            color: #222;
+            margin-bottom: 15px;
+        }
+        
+        .archetype-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: #444;
+        }
+        
+        .archetype-desc {
+            font-size: 0.9rem;
+            color: #333;
+            line-height: 1.4;
+        }
+        
+        /* Challenge Card View */
+        .challenge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .challenge-card {
+            width: 100%;
+            max-width: 600px;
+            background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
+            border: 6px solid #333;
+            border-radius: 20px;
+            padding: 40px;
+            position: relative;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+        
+        .challenge-title {
+            font-family: 'Cinzel Decorative', serif;
+            font-size: 1.8rem;
+            color: #222;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .challenge-instructions {
+            color: #333;
+            line-height: 1.6;
+            font-size: 1rem;
+            margin-bottom: 30px;
+        }
+        
+        .challenge-actions {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .action-button {
+            background: linear-gradient(145deg, #333, #111);
+            border: 3px solid #555;
+            color: #f0f0f0;
+            padding: 12px 25px;
+            font-family: 'Cinzel', serif;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .action-button:hover {
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+        
+        /* Gameboard Tracker */
+        .gameboard {
+            background: linear-gradient(145deg, #f8f8f8, #e0e0e0);
+            border: 6px solid #333;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .progress-scroll {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .progress-circle {
+            width: 80px;
+            height: 80px;
+            border: 4px solid #333;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .progress-circle.completed {
+            background: linear-gradient(145deg, #666, #444);
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+        }
+        
+        .progress-circle.completed::after {
+            content: '⚡';
+            position: absolute;
+            font-size: 2rem;
+            color: #f0f0f0;
+        }
+        
+        /* Final Worksheet */
+        .worksheet-scroll {
+            background: linear-gradient(145deg, #f8f8f8, #e8e8e8);
+            border: 6px solid #333;
+            border-radius: 20px;
+            padding: 40px;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .worksheet-field {
+            margin-bottom: 25px;
+        }
+        
+        .worksheet-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .worksheet-input {
+            width: 100%;
+            padding: 15px;
+            border: 3px solid #666;
+            border-radius: 8px;
+            background: linear-gradient(145deg, #fff, #f0f0f0);
+            font-family: 'Cinzel', serif;
+            font-size: 1rem;
+            color: #333;
+            transition: all 0.3s ease;
+        }
+        
+        .worksheet-input:focus {
+            outline: none;
+            border-color: #999;
+            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+            background: #fff;
+        }
+        
+        /* Dice Roller Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .dice-modal {
+            background: linear-gradient(145deg, #333, #111);
+            border: 6px solid #666;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        
+        .dice-cube {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(145deg, #f0f0f0, #d0d0d0);
+            border: 4px solid #333;
+            border-radius: 15px;
+            margin: 20px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #333;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            animation: rollDice 1s ease-in-out;
+        }
+        
+        @keyframes rollDice {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(90deg); }
+            50% { transform: rotate(180deg); }
+            75% { transform: rotate(270deg); }
+        }
+        
+        .dice-result {
+            margin: 20px 0;
+            font-size: 1.2rem;
+            color: #f0f0f0;
+        }
+        
+        /* Navigation */
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .nav-button {
+            background: linear-gradient(145deg, #444, #222);
+            border: 3px solid #666;
+            color: #f0f0f0;
+            padding: 10px 20px;
+            font-family: 'Cinzel', serif;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-button:hover {
+            box-shadow: 0 0 15px rgba(255,255,255,0.2);
+        }
+        
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Enhanced challenge UI styles */
+        .challenge-details {
+            background: rgba(255,255,255,0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+        }
+        
+        .challenge-category, .challenge-revenue {
+            background: rgba(255,255,255,0.1);
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin: 8px 0;
+            font-size: 0.9rem;
+        }
+        
+        .ai-tools-section, .detailed-steps, .expected-outcome {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        
+        .ai-tools-section h4, .detailed-steps h4, .expected-outcome h4 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-family: 'Cinzel Decorative', serif;
+        }
+        
+        .ai-tools-section ul, .detailed-steps ol {
+            margin-left: 20px;
+            line-height: 1.6;
+        }
+        
+        .ai-assistant-section {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .ai-helper-btn, .hint-btn {
+            background: linear-gradient(145deg, #4c1d95, #312e81);
+            border: 2px solid #6366f1;
+            color: #f0f0f0;
+            padding: 10px 20px;
+            font-family: 'Cinzel', serif;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .ai-helper-btn:hover, .hint-btn:hover {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .ai-helper-modal, .hint-modal {
+            background: linear-gradient(145deg, #333, #111);
+            border: 6px solid #666;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            color: #f0f0f0;
+        }
+        
+        .ai-tools-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .ai-tool-card {
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        .ai-tool-card h4 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-family: 'Cinzel Decorative', serif;
+        }
+        
+        .tool-pricing {
+            background: rgba(0,255,0,0.1);
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 0.9rem;
+        }
+        
+        .suggested-prompt code {
+            background: rgba(0,0,0,0.3);
+            padding: 8px;
+            border-radius: 5px;
+            display: block;
+            margin-top: 5px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        
+        .dice-outcome {
+            text-align: center;
+            margin: 15px 0;
+        }
+        
+        .dice-outcome h4 {
+            color: #ffd700;
+            margin-bottom: 10px;
+            font-family: 'Cinzel Decorative', serif;
+        }
+        
+        .tool-discovery, .revenue-tip, .market-insight, .skill-tutorial, .networking-tip {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #ffd700;
+        }
+        
+        .tool-discovery h5 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        
+        .tool-prompt {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        
+        .hint-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #e0e0e0;
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            border-left: 4px solid #ffd700;
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .wolf-oracle-card {
+                width: 300px;
+                height: 450px;
+            }
+            
+            .game-title {
+                font-size: 2rem;
+            }
+            
+            .screen-title {
+                font-size: 2rem;
+            }
+            
+            .archetype-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .challenge-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .ai-assistant-section {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .ai-tools-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Glow effects */
+        .glow {
+            animation: softGlow 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes softGlow {
+            from { box-shadow: 0 0 10px rgba(255,255,255,0.1); }
+            to { box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        }
+        
+        /* Blessing effect */
+        @keyframes blessing {
+            0% { transform: scale(1) rotate(0deg); opacity: 1; }
+            50% { transform: scale(1.1) rotate(180deg); opacity: 0.8; }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+        
+        .blessing {
+            animation: blessing 1.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- Start Screen -->
+    <div class="start-screen" id="startScreen">
+        <div class="wolf-oracle-card">
+            <div class="card-border"></div>
+            <div class="wolf-illustration"></div>
+            <div class="card-title">The Hearthbound Seer</div>
+        </div>
+        <div class="start-content">
+            <h1 class="game-title">AI Business Builder</h1>
+            <p class="game-subtitle">Summon your first real-world business with the help of The Seer.</p>
+            <button class="begin-button" onclick="beginJourney()">Begin My Journey</button>
+        </div>
+    </div>
+
+    <!-- Main UI -->
+    <div class="main-ui" id="mainUI">
+        <div class="ui-container">
+            <!-- Archetype Selection Screen -->
+            <div class="screen active" id="archetypeScreen">
+                <h2 class="screen-title">Choose Your Path</h2>
+                <div class="archetype-grid">
+                    <div class="archetype-card" onclick="selectArchetype('echo')" onmouseenter="flipCard(this)" onmouseleave="unflipCard(this)">
+                        <div class="card-front">
+                            <div class="archetype-icon">🎭</div>
+                            <h3 class="archetype-name">The Echo Wraith</h3>
+                        </div>
+                        <div class="card-back">
+                            <p class="archetype-desc">Masters of digital presence and viral marketing. You create businesses that spread like whispers in the digital realm.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="archetype-card" onclick="selectArchetype('relic')" onmouseenter="flipCard(this)" onmouseleave="unflipCard(this)">
+                        <div class="card-front">
+                            <div class="archetype-icon">🏺</div>
+                            <h3 class="archetype-name">The Relicmancer</h3>
+                        </div>
+                        <div class="card-back">
+                            <p class="archetype-desc">Guardians of ancient wisdom applied to modern problems. You build timeless businesses with deep foundations.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="archetype-card" onclick="selectArchetype('net')" onmouseenter="flipCard(this)" onmouseleave="unflipCard(this)">
+                        <div class="card-front">
+                            <div class="archetype-icon">🕸️</div>
+                            <h3 class="archetype-name">The Netstalker</h3>
+                        </div>
+                        <div class="card-back">
+                            <p class="archetype-desc">Weavers of digital connections and networks. You create businesses that thrive on community and collaboration.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="archetype-card" onclick="selectArchetype('seer')" onmouseenter="flipCard(this)" onmouseleave="unflipCard(this)">
+                        <div class="card-front">
+                            <div class="archetype-icon">🔮</div>
+                            <h3 class="archetype-name">The Hearthbound Seer</h3>
+                        </div>
+                        <div class="card-back">
+                            <p class="archetype-desc">Visionaries who see future trends and opportunities. You build businesses that anticipate tomorrow's needs.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Challenge Card Screen -->
+            <div class="screen" id="challengeScreen">
+                <h2 class="screen-title">Your Quest Awaits</h2>
+                <div class="challenge-container">
+                    <div class="challenge-card" id="currentChallenge">
+                        <h3 class="challenge-title" id="challengeTitle">Loading Challenge...</h3>
+                        <div class="challenge-instructions" id="challengeInstructions">Your mystical journey begins...</div>
+                        <div class="challenge-actions">
+                            <button class="action-button" onclick="markComplete(event)">Mark Complete</button>
+                            <button class="action-button" onclick="rollDice()">Roll Dice if Stuck</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Progress Tracker -->
+                <div class="gameboard">
+                    <h3 style="text-align: center; color: #333; margin-bottom: 20px; font-family: 'Cinzel Decorative', serif;">Your Journey Progress</h3>
+                    <div class="progress-scroll" id="progressTracker">
+                        <!-- Progress circles will be generated dynamically -->
+                    </div>
+                </div>
+                
+                <div class="nav-container">
+                    <button class="nav-button" onclick="showScreen('archetypeScreen')">Change Path</button>
+                    <button class="nav-button" onclick="showWorksheet()">View Business Plan</button>
+                </div>
+            </div>
+
+            <!-- Final Worksheet Screen -->
+            <div class="screen" id="worksheetScreen">
+                <h2 class="screen-title">Your Business Scroll</h2>
+                <div class="worksheet-scroll">
+                    <div class="worksheet-field">
+                        <label class="worksheet-label">Business Name:</label>
+                        <input type="text" class="worksheet-input" id="businessName" placeholder="Enter your business name...">
+                    </div>
+                    
+                    <div class="worksheet-field">
+                        <label class="worksheet-label">Business Concept:</label>
+                        <textarea class="worksheet-input" id="businessConcept" rows="4" placeholder="Describe your business idea..."></textarea>
+                    </div>
+                    
+                    <div class="worksheet-field">
+                        <label class="worksheet-label">Target Audience:</label>
+                        <input type="text" class="worksheet-input" id="targetAudience" placeholder="Who are your customers?">
+                    </div>
+                    
+                    <div class="worksheet-field">
+                        <label class="worksheet-label">AI Tools You'll Use:</label>
+                        <textarea class="worksheet-input" id="aiTools" rows="3" placeholder="List the AI tools that will help your business..."></textarea>
+                    </div>
+                    
+                    <div class="worksheet-field">
+                        <label class="worksheet-label">Revenue Model:</label>
+                        <input type="text" class="worksheet-input" id="revenueModel" placeholder="How will you make money?">
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button class="action-button blessing" onclick="submitBusinessPlan()">Seal Your Destiny</button>
+                    </div>
+                </div>
+                
+                <div class="nav-container">
+                    <button class="nav-button" onclick="showScreen('challengeScreen')">Return to Challenges</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dice Roller Modal -->
+    <div class="modal-overlay" id="diceModal">
+        <div class="dice-modal">
+            <h3 style="color: #f0f0f0; margin-bottom: 20px; font-family: 'Cinzel Decorative', serif;">Roll the Rune Stone</h3>
+            <div class="dice-cube" id="diceCube" onclick="performRoll()">⚡</div>
+            <div class="dice-result" id="diceResult">Click the rune to roll your fate...</div>
+            <button class="action-button" onclick="closeDiceModal()" style="margin-top: 20px;">Continue Journey</button>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced educational content and AI-first features
+        const aiToolsLibrary = {
+            "ChatGPT": {
+                description: "AI writing assistant for content creation, planning, and problem-solving",
+                prompts: [
+                    "Write a compelling business description for [business idea] targeting [audience]",
+                    "Create a content calendar for [business type] social media for 30 days",
+                    "Generate 10 creative marketing ideas for [product/service] with $100 budget"
+                ],
+                pricing: "Free tier available, $20/month for ChatGPT Plus",
+                useCase: "Content creation, strategy planning, customer communication"
+            },
+            "Midjourney": {
+                description: "AI image generator for creating stunning visual content",
+                prompts: [
+                    "professional product photography [item] clean white background --ar 1:1",
+                    "modern logo design for [business name] minimalist style --ar 1:1"
+                ],
+                pricing: "$10-60/month for various plans",
+                useCase: "Marketing visuals, product mockups, social media content"
+            },
+            "Canva": {
+                description: "Design platform with AI features for creating professional graphics",
+                prompts: ["Use Magic Design AI to generate complete brand packages"],
+                pricing: "Free tier available, $15/month for Pro",
+                useCase: "Social media graphics, presentations, marketing materials"
+            }
+        };
+
+        // Character data
+        const characterData = {
+            echo: {
+                icon: "🎭",
+                name: "Echo Wraith",
+                description: "Master of Performance & Digital Voice",
+                color: "#8B5CF6"
+            },
+            relic: {
+                icon: "🏺",
+                name: "Relicmancer", 
+                description: "Guardian of Ancient Crafts & Making",
+                color: "#F59E0B"
+            },
+            net: {
+                icon: "🕸️",
+                name: "Netstalker",
+                description: "Weaver of Digital Communities",
+                color: "#10B981"
+            },
+            seer: {
+                icon: "🔮",
+                name: "Hearthbound Seer",
+                description: "Oracle of Community & Future Vision",
+                color: "#EC4899"
+            }
+        };
+
+        // Achievement badges
+        const achievementBadges = [
+            { name: "First Steps", icon: "👣", description: "Completed your first challenge" },
+            { name: "Tool Master", icon: "🛠️", description: "Mastered AI tool integration" },
+            { name: "Vision Keeper", icon: "✨", description: "Finished all archetype challenges" },
+            { name: "Business Builder", icon: "🏗️", description: "Completed business plan" }
+        ];
+
+        // Challenge data for different archetypes
+        const challengeData = {
+            echo: [
+                {
+                    title: "Voice of the Digital Realm",
+                    category: "Content Creation & Performance",
+                    revenueModel: "YouTube Ad Revenue, Patreon, Sponsored Content",
+                    aiTools: ["ChatGPT for script writing", "Canva for thumbnails"],
+                    instructions: "Launch your performance business! Use ChatGPT to write video scripts, then use Canva to design eye-catching thumbnails.",
+                    detailedSteps: [
+                        "Open ChatGPT and prompt: 'Write a 2-minute comedy script about [your topic] for teens'",
+                        "Use Canva's YouTube thumbnail templates - add bold text and bright colors",
+                        "Research 5 YouTube channels in your niche - note their posting schedule"
+                    ],
+                    expectedOutcome: "Complete video concept with monetization plan"
+                },
+                {
+                    title: "Sonic Spellcasting",
+                    category: "Audio Content & Music",
+                    revenueModel: "Spotify streams, custom audio services",
+                    aiTools: ["ChatGPT for lyrics", "Canva for cover art"],
+                    instructions: "Create an audio-focused business! Use AI to generate music concepts and offer custom audio services.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Write catchy lyrics for a song about [topic] in [genre] style'",
+                        "Create 3 different audio samples (music, voiceover, sound effects)",
+                        "Set up profiles on audio platforms"
+                    ],
+                    expectedOutcome: "Audio business with multiple revenue streams"
+                },
+                {
+                    title: "Visual Echo Mastery",
+                    category: "Visual Performance & Art",
+                    revenueModel: "Art commissions, print-on-demand",
+                    aiTools: ["Midjourney for concept art", "ChatGPT for creative prompts"],
+                    instructions: "Build a visual art business! Use AI to create stunning artwork, then sell as prints or digital downloads.",
+                    detailedSteps: [
+                        "Master Midjourney prompts for your art style",
+                        "Use ChatGPT to generate 20 unique art concept ideas",
+                        "Create 5 high-quality pieces and set up online shop"
+                    ],
+                    expectedOutcome: "Art business with online store and social presence"
+                },
+                {
+                    title: "Performance Oracle",
+                    category: "Live Performance & Workshops",
+                    revenueModel: "Workshop fees, online courses",
+                    aiTools: ["ChatGPT for curriculum design", "Canva for promotional materials"],
+                    instructions: "Create a performance education business! Design workshops teaching others your skills.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Create a 1-hour workshop outline teaching [your skill] to beginners'",
+                        "Design promotional flyers in Canva",
+                        "Set up booking system for workshops"
+                    ],
+                    expectedOutcome: "Workshop business with online course platform"
+                }
+            ],
+            relic: [
+                {
+                    title: "Artisan's Awakening",
+                    category: "Handmade Crafts & Physical Products",
+                    revenueModel: "Etsy sales, craft fairs, custom orders",
+                    aiTools: ["ChatGPT for product descriptions", "Canva for packaging design"],
+                    instructions: "Launch your maker business! Use AI to design unique physical products, then sell through online platforms.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Write compelling Etsy product descriptions for handmade [item]'",
+                        "Create 3 prototype products and photograph with good lighting",
+                        "Set up Etsy shop with AI-generated SEO-optimized titles"
+                    ],
+                    expectedOutcome: "Physical product business with online storefront"
+                },
+                {
+                    title: "Scent Sorcery",
+                    category: "Aromatherapy & Scented Products",
+                    revenueModel: "Custom scent blends, subscription boxes",
+                    aiTools: ["ChatGPT for scent recipes", "Canva for label design"],
+                    instructions: "Create an aromatherapy business! Use AI to research scent combinations and create custom blends.",
+                    detailedSteps: [
+                        "ChatGPT: 'Suggest 10 essential oil blend recipes for relaxation'",
+                        "Design product labels in Canva with ingredient lists",
+                        "Create sample packs and test with friends for feedback"
+                    ],
+                    expectedOutcome: "Aromatherapy product line with custom services"
+                },
+                {
+                    title: "Relic Restoration",
+                    category: "Upcycling & Vintage Restoration",
+                    revenueModel: "Restored item sales, upcycling services",
+                    aiTools: ["ChatGPT for restoration techniques", "Canva for before/after showcases"],
+                    instructions: "Build an upcycling business! Find vintage items, use AI to research restoration methods.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'How to restore [vintage item type] - step by step process'",
+                        "Scout thrift stores for undervalued items",
+                        "Document before/after photos for portfolio building"
+                    ],
+                    expectedOutcome: "Restoration business with documented processes"
+                },
+                {
+                    title: "Ancient Wisdom Keeper",
+                    category: "Traditional Skills & Education",
+                    revenueModel: "Skill workshops, online courses",
+                    aiTools: ["ChatGPT for curriculum creation", "Canva for course materials"],
+                    instructions: "Teach traditional skills with modern methods! Use AI to create learning experiences.",
+                    detailedSteps: [
+                        "ChatGPT: 'Create a beginner's course outline for teaching [traditional skill]'",
+                        "Film step-by-step tutorial videos",
+                        "Design printable worksheets using Canva templates"
+                    ],
+                    expectedOutcome: "Educational business preserving traditional knowledge"
+                }
+            ],
+            net: [
+                {
+                    title: "Digital Web Weaving",
+                    category: "Content Creation & Blogging",
+                    revenueModel: "Blog monetization, affiliate marketing",
+                    aiTools: ["ChatGPT for content creation", "Canva for blog graphics"],
+                    instructions: "Launch your digital content empire! Use AI to create valuable blog content and build an audience.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Write a 1000-word blog post about [your niche topic]'",
+                        "Set up blog with professional theme",
+                        "Create content calendar with AI assistance"
+                    ],
+                    expectedOutcome: "Professional blog with monetization strategies"
+                },
+                {
+                    title: "Social Media Sorcery",
+                    category: "Social Media Management",
+                    revenueModel: "Management services, content packages",
+                    aiTools: ["ChatGPT for captions", "Canva for graphics"],
+                    instructions: "Become a social media expert! Use AI to create engaging content and manage accounts.",
+                    detailedSteps: [
+                        "Master ChatGPT prompts: 'Write 10 engaging Instagram captions for [business type]'",
+                        "Create templates in Canva for different content types",
+                        "Offer free social media audit to local businesses"
+                    ],
+                    expectedOutcome: "Social media agency with recurring clients"
+                },
+                {
+                    title: "Community Catalyst",
+                    category: "Online Community Building",
+                    revenueModel: "Membership fees, exclusive content",
+                    aiTools: ["ChatGPT for engagement prompts", "Canva for member graphics"],
+                    instructions: "Build and monetize online communities! Use AI to create engaging discussion topics.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Generate 50 discussion prompts for [community topic]'",
+                        "Create member onboarding process",
+                        "Plan weekly events like Q&As or workshops"
+                    ],
+                    expectedOutcome: "Thriving online community with subscription model"
+                },
+                {
+                    title: "Digital Marketplace Mastery",
+                    category: "E-commerce & Digital Products",
+                    revenueModel: "Digital downloads, online courses",
+                    aiTools: ["ChatGPT for product creation", "Canva for course materials"],
+                    instructions: "Create and sell digital products! Use AI to develop courses or tools that solve problems.",
+                    detailedSteps: [
+                        "Identify problems your audience faces",
+                        "Use ChatGPT to outline comprehensive course content",
+                        "Create professional materials with Canva templates"
+                    ],
+                    expectedOutcome: "Digital product business with passive income potential"
+                }
+            ],
+            seer: [
+                {
+                    title: "Childcare Oracle",
+                    category: "Childcare & Youth Services",
+                    revenueModel: "Babysitting, tutoring, kids' activities",
+                    aiTools: ["ChatGPT for activity planning", "Canva for parent communication"],
+                    instructions: "Build a youth-focused service business! Use AI to create engaging activities for children.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Create 10 educational activities for ages [target age]'",
+                        "Design parent communication templates in Canva",
+                        "Get CPR/First Aid certification for credibility"
+                    ],
+                    expectedOutcome: "Professional childcare service with regular clients"
+                },
+                {
+                    title: "Workshop Wisdom",
+                    category: "Educational Workshops & Classes",
+                    revenueModel: "Workshop fees, private lessons",
+                    aiTools: ["ChatGPT for lesson planning", "Canva for materials"],
+                    instructions: "Create educational experiences! Use AI to design workshops teaching skills you're passionate about.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Design a 2-hour workshop teaching [your skill] to beginners'",
+                        "Create professional handouts in Canva",
+                        "Book community center space or offer virtual sessions"
+                    ],
+                    expectedOutcome: "Educational business with structured curriculum"
+                },
+                {
+                    title: "Community Gathering Guide",
+                    category: "Event Planning & Community Building",
+                    revenueModel: "Event planning fees, vendor partnerships",
+                    aiTools: ["ChatGPT for event concepts", "Canva for invitations"],
+                    instructions: "Become the local community connector! Use AI to plan events that bring people together.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Plan a community event for [occasion] including timeline'",
+                        "Partner with local venues and entertainment",
+                        "Create event promotion materials using Canva"
+                    ],
+                    expectedOutcome: "Event planning business with vendor network"
+                },
+                {
+                    title: "Future Vision Keeper",
+                    category: "Trend Research & Consulting",
+                    revenueModel: "Research reports, trend consulting",
+                    aiTools: ["ChatGPT for trend analysis", "Canva for reports"],
+                    instructions: "Become a trend spotter! Use AI to research emerging opportunities and advise others.",
+                    detailedSteps: [
+                        "Use ChatGPT: 'Analyze emerging trends in [industry]'",
+                        "Create professional trend reports with data",
+                        "Build expertise in specific industries"
+                    ],
+                    expectedOutcome: "Consulting business focused on future planning"
+                }
+            ]
+        };
+
+        // Enhanced dice outcomes
+        const diceOutcomes = [
+            {
+                title: "AI Tool Unlock",
+                description: "Discover a powerful AI tool perfect for your archetype!",
+                action: "showAIToolTip"
+            },
+            {
+                title: "Revenue Boost",
+                description: "Learn a new monetization strategy for your business!",
+                action: "showRevenueStrategy"
+            },
+            {
+                title: "Market Insight",
+                description: "Gain valuable knowledge about your target audience!",
+                action: "showMarketInsight"
+            },
+            {
+                title: "Skill Accelerator",
+                description: "Get a detailed tutorial for your current challenge!",
+                action: "showSkillTutorial"
+            },
+            {
+                title: "Network Connection",
+                description: "Connect with resources in your business niche!",
+                action: "showNetworkingTip"
+            },
+            {
+                title: "Power Completion",
+                description: "Mystical energy completes your current challenge!",
+                action: "autoComplete"
+            }
+        ];
+
+        // Game state - DEFAULT VALUES
+        const defaultGameState = {
+            selectedArchetype: null,
+            currentChallengeIndex: 0,
+            completedChallenges: [],
+            challenges: [],
+            achievements: [],
+            totalDiceRolls: 0,
+            archetypesExplored: []
+        };
+
+        // Initialize game state with defaults
+        let gameState = { ...defaultGameState };
+
+        // Sound effects and animations
+        function playSuccessSound() {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(523.25, audioContext.currentTime);
+                oscillator.frequency.setValueAtTime(659.25, audioContext.currentTime + 0.1);
+                oscillator.frequency.setValueAtTime(783.99, audioContext.currentTime + 0.2);
+                
+                gainNode.gain.setValueAtTime(0, audioContext.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.4);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.4);
+            } catch (e) {
+                console.log("Audio not supported");
+            }
+        }
+
+        function createGlitterExplosion(element) {
+            if (!element) return;
+            
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            for (let i = 0; i < 20; i++) {
+                const glitter = document.createElement('div');
+                glitter.style.cssText = `
+                    position: fixed;
+                    width: 6px;
+                    height: 6px;
+                    background: linear-gradient(45deg, #ffd700, #ffed4e, #fff);
+                    border-radius: 50%;
+                    pointer-events: none;
+                    z-index: 10000;
+                    left: ${centerX}px;
+                    top: ${centerY}px;
+                `;
+                
+                document.body.appendChild(glitter);
+                
+                const angle = (Math.PI * 2 * i) / 20;
+                const velocity = 50 + Math.random() * 50;
+                const startTime = Date.now();
+                
+                let vx = Math.cos(angle) * velocity;
+                let vy = Math.sin(angle) * velocity;
+                
+                function animate() {
+                    const elapsed = Date.now() - startTime;
+                    if (elapsed > 1000) {
+                        if (glitter && glitter.parentNode) {
+                            glitter.remove();
+                        }
+                        return;
+                    }
+                    
+                    const t = elapsed / 1000;
+                    const x = centerX + vx * t;
+                    const y = centerY + vy * t + 100 * t * t;
+                    const opacity = 1 - t;
+                    
+                    if (glitter && glitter.style) {
+                        glitter.style.left = x + 'px';
+                        glitter.style.top = y + 'px';
+                        glitter.style.opacity = opacity;
+                    }
+                    
+                    requestAnimationFrame(animate);
+                }
+                
+                requestAnimationFrame(animate);
+            }
+        }
+
+        // Initialize the game
+        function initializeGame() {
+            loadGameState();
+            createProgressTracker();
+        }
+
+        // Begin journey - transition from start screen to main UI
+        function beginJourney() {
+            const startScreen = document.getElementById('startScreen');
+            const mainUI = document.getElementById('mainUI');
+            
+            if (!startScreen || !mainUI) return;
+            
+            startScreen.style.opacity = '0';
+            setTimeout(() => {
+                startScreen.style.display = 'none';
+                mainUI.style.display = 'block';
+                mainUI.style.opacity = '0';
+                setTimeout(() => {
+                    mainUI.style.opacity = '1';
+                }, 100);
+            }, 1500);
+        }
+
+        // Card flip animations
+        function flipCard(card) {
+            if (card && card.classList) {
+                card.classList.add('flipped');
+            }
+        }
+
+        function unflipCard(card) {
+            if (card && card.classList) {
+                card.classList.remove('flipped');
+            }
+        }
+
+        // Select archetype and move to challenges
+        function selectArchetype(archetype) {
+            gameState.selectedArchetype = archetype;
+            gameState.challenges = challengeData[archetype];
+            gameState.currentChallengeIndex = 0;
+            gameState.completedChallenges = [];
+            
+            // Initialize archetypesExplored if it doesn't exist
+            if (!gameState.archetypesExplored) {
+                gameState.archetypesExplored = [];
+            }
+            
+            if (!gameState.archetypesExplored.includes(archetype)) {
+                gameState.archetypesExplored.push(archetype);
+            }
+            
+            saveGameState();
+            loadCurrentChallenge();
+            showScreen('challengeScreen');
+            createProgressTracker();
+        }
+
+        // Show different screens
+        function showScreen(screenId) {
+            const screens = document.querySelectorAll('.screen');
+            screens.forEach(screen => {
+                if (screen && screen.classList) {
+                    screen.classList.remove('active');
+                }
+            });
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen && targetScreen.classList) {
+                targetScreen.classList.add('active');
+            }
+        }
+
+        // Load current challenge
+        function loadCurrentChallenge() {
+            if (!gameState.selectedArchetype || !gameState.challenges || !gameState.challenges.length) return;
+            
+            const challenge = gameState.challenges[gameState.currentChallengeIndex];
+            if (challenge) {
+                const titleElement = document.getElementById('challengeTitle');
+                const instructionsElement = document.getElementById('challengeInstructions');
+                
+                if (titleElement) {
+                    titleElement.textContent = challenge.title;
+                }
+                
+                if (instructionsElement) {
+                    instructionsElement.innerHTML = `
+                        <div class="challenge-details">
+                            <div class="challenge-category">
+                                <strong>Category:</strong> ${challenge.category}
+                            </div>
+                            <div class="challenge-revenue">
+                                <strong>Revenue Model:</strong> ${challenge.revenueModel}
+                            </div>
+                            <div class="challenge-description">
+                                ${challenge.instructions}
+                            </div>
+                            <div class="ai-tools-section">
+                                <h4>🤖 AI Tools for This Challenge:</h4>
+                                <ul>
+                                    ${challenge.aiTools.map(tool => `<li>${tool}</li>`).join('')}
+                                </ul>
+                            </div>
+                            <div class="detailed-steps">
+                                <h4>📋 Step-by-Step Guide:</h4>
+                                <ol>
+                                    ${challenge.detailedSteps.map(step => `<li>${step}</li>`).join('')}
+                                </ol>
+                            </div>
+                            <div class="expected-outcome">
+                                <h4>🎯 Expected Outcome:</h4>
+                                <p>${challenge.expectedOutcome}</p>
+                            </div>
+                            <div class="ai-assistant-section">
+                                <button class="ai-helper-btn" onclick="showAIHelper()">🤖 Get AI Assistant Help</button>
+                                <button class="hint-btn" onclick="showHint()">💡 Show Hint</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // AI Assistant Helper Modal
+        function showAIHelper() {
+            const challenge = gameState.challenges[gameState.currentChallengeIndex];
+            
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay active';
+            modal.innerHTML = `
+                <div class="ai-helper-modal">
+                    <h3>🤖 AI Assistant for ${challenge.title}</h3>
+                    <div class="ai-tools-grid">
+                        ${challenge.aiTools.map(tool => {
+                            const toolName = tool.split(' ')[0];
+                            const toolData = aiToolsLibrary[toolName];
+                            if (!toolData) return '';
+                            
+                            return `
+                                <div class="ai-tool-card">
+                                    <h4>${toolName}</h4>
+                                    <p>${toolData.description}</p>
+                                    <div class="tool-pricing">💰 ${toolData.pricing}</div>
+                                    <div class="suggested-prompt">
+                                        <strong>Try this prompt:</strong>
+                                        <code>${toolData.prompts[0]}</code>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <button class="action-button" onclick="closeAIHelper()">Continue Challenge</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        }
+
+        function closeAIHelper() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) modal.remove();
+        }
+
+        function showHint() {
+            const hints = [
+                "💡 Try breaking down your challenge into smaller, manageable steps!",
+                "💡 Research successful examples in your niche for inspiration!",
+                "💡 Start with simple tools and gradually add more advanced features!",
+                "💡 Test your ideas with friends or family before launching!"
+            ];
+            
+            const randomHint = hints[Math.floor(Math.random() * hints.length)];
+            
+            const hintModal = document.createElement('div');
+            hintModal.className = 'modal-overlay active';
+            hintModal.innerHTML = `
+                <div class="hint-modal">
+                    <h3>💡 Mystical Guidance</h3>
+                    <p class="hint-text">${randomHint}</p>
+                    <button class="action-button" onclick="closeHint()">Thank you, wise one!</button>
+                </div>
+            `;
+            
+            document.body.appendChild(hintModal);
+        }
+
+        function closeHint() {
+            const modal = document.querySelector('.modal-overlay');
+            if (modal) modal.remove();
+        }
+
+        // Mark challenge as complete
+        function markComplete(e) {
+            if (gameState.currentChallengeIndex < gameState.challenges.length) {
+                playSuccessSound();
+                
+                // Get the button that was clicked
+                const target = e ? e.target : (event ? event.target : null);
+                if (target) {
+                    createGlitterExplosion(target);
+                }
+                
+                if (!gameState.completedChallenges) {
+                    gameState.completedChallenges = [];
+                }
+                
+                gameState.completedChallenges.push(gameState.currentChallengeIndex);
+                updateProgressTracker();
+                checkAchievements();
+                
+                if (gameState.currentChallengeIndex < gameState.challenges.length - 1) {
+                    gameState.currentChallengeIndex++;
+                    loadCurrentChallenge();
+                } else {
+                    setTimeout(() => {
+                        alert("🎉 Congratulations! You've completed all challenges. Your business plan awaits!");
+                        autoPopulateBusinessPlan();
+                        showWorksheet();
+                    }, 1500);
+                }
+                
+                saveGameState();
+            }
+        }
+
+        // Auto-populate business plan
+        function autoPopulateBusinessPlan() {
+            const archetype = gameState.selectedArchetype;
+            const character = characterData[archetype];
+            
+            const businessNameEl = document.getElementById('businessName');
+            const businessConceptEl = document.getElementById('businessConcept');
+            const targetAudienceEl = document.getElementById('targetAudience');
+            const aiToolsEl = document.getElementById('aiTools');
+            const revenueModelEl = document.getElementById('revenueModel');
+            
+            if (businessNameEl) businessNameEl.value = `${character.name} Ventures`;
+            if (businessConceptEl) businessConceptEl.value = `A ${character.description.toLowerCase()} focused business that leverages AI tools to create value and generate income.`;
+            if (targetAudienceEl) targetAudienceEl.value = `Creative individuals and businesses seeking ${archetype === 'echo' ? 'content and performance' : archetype === 'relic' ? 'handmade and traditional products' : archetype === 'net' ? 'digital community and content services' : 'educational and community services'}.`;
+            if (aiToolsEl) aiToolsEl.value = gameState.challenges.flatMap(c => c.aiTools).slice(0, 5).join('\n• ');
+            if (revenueModelEl) revenueModelEl.value = gameState.challenges[0].revenueModel;
+        }
+
+        // Create progress tracker circles
+        function createProgressTracker() {
+            const tracker = document.getElementById('progressTracker');
+            if (!tracker) return;
+            
+            tracker.innerHTML = '';
+            
+            if (!gameState.challenges || !gameState.challenges.length) return;
+            
+            // Ensure completedChallenges array exists
+            if (!gameState.completedChallenges) {
+                gameState.completedChallenges = [];
+            }
+            
+            gameState.challenges.forEach((challenge, index) => {
+                const circle = document.createElement('div');
+                circle.className = 'progress-circle';
+                circle.setAttribute('data-index', index);
+                circle.onclick = () => jumpToChallenge(index);
+                
+                if (gameState.completedChallenges.includes(index)) {
+                    circle.classList.add('completed');
+                }
+                
+                tracker.appendChild(circle);
+            });
+        }
+
+        // Update progress tracker
+        function updateProgressTracker() {
+            const circles = document.querySelectorAll('.progress-circle');
+            circles.forEach((circle, index) => {
+                if (circle && circle.classList && gameState.completedChallenges && gameState.completedChallenges.includes(index)) {
+                    circle.classList.add('completed');
+                }
+            });
+        }
+
+        // Jump to specific challenge
+        function jumpToChallenge(index) {
+            const maxCompleted = gameState.completedChallenges && gameState.completedChallenges.length > 0 
+                ? Math.max(...gameState.completedChallenges) 
+                : -1;
+                
+            if ((gameState.completedChallenges && gameState.completedChallenges.includes(index)) || index <= maxCompleted + 1) {
+                gameState.currentChallengeIndex = index;
+                loadCurrentChallenge();
+                saveGameState();
+            }
+        }
+
+        // Show worksheet
+        function showWorksheet() {
+            showScreen('worksheetScreen');
+            loadWorksheetData();
+        }
+
+        // Load saved worksheet data
+        function loadWorksheetData() {
+            const saved = localStorage.getItem('businessPlan');
+            if (saved) {
+                const data = JSON.parse(saved);
+                const businessNameEl = document.getElementById('businessName');
+                const businessConceptEl = document.getElementById('businessConcept');
+                const targetAudienceEl = document.getElementById('targetAudience');
+                const aiToolsEl = document.getElementById('aiTools');
+                const revenueModelEl = document.getElementById('revenueModel');
+                
+                if (businessNameEl) businessNameEl.value = data.businessName || '';
+                if (businessConceptEl) businessConceptEl.value = data.businessConcept || '';
+                if (targetAudienceEl) targetAudienceEl.value = data.targetAudience || '';
+                if (aiToolsEl) aiToolsEl.value = data.aiTools || '';
+                if (revenueModelEl) revenueModelEl.value = data.revenueModel || '';
+            }
+        }
+
+        // Submit business plan
+        function submitBusinessPlan() {
+            const businessNameEl = document.getElementById('businessName');
+            const businessConceptEl = document.getElementById('businessConcept');
+            const targetAudienceEl = document.getElementById('targetAudience');
+            const aiToolsEl = document.getElementById('aiTools');
+            const revenueModelEl = document.getElementById('revenueModel');
+            
+            const businessPlan = {
+                businessName: businessNameEl ? businessNameEl.value : '',
+                businessConcept: businessConceptEl ? businessConceptEl.value : '',
+                targetAudience: targetAudienceEl ? targetAudienceEl.value : '',
+                aiTools: aiToolsEl ? aiToolsEl.value : '',
+                revenueModel: revenueModelEl ? revenueModelEl.value : '',
+                archetype: gameState.selectedArchetype,
+                completedChallenges: gameState.completedChallenges ? gameState.completedChallenges.length : 0
+            };
+            
+            localStorage.setItem('businessPlan', JSON.stringify(businessPlan));
+            
+            const button = event && event.target ? event.target : null;
+            if (button && button.style) {
+                button.style.animation = 'blessing 1.5s ease-in-out';
+                
+                setTimeout(() => {
+                    alert("🔮 The Hearthbound Seer has blessed your business plan! Your entrepreneurial journey has been sealed!");
+                    if (button && button.style) {
+                        button.style.animation = '';
+                    }
+                }, 1500);
+            } else {
+                alert("🔮 The Hearthbound Seer has blessed your business plan! Your entrepreneurial journey has been sealed!");
+            }
+        }
+
+        // Dice rolling functionality
+        function rollDice() {
+            const diceModal = document.getElementById('diceModal');
+            if (diceModal && diceModal.classList) {
+                diceModal.classList.add('active');
+            }
+        }
+
+        function performRoll() {
+            const diceCube = document.getElementById('diceCube');
+            const diceResult = document.getElementById('diceResult');
+            
+            if (!diceCube || !diceResult) return;
+            
+            gameState.totalDiceRolls++;
+            
+            diceCube.style.animation = 'none';
+            setTimeout(() => {
+                diceCube.style.animation = 'rollDice 1s ease-in-out';
+            }, 10);
+            
+            setTimeout(() => {
+                const roll = Math.floor(Math.random() * 6);
+                const outcome = diceOutcomes[roll];
+                
+                diceCube.textContent = roll + 1;
+                diceResult.innerHTML = `
+                    <div class="dice-outcome">
+                        <h4>${outcome.title}</h4>
+                        <p>${outcome.description}</p>
+                    </div>
+                `;
+                
+                setTimeout(() => {
+                    executeOutcomeAction(outcome.action);
+                }, 1000);
+                
+            }, 1000);
+        }
+
+        function executeOutcomeAction(action) {
+            switch(action) {
+                case 'showAIToolTip':
+                    showRandomAITool();
+                    break;
+                case 'showRevenueStrategy':
+                    showRevenueStrategy();
+                    break;
+                case 'showMarketInsight':
+                    showMarketInsight();
+                    break;
+                case 'showSkillTutorial':
+                    showSkillTutorial();
+                    break;
+                case 'showNetworkingTip':
+                    showNetworkingTip();
+                    break;
+                case 'autoComplete':
+                    setTimeout(() => {
+                        closeDiceModal();
+                        markComplete();
+                    }, 2000);
+                    break;
+            }
+        }
+
+        function showRandomAITool() {
+            const tools = Object.keys(aiToolsLibrary);
+            const randomTool = tools[Math.floor(Math.random() * tools.length)];
+            const toolData = aiToolsLibrary[randomTool];
+            
+            const diceResult = document.getElementById('diceResult');
+            if (diceResult) {
+                diceResult.innerHTML += `
+                    <div class="tool-discovery">
+                        <h5>🛠️ Tool Discovered: ${randomTool}</h5>
+                        <p>${toolData.description}</p>
+                        <div class="tool-prompt">
+                            <strong>Try this:</strong> ${toolData.prompts[0]}
+                        </div>
+                        <div class="tool-pricing">💰 ${toolData.pricing}</div>
+                    </div>
+                `;
+            }
+        }
+
+        function showRevenueStrategy() {
+            const archetype = gameState.selectedArchetype;
+            const strategies = {
+                echo: "💰 Revenue Boost: Consider creating a Patreon for recurring income. Offer exclusive behind-the-scenes content for $5-15/month tiers.",
+                relic: "💰 Revenue Boost: Bundle your products into seasonal collections. Customers pay 20% more for curated bundles vs individual items.",
+                net: "💰 Revenue Boost: Create a premium newsletter with industry insights. Charge $10-50/month for exclusive content and networking access.",
+                seer: "💰 Revenue Boost: Offer parent date night packages. Premium evening childcare rates are 50% higher than daytime rates."
+            };
+            
+            const diceResult = document.getElementById('diceResult');
+            if (diceResult) {
+                diceResult.innerHTML += `
+                    <div class="revenue-tip">
+                        ${strategies[archetype]}
+                    </div>
+                `;
+            }
+        }
+
+        function showMarketInsight() {
+            const insights = [
+                "📊 Market Insight: 73% of Gen Z discovers new products through social media. Focus your marketing there!",
+                "📊 Market Insight: Personalized products command 20% higher prices. Consider customization options.",
+                "📊 Market Insight: Video content gets 1200% more engagement than text and photos combined.",
+                "📊 Market Insight: 92% of consumers trust referrals from people they know. Build a referral system early."
+            ];
+            
+            const randomInsight = insights[Math.floor(Math.random() * insights.length)];
+            const diceResult = document.getElementById('diceResult');
+            if (diceResult) {
+                diceResult.innerHTML += `
+                    <div class="market-insight">
+                        ${randomInsight}
+                    </div>
+                `;
+            }
+        }
+
+        function showSkillTutorial() {
+            const archetype = gameState.selectedArchetype;
+            const tutorials = {
+                echo: "🎯 Skill Tutorial: Perfect your hook! Start videos with 'You won't believe what happened when...' to increase watch time by 40%.",
+                relic: "🎯 Skill Tutorial: Photography tip - Use natural light 2 hours before sunset for that perfect 'golden hour' product glow.",
+                net: "🎯 Skill Tutorial: Engagement hack - Ask questions that require more than yes/no answers. 'What's your biggest challenge with...' works great.",
+                seer: "🎯 Skill Tutorial: Safety protocol - Always have emergency contacts, first aid kit, and backup activities ready before any session."
+            };
+            
+            const diceResult = document.getElementById('diceResult');
+            if (diceResult) {
+                diceResult.innerHTML += `
+                    <div class="skill-tutorial">
+                        ${tutorials[archetype]}
+                    </div>
+                `;
+            }
+        }
+
+        function showNetworkingTip() {
+            const tips = [
+                "🤝 Networking Tip: Join Facebook groups in your niche. Provide value before promoting your business.",
+                "🤝 Networking Tip: Follow the 80/20 rule on social media: 80% valuable content, 20% self-promotion.",
+                "🤝 Networking Tip: Collaborate with non-competing businesses that serve your audience. Cross-promote for mutual benefit.",
+                "🤝 Networking Tip: Attend virtual networking events. They're less intimidating and you can connect globally."
+            ];
+            
+            const randomTip = tips[Math.floor(Math.random() * tips.length)];
+            const diceResult = document.getElementById('diceResult');
+            if (diceResult) {
+                diceResult.innerHTML += `
+                    <div class="networking-tip">
+                        ${randomTip}
+                    </div>
+                `;
+            }
+        }
+
+        function closeDiceModal() {
+            const diceModal = document.getElementById('diceModal');
+            const diceCube = document.getElementById('diceCube');
+            const diceResult = document.getElementById('diceResult');
+            
+            if (diceModal && diceModal.classList) {
+                diceModal.classList.remove('active');
+            }
+            if (diceCube) {
+                diceCube.textContent = '⚡';
+            }
+            if (diceResult) {
+                diceResult.textContent = 'Click the rune to roll your fate...';
+            }
+        }
+
+        function checkAchievements() {
+            if (!gameState.achievements) {
+                gameState.achievements = [];
+            }
+            
+            const newAchievements = [];
+            const completedCount = gameState.completedChallenges ? gameState.completedChallenges.length : 0;
+            
+            if (completedCount >= 1 && !gameState.achievements.includes('First Steps')) {
+                newAchievements.push('First Steps');
+            }
+            
+            if (completedCount >= 2 && !gameState.achievements.includes('Tool Master')) {
+                newAchievements.push('Tool Master');
+            }
+            
+            if (completedCount >= 4 && !gameState.achievements.includes('Vision Keeper')) {
+                newAchievements.push('Vision Keeper');
+            }
+            
+            newAchievements.forEach(achievement => {
+                gameState.achievements.push(achievement);
+                showAchievementNotification(achievement);
+            });
+            
+            saveGameState();
+        }
+
+        function showAchievementNotification(achievementName) {
+            const badge = achievementBadges.find(b => b.name === achievementName);
+            if (!badge) return;
+            
+            const notification = document.createElement('div');
+            notification.innerHTML = `
+                <div style="
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: linear-gradient(145deg, #333, #111);
+                    border: 3px solid #666;
+                    border-radius: 15px;
+                    padding: 20px;
+                    color: #f0f0f0;
+                    font-family: 'Cinzel', serif;
+                    z-index: 9999;
+                    transform: translateX(400px);
+                    transition: transform 0.5s ease;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                ">
+                    <div style="text-align: center;">
+                        <div style="font-size: 2rem; margin-bottom: 10px;">${badge.icon}</div>
+                        <div style="font-weight: 600; margin-bottom: 5px;">Achievement Unlocked!</div>
+                        <div style="font-size: 1.1rem; color: #ffd700;">${badge.name}</div>
+                        <div style="font-size: 0.9rem; color: #ccc; margin-top: 5px;">${badge.description}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.firstElementChild) {
+                    notification.firstElementChild.style.transform = 'translateX(0)';
+                }
+            }, 100);
+            
+            setTimeout(() => {
+                if (notification.firstElementChild) {
+                    notification.firstElementChild.style.transform = 'translateX(400px)';
+                }
+                setTimeout(() => {
+                    if (notification && notification.parentNode) {
+                        notification.remove();
+                    }
+                }, 500);
+            }, 4000);
+        }
+
+        // Save/Load game state - FIXED VERSION
+        function saveGameState() {
+            localStorage.setItem('aiBusinessBuilderState', JSON.stringify(gameState));
+        }
+
+        function loadGameState() {
+            const saved = localStorage.getItem('aiBusinessBuilderState');
+            if (saved) {
+                try {
+                    const parsedState = JSON.parse(saved);
+                    
+                    // Merge saved state with default state to ensure all properties exist
+                    gameState = {
+                        ...defaultGameState,  // Start with defaults
+                        ...parsedState       // Override with saved values
+                    };
+                    
+                    // Ensure arrays are initialized
+                    if (!Array.isArray(gameState.completedChallenges)) {
+                        gameState.completedChallenges = [];
+                    }
+                    if (!Array.isArray(gameState.achievements)) {
+                        gameState.achievements = [];
+                    }
+                    if (!Array.isArray(gameState.archetypesExplored)) {
+                        gameState.archetypesExplored = [];
+                    }
+                    if (!Array.isArray(gameState.challenges)) {
+                        gameState.challenges = [];
+                    }
+                    
+                    // Reload challenges if archetype is selected
+                    if (gameState.selectedArchetype && challengeData[gameState.selectedArchetype]) {
+                        gameState.challenges = challengeData[gameState.selectedArchetype];
+                        loadCurrentChallenge();
+                        createProgressTracker();
+                    }
+                } catch (e) {
+                    console.error('Error loading game state:', e);
+                    // Reset to default if there's an error
+                    gameState = { ...defaultGameState };
+                }
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initializeGame);
+    </script>
+</body>
+</html>
