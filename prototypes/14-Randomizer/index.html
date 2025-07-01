@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI Business Archetype Generator</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap');
+
     body {
       font-family: 'Cinzel', serif;
       background: radial-gradient(circle at center, #111, #000);
@@ -48,7 +50,7 @@
       background-color: #333;
       border-color: #ccc;
     }
-    .result, .desc, .tools, .dice-roll {
+    .result, .desc, .tools, .dice-roll, .trait {
       font-size: 1.1rem;
       color: #fefefe;
       margin-top: 10px;
@@ -62,7 +64,6 @@
       margin-top: 30px;
       text-align: center;
     }
-    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap');
   </style>
 </head>
 <body>
@@ -92,6 +93,7 @@
     <div class="result" id="result"></div>
     <div class="desc" id="desc"></div>
     <div class="tools" id="tools"></div>
+    <div class="trait" id="trait"></div>
     <div class="dice-roll" id="dice"></div>
   </div>
 
@@ -99,10 +101,17 @@
 
   <script>
     const adjectives = {
-      "Echo Wraith": ["Sonic", "Echoing", "Resonant", "Phantom"],
-      "Relicmancer": ["Fragrant", "Alchemical", "Sacred", "Runed"],
-      "Netstalker": ["Glitched", "Viral", "Encrypted", "Hyper"],
-      "Hearthbound Seer": ["Rooted", "Hearthlight", "Kindled", "Ancient"]
+      "Echo Wraith": ["Echoing", "Sonic", "Resonant", "Phantom"],
+      "Relicmancer": ["Fragrant", "Runed", "Mystic", "Alchemical"],
+      "Netstalker": ["Encrypted", "Glitched", "Pixel", "Hyper"],
+      "Hearthbound Seer": ["Kindled", "Rooted", "Hearthlight", "Ashen"]
+    };
+
+    const modifiers = {
+      "Echo Wraith": ["Velvet", "Glass", "Shadow", "Signal"],
+      "Relicmancer": ["Gilded", "Crystal", "Herbal", "Arcane"],
+      "Netstalker": ["Cyber", "Neon", "Quantum", "Hex"],
+      "Hearthbound Seer": ["Ember", "Bloom", "Flame", "Quiet"]
     };
 
     const nouns = {
@@ -112,6 +121,8 @@
       "Channel": ["Signal", "Path", "Echo", "Voice"],
       "Shop": ["Market", "Vault", "Cabinet", "Corner"]
     };
+
+    const suffixes = ["Works", "Nest", "System", "Syndicate", "Vault", "Cult", "Verse"];
 
     const descriptions = {
       "Studio": "A creative lab or ritual space for building custom products.",
@@ -128,19 +139,28 @@
       "Hearthbound Seer": ["Google Forms", "Canva", "ChatGPT"]
     };
 
+    const traits = {
+      "Echo Wraith": "Use trends, remix culture, and sound-based branding.",
+      "Relicmancer": "Focus on handmade, aesthetic, or sensory-driven offerings.",
+      "Netstalker": "Use viral tools, automation, and digital reach hacks.",
+      "Hearthbound Seer": "Leverage emotional storytelling and audience rituals."
+    };
+
     function generateName() {
       const arch = document.getElementById('archetype').value;
       const type = document.getElementById('businessType').value;
-      const adj = adjectives[arch];
-      const noun = nouns[type];
 
-      const randAdj = adj[Math.floor(Math.random() * adj.length)];
-      const randNoun = noun[Math.floor(Math.random() * noun.length)];
-      const result = `${randAdj} ${randNoun}`;
+      const adj = adjectives[arch];
+      const mod = modifiers[arch];
+      const noun = nouns[type];
+      const suff = suffixes;
+
+      const result = `${random(adj)} ${random(mod)} ${random(noun)} ${Math.random() < 0.5 ? '' : random(suff)}`.trim();
 
       document.getElementById('result').innerText = `✨ Your Business Name: ${result}`;
       document.getElementById('desc').innerText = `🧾 Description: ${result} is ${descriptions[type].toLowerCase()}`;
       document.getElementById('tools').innerText = `🔧 Suggested Tools: ${tools[arch].join(", ")}`;
+      document.getElementById('trait').innerText = `🧙 Strategic Tip: ${traits[arch]}`;
       document.getElementById('dice').innerText = '';
     }
 
@@ -156,7 +176,10 @@
       const result = rolls[Math.floor(Math.random() * rolls.length)];
       document.getElementById('dice').innerText = `🎲 Oracle Bonus: ${result}`;
     }
+
+    function random(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
   </script>
 </body>
 </html>
-
