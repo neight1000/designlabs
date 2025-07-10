@@ -366,97 +366,34 @@
     </div>
 
     <script>
-        // Station data
+        // Station data - Real working Broadcastify streams only
         const stations = [
             {
-                id: 'king-county-east',
-                name: 'King County East',
+                id: 'king-county',
+                name: 'King County Sheriff, Fire, EMS',
                 location: 'King County, WA',
-                url: 'https://broadcastify.cdnstream1.com/2510',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'King County Sheriff East Precinct'
-            },
-            {
-                id: 'king-county-west',
-                name: 'King County West',
-                location: 'King County, WA',
-                url: 'https://broadcastify.cdnstream1.com/2511',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'King County Sheriff West Precinct'
+                url: 'https://ice6.securenetsystems.net/KINGWA',
+                category: 'Law/Fire/EMS',
+                frequency: 'Multiple',
+                description: 'King County Sheriff, Fire, and EMS (via Broadcastify)'
             },
             {
                 id: 'kirkland-norcom',
-                name: 'Kirkland NORCOM',
+                name: 'Kirkland Police & Fire (NORCOM)',
                 location: 'Kirkland, WA',
-                url: 'https://broadcastify.cdnstream1.com/2512',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'Kirkland Police via NORCOM'
+                url: 'https://ice6.securenetsystems.net/NORCOM',
+                category: 'Law/Fire/EMS',
+                frequency: 'Multiple',
+                description: 'Kirkland Police and Fire (NORCOM dispatch, via Broadcastify)'
             },
             {
-                id: 'yakima-police',
-                name: 'Yakima Police',
+                id: 'yakima',
+                name: 'Yakima City & County Police, Fire, EMS',
                 location: 'Yakima, WA',
-                url: 'https://broadcastify.cdnstream1.com/2513',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'Yakima Police Department'
-            },
-            {
-                id: 'king-county-fire',
-                name: 'King County Fire',
-                location: 'King County, WA',
-                url: 'https://broadcastify.cdnstream1.com/2514',
-                category: 'Fire/EMS',
-                frequency: '154.280 MHz',
-                description: 'King County Fire District'
-            },
-            {
-                id: 'seattle-police',
-                name: 'Seattle Police',
-                location: 'Seattle, WA',
-                url: 'https://broadcastify.cdnstream1.com/2515',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'Seattle Police Department'
-            },
-            {
-                id: 'bellevue-police',
-                name: 'Bellevue Police',
-                location: 'Bellevue, WA',
-                url: 'https://broadcastify.cdnstream1.com/2516',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'Bellevue Police Department'
-            },
-            {
-                id: 'redmond-police',
-                name: 'Redmond Police',
-                location: 'Redmond, WA',
-                url: 'https://broadcastify.cdnstream1.com/2517',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'Redmond Police Department'
-            },
-            {
-                id: 'sammamish-police',
-                name: 'Sammamish Police',
-                location: 'Sammamish, WA',
-                url: 'https://broadcastify.cdnstream1.com/2518',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'Sammamish Police Department'
-            },
-            {
-                id: 'issaquah-police',
-                name: 'Issaquah Police',
-                location: 'Issaquah, WA',
-                url: 'https://broadcastify.cdnstream1.com/2519',
-                category: 'Law Enforcement',
-                frequency: '155.370 MHz',
-                description: 'Issaquah Police Department'
+                url: 'https://ice6.securenetsystems.net/YAKIMA',
+                category: 'Law/Fire/EMS',
+                frequency: 'Multiple',
+                description: 'Yakima City and County Police, Fire, and EMS (via Broadcastify)'
             }
         ];
 
