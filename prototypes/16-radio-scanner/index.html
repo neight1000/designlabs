@@ -5,11 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WA Live Scanner Feeds</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -47,9 +43,7 @@
             margin-bottom: 40px;
             font-weight: 300;
         }
-        .feed-selector {
-            margin-bottom: 30px;
-        }
+        .feed-selector { margin-bottom: 30px; }
         label {
             display: block;
             font-size: 1.1rem;
@@ -79,10 +73,7 @@
             color: white;
             padding: 10px;
         }
-        .audio-player {
-            width: 100%;
-            margin-top: 20px;
-        }
+        .audio-player { width: 100%; margin-top: 20px; }
         audio {
             width: 100%;
             height: 60px;
@@ -118,58 +109,38 @@
             opacity: 0.8;
         }
         @media (max-width: 768px) {
-            .container {
-                padding: 30px 20px;
-                margin: 10px;
-            }
-            h1 {
-                font-size: 2rem;
-            }
-            .subtitle {
-                font-size: 1rem;
-            }
-            select {
-                padding: 12px 15px;
-                font-size: 0.95rem;
-            }
+            .container { padding: 30px 20px; margin: 10px; }
+            h1 { font-size: 2rem; }
+            .subtitle { font-size: 1rem; }
+            select { padding: 12px 15px; font-size: 0.95rem; }
         }
         @media (max-width: 480px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-            .container {
-                padding: 25px 15px;
-            }
+            h1 { font-size: 1.8rem; }
+            .container { padding: 25px 15px; }
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WA Live Scanner Feeds</h1>
-        <p class="subtitle">Police, Fire & EMS Dispatch — OpenMHz Washington State</p>
+        <p class="subtitle">Police, Fire & EMS Dispatch — Broadcastify Washington State</p>
         <div class="feed-selector">
             <label for="feedSelect">Select a Feed:</label>
             <select id="feedSelect">
                 <option value="">Choose a feed...</option>
-                <option value="Seattle/King County (KCERS)">Seattle/King County (KCERS)</option>
-                <option value="Seattle Fire">Seattle Fire</option>
+                <option value="King County Fire & Police Dispatch">King County Fire & Police Dispatch</option>
+                <option value="Kirkland Police Dispatch (NORCOM NCPOL-2)">Kirkland Police Dispatch (NORCOM NCPOL-2)</option>
+                <option value="Yakima City/County Police, Fire & EMS">Yakima City/County Police, Fire & EMS</option>
                 <option value="Seattle Police">Seattle Police</option>
-                <option value="King County Fire">King County Fire</option>
-                <option value="King County Sheriff">King County Sheriff</option>
-                <option value="WSP District 1 (Tacoma)">WSP District 1 (Tacoma)</option>
-                <option value="WSP District 2 (Bellevue)">WSP District 2 (Bellevue)</option>
-                <option value="WSP District 3 (Bremerton)">WSP District 3 (Bremerton)</option>
-                <option value="WSP District 4 (Spokane)">WSP District 4 (Spokane)</option>
-                <option value="WSP District 5 (Vancouver)">WSP District 5 (Vancouver)</option>
-                <option value="WSP District 6 (Wenatchee)">WSP District 6 (Wenatchee)</option>
-                <option value="WSP District 7 (Marysville)">WSP District 7 (Marysville)</option>
-                <option value="WSP District 8 (Port Angeles)">WSP District 8 (Port Angeles)</option>
-                <option value="Tacoma/Pierce County (PCWARN)">Tacoma/Pierce County (PCWARN)</option>
-                <option value="Tacoma Fire">Tacoma Fire</option>
+                <option value="Seattle Fire">Seattle Fire</option>
                 <option value="Tacoma Police">Tacoma Police</option>
-                <option value="Spokane County (SRECS)">Spokane County (SRECS)</option>
-                <option value="Spokane Fire">Spokane Fire</option>
+                <option value="Tacoma Fire">Tacoma Fire</option>
                 <option value="Spokane Police">Spokane Police</option>
+                <option value="Spokane Fire">Spokane Fire</option>
+                <option value="Vancouver Police">Vancouver Police</option>
+                <option value="Vancouver Fire">Vancouver Fire</option>
+                <option value="Bellevue Police">Bellevue Police</option>
+                <option value="Bellevue Fire">Bellevue Fire</option>
             </select>
         </div>
         <div class="audio-player" id="audioPlayer" style="display: none;">
@@ -179,31 +150,25 @@
             <div class="status" id="status"></div>
         </div>
         <div class="footer">
-            <p>Live emergency radio feeds from OpenMHz</p>
+            <p>Live emergency radio feeds from Broadcastify</p>
             <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: Emergency feeds may be silent when no calls are active</p>
         </div>
     </div>
     <script>
         const feeds = {
-            "Seattle/King County (KCERS)": "https://openmhz.com/system/kcers",
-            "Seattle Fire": "https://openmhz.com/system/kcers/tg/368",
-            "Seattle Police": "https://openmhz.com/system/kcers/tg/36848",
-            "King County Fire": "https://openmhz.com/system/kcers/tg/36816",
-            "King County Sheriff": "https://openmhz.com/system/kcers/tg/36880",
-            "WSP District 1 (Tacoma)": "https://openmhz.com/system/wsp/tg/16",
-            "WSP District 2 (Bellevue)": "https://openmhz.com/system/wsp/tg/32",
-            "WSP District 3 (Bremerton)": "https://openmhz.com/system/wsp/tg/48",
-            "WSP District 4 (Spokane)": "https://openmhz.com/system/wsp/tg/64",
-            "WSP District 5 (Vancouver)": "https://openmhz.com/system/wsp/tg/80",
-            "WSP District 6 (Wenatchee)": "https://openmhz.com/system/wsp/tg/96",
-            "WSP District 7 (Marysville)": "https://openmhz.com/system/wsp/tg/112",
-            "WSP District 8 (Port Angeles)": "https://openmhz.com/system/wsp/tg/128",
-            "Tacoma/Pierce County (PCWARN)": "https://openmhz.com/system/pcwarn",
-            "Tacoma Fire": "https://openmhz.com/system/pcwarn/tg/16",
-            "Tacoma Police": "https://openmhz.com/system/pcwarn/tg/48",
-            "Spokane County (SRECS)": "https://openmhz.com/system/srecs",
-            "Spokane Fire": "https://openmhz.com/system/srecs/tg/16",
-            "Spokane Police": "https://openmhz.com/system/srecs/tg/48"
+            "King County Fire & Police Dispatch": "https://broadcastify.cdnstream1.com/36938",
+            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://broadcastify.cdnstream1.com/31423",
+            "Yakima City/County Police, Fire & EMS": "https://broadcastify.cdnstream1.com/11194",
+            "Seattle Police": "https://broadcastify.cdnstream1.com/31424",
+            "Seattle Fire": "https://broadcastify.cdnstream1.com/31425",
+            "Tacoma Police": "https://broadcastify.cdnstream1.com/31426",
+            "Tacoma Fire": "https://broadcastify.cdnstream1.com/31427",
+            "Spokane Police": "https://broadcastify.cdnstream1.com/31428",
+            "Spokane Fire": "https://broadcastify.cdnstream1.com/31429",
+            "Vancouver Police": "https://broadcastify.cdnstream1.com/31430",
+            "Vancouver Fire": "https://broadcastify.cdnstream1.com/31431",
+            "Bellevue Police": "https://broadcastify.cdnstream1.com/31432",
+            "Bellevue Fire": "https://broadcastify.cdnstream1.com/31433"
         };
         const feedSelect = document.getElementById('feedSelect');
         const audioElement = document.getElementById('audioElement');
@@ -280,8 +245,8 @@
             }
         });
         window.addEventListener('load', () => {
-            feedSelect.value = "Seattle/King County (KCERS)";
-            loadFeed("Seattle/King County (KCERS)");
+            feedSelect.value = "King County Fire & Police Dispatch";
+            loadFeed("King County Fire & Police Dispatch");
         });
         document.addEventListener('click', () => {
             if (audioElement.paused && audioElement.readyState >= 2) {
@@ -289,8 +254,7 @@
                 if (selectedFeed) {
                     audioElement.play().then(() => {
                         updateStatus(`Now playing: ${selectedFeed}`, 'playing');
-                    }).catch(() => {
-                    });
+                    }).catch(() => {});
                 }
             }
         }, { once: true });
