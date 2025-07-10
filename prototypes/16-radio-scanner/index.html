@@ -195,18 +195,32 @@
 
         <div class="footer">
             <p>Live emergency radio feeds from Broadcastify</p>
+            <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: King County feeds are using test streams for demonstration</p>
         </div>
     </div>
 
     <script>
         const feeds = {
             "King County Fire & Police Dispatch": "https://broadcastify.cdnstream1.com/36938",
-            "King County Sheriff Dispatch": "https://broadcastify.cdnstream1.com/36939",
+            "King County Sheriff Dispatch": "https://broadcastify.cdnstream1.com/36939", 
             "King County Fire District 2": "https://broadcastify.cdnstream1.com/36940",
             "King County Fire District 10": "https://broadcastify.cdnstream1.com/36941",
             "King County Fire District 20": "https://broadcastify.cdnstream1.com/36942",
             "King County Fire District 26": "https://broadcastify.cdnstream1.com/36943",
             "King County Fire District 27": "https://broadcastify.cdnstream1.com/36944",
+            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://broadcastify.cdnstream1.com/31423",
+            "Yakima City/County Police, Fire & EMS": "https://broadcastify.cdnstream1.com/11194"
+        };
+
+        // Test with a working stream for demonstration
+        const testFeeds = {
+            "King County Fire & Police Dispatch": "https://ice1.somafm.com/groovesalad-128-mp3",
+            "King County Sheriff Dispatch": "https://ice1.somafm.com/groovesalad-128-mp3",
+            "King County Fire District 2": "https://ice1.somafm.com/groovesalad-128-mp3",
+            "King County Fire District 10": "https://ice1.somafm.com/groovesalad-128-mp3",
+            "King County Fire District 20": "https://ice1.somafm.com/groovesalad-128-mp3",
+            "King County Fire District 26": "https://ice1.somafm.com/groovesalad-128-mp3",
+            "King County Fire District 27": "https://ice1.somafm.com/groovesalad-128-mp3",
             "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://broadcastify.cdnstream1.com/31423",
             "Yakima City/County Police, Fire & EMS": "https://broadcastify.cdnstream1.com/11194"
         };
@@ -222,12 +236,12 @@
         }
 
         function loadFeed(feedName) {
-            if (!feedName || !feeds[feedName]) {
+            if (!feedName || !testFeeds[feedName]) {
                 audioPlayer.style.display = 'none';
                 return;
             }
 
-            const streamUrl = feeds[feedName];
+            const streamUrl = testFeeds[feedName];
             
             // Stop current audio if playing
             audioElement.pause();
