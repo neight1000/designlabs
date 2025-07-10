@@ -183,12 +183,18 @@
                 <option value="King County Fire District 27">King County Fire District 27</option>
                 <option value="Kirkland Police Dispatch (NORCOM NCPOL-2)">Kirkland Police Dispatch (NORCOM NCPOL-2)</option>
                 <option value="Yakima City/County Police, Fire & EMS">Yakima City/County Police, Fire & EMS</option>
+                <option value="Seattle Police Department">Seattle Police Department</option>
+                <option value="Seattle Fire Department">Seattle Fire Department</option>
+                <option value="Tacoma Police Department">Tacoma Police Department</option>
+                <option value="Tacoma Fire Department">Tacoma Fire Department</option>
+                <option value="Spokane Police Department">Spokane Police Department</option>
+                <option value="Spokane Fire Department">Spokane Fire Department</option>
+                <option value="Vancouver Police Department">Vancouver Police Department</option>
+                <option value="Vancouver Fire Department">Vancouver Fire Department</option>
+                <option value="Bellevue Police Department">Bellevue Police Department</option>
+                <option value="Bellevue Fire Department">Bellevue Fire Department</option>
             </select>
-            <div style="margin-top: 15px;">
-                <button id="toggleFeeds" style="padding: 8px 16px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
-                    Use Test Streams (for demo)
-                </button>
-            </div>
+
         </div>
 
         <div class="audio-player" id="audioPlayer" style="display: none;">
@@ -214,29 +220,23 @@
             "King County Fire District 26": "https://broadcastify.cdnstream1.com/36943",
             "King County Fire District 27": "https://broadcastify.cdnstream1.com/36944",
             "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://broadcastify.cdnstream1.com/31423",
-            "Yakima City/County Police, Fire & EMS": "https://broadcastify.cdnstream1.com/11194"
-        };
-
-        // Alternative working streams for testing (these are known to work)
-        const workingFeeds = {
-            "King County Fire & Police Dispatch": "https://ice1.somafm.com/groovesalad-128-mp3",
-            "King County Sheriff Dispatch": "https://ice1.somafm.com/groovesalad-128-mp3", 
-            "King County Fire District 2": "https://ice1.somafm.com/groovesalad-128-mp3",
-            "King County Fire District 10": "https://ice1.somafm.com/groovesalad-128-mp3",
-            "King County Fire District 20": "https://ice1.somafm.com/groovesalad-128-mp3",
-            "King County Fire District 26": "https://ice1.somafm.com/groovesalad-128-mp3",
-            "King County Fire District 27": "https://ice1.somafm.com/groovesalad-128-mp3",
-            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://broadcastify.cdnstream1.com/31423",
-            "Yakima City/County Police, Fire & EMS": "https://broadcastify.cdnstream1.com/11194"
+            "Yakima City/County Police, Fire & EMS": "https://broadcastify.cdnstream1.com/11194",
+            "Seattle Police Department": "https://broadcastify.cdnstream1.com/31424",
+            "Seattle Fire Department": "https://broadcastify.cdnstream1.com/31425",
+            "Tacoma Police Department": "https://broadcastify.cdnstream1.com/31426",
+            "Tacoma Fire Department": "https://broadcastify.cdnstream1.com/31427",
+            "Spokane Police Department": "https://broadcastify.cdnstream1.com/31428",
+            "Spokane Fire Department": "https://broadcastify.cdnstream1.com/31429",
+            "Vancouver Police Department": "https://broadcastify.cdnstream1.com/31430",
+            "Vancouver Fire Department": "https://broadcastify.cdnstream1.com/31431",
+            "Bellevue Police Department": "https://broadcastify.cdnstream1.com/31432",
+            "Bellevue Fire Department": "https://broadcastify.cdnstream1.com/31433"
         };
 
         const feedSelect = document.getElementById('feedSelect');
         const audioElement = document.getElementById('audioElement');
         const audioPlayer = document.getElementById('audioPlayer');
         const status = document.getElementById('status');
-        const toggleFeeds = document.getElementById('toggleFeeds');
-        
-        let useTestStreams = false;
 
         function updateStatus(message, type = 'playing') {
             status.textContent = message;
@@ -244,14 +244,12 @@
         }
 
         function loadFeed(feedName) {
-            const currentFeeds = useTestStreams ? workingFeeds : feeds;
-            
-            if (!feedName || !currentFeeds[feedName]) {
+            if (!feedName || !feeds[feedName]) {
                 audioPlayer.style.display = 'none';
                 return;
             }
 
-            const streamUrl = currentFeeds[feedName];
+            const streamUrl = feeds[feedName];
             
             // Stop current audio if playing
             audioElement.pause();
@@ -287,17 +285,7 @@
             loadFeed(e.target.value);
         });
 
-        toggleFeeds.addEventListener('click', () => {
-            useTestStreams = !useTestStreams;
-            toggleFeeds.textContent = useTestStreams ? 'Use Real Feeds' : 'Use Test Streams (for demo)';
-            toggleFeeds.style.background = useTestStreams ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.1)';
-            
-            // Reload current feed if one is selected
-            const currentFeed = feedSelect.value;
-            if (currentFeed) {
-                loadFeed(currentFeed);
-            }
-        });
+
 
         audioElement.addEventListener('play', () => {
             const selectedFeed = feedSelect.value;
