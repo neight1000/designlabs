@@ -184,6 +184,11 @@
                 <option value="Kirkland Police Dispatch (NORCOM NCPOL-2)">Kirkland Police Dispatch (NORCOM NCPOL-2)</option>
                 <option value="Yakima City/County Police, Fire & EMS">Yakima City/County Police, Fire & EMS</option>
             </select>
+            <div style="margin-top: 15px;">
+                <button id="toggleFeeds" style="padding: 8px 16px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; border-radius: 6px; cursor: pointer; font-size: 0.9rem;">
+                    Use Test Streams (for demo)
+                </button>
+            </div>
         </div>
 
         <div class="audio-player" id="audioPlayer" style="display: none;">
@@ -195,7 +200,7 @@
 
         <div class="footer">
             <p>Live emergency radio feeds from Broadcastify</p>
-            <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: King County feeds are using test streams for demonstration</p>
+            <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: Stream URLs may need to be updated with actual working feeds</p>
         </div>
     </div>
 
@@ -212,10 +217,10 @@
             "Yakima City/County Police, Fire & EMS": "https://broadcastify.cdnstream1.com/11194"
         };
 
-        // Test with a working stream for demonstration
-        const testFeeds = {
+        // Alternative working streams for testing (these are known to work)
+        const workingFeeds = {
             "King County Fire & Police Dispatch": "https://ice1.somafm.com/groovesalad-128-mp3",
-            "King County Sheriff Dispatch": "https://ice1.somafm.com/groovesalad-128-mp3",
+            "King County Sheriff Dispatch": "https://ice1.somafm.com/groovesalad-128-mp3", 
             "King County Fire District 2": "https://ice1.somafm.com/groovesalad-128-mp3",
             "King County Fire District 10": "https://ice1.somafm.com/groovesalad-128-mp3",
             "King County Fire District 20": "https://ice1.somafm.com/groovesalad-128-mp3",
@@ -229,6 +234,9 @@
         const audioElement = document.getElementById('audioElement');
         const audioPlayer = document.getElementById('audioPlayer');
         const status = document.getElementById('status');
+        const toggleFeeds = document.getElementById('toggleFeeds');
+        
+        let useTestStreams = false;
 
         function updateStatus(message, type = 'playing') {
             status.textContent = message;
@@ -236,12 +244,14 @@
         }
 
         function loadFeed(feedName) {
-            if (!feedName || !testFeeds[feedName]) {
+            const currentFeeds = useTestStreams ? workingFeeds : feeds;
+            
+            if (!feedName || !currentFeeds[feedName]) {
                 audioPlayer.style.display = 'none';
                 return;
             }
 
-            const streamUrl = testFeeds[feedName];
+            const streamUrl = currentFeeds[feedName];
             
             // Stop current audio if playing
             audioElement.pause();
@@ -275,6 +285,18 @@
         // Event listeners
         feedSelect.addEventListener('change', (e) => {
             loadFeed(e.target.value);
+        });
+
+        toggleFeeds.addEventListener('click', () => {
+            useTestStreams = !useTestStreams;
+            toggleFeeds.textContent = useTestStreams ? 'Use Real Feeds' : 'Use Test Streams (for demo)';
+            toggleFeeds.style.background = useTestStreams ? 'rgba(76, 175, 80, 0.2)' : 'rgba(255, 255, 255, 0.1)';
+            
+            // Reload current feed if one is selected
+            const currentFeed = feedSelect.value;
+            if (currentFeed) {
+                loadFeed(currentFeed);
+            }
         });
 
         audioElement.addEventListener('play', () => {
