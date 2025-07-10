@@ -587,7 +587,7 @@
         <div class="station-selector">
             <label for="stationSelect">📻 Scanner Channel:</label>
             <select id="stationSelect" aria-label="Select scanner channel">
-                <option value="test">🎵 Test Audio Stream (Working)</option>
+                <option value="test">🎵 SomaFM Test Stream (Should Work)</option>
                 <option value="broadcastify-info">ℹ️ About Broadcastify Streams</option>
                 <option value="41164">🚒 Kirkland Fire/EMS (Try Direct)</option>
                 <option value="31423">👮 King County Police Northeast</option>
@@ -612,8 +612,10 @@
                 </div>
             </div>
             
-            <audio id="scanner" preload="none" crossorigin="anonymous" aria-label="Live scanner audio">
-                <source id="audioSource" src="https://broadcastify.cdnstream1.com/41164" type="audio/mpeg">
+            <audio id="scanner" preload="metadata" controls style="width: 100%; margin: 10px 0;" aria-label="Live scanner audio">
+                <source id="audioSource" src="https://ice1.somafm.com/groovesalad-256-mp3" type="audio/mpeg">
+                <source src="https://streams.publicradio.org/kqed.mp3" type="audio/mpeg">
+                <source src="https://playerservices.streamtheworld.com/api/livestream-redirect/KQEDFM.mp3" type="audio/mpeg">
                 Your browser does not support audio streaming.
             </audio>
             
@@ -672,14 +674,19 @@
 
         <div class="troubleshoot" id="troubleshoot" style="display: none;">
             <details>
-                <summary>🔧 Troubleshooting</summary>
+                <summary>🔧 Troubleshooting Scanner Access</summary>
                 <ul>
-                    <li>Check your internet connection</li>
-                    <li>Try refreshing the page</li>
-                    <li>Disable ad blockers for this site</li>
-                    <li>Try a different browser</li>
-                    <li>Check if audio is enabled in browser settings</li>
+                    <li><strong>Test Stream:</strong> Select "Test Audio Stream" to verify your browser can play audio</li>
+                    <li><strong>CORS Issues:</strong> Broadcastify blocks direct web access - use their official website</li>
+                    <li><strong>Alternative:</strong> Download the Broadcastify mobile app for reliable access</li>
+                    <li><strong>Browser Settings:</strong> Check if audio is allowed for this site</li>
+                    <li><strong>Ad Blockers:</strong> May interfere with stream loading</li>
+                    <li><strong>Network:</strong> Some corporate/school networks block streaming</li>
                 </ul>
+                <div class="access-links">
+                    <a href="https://www.broadcastify.com/listen/ctid/2974" target="_blank">📻 King County Feeds</a>
+                    <a href="https://play.google.com/store/apps/details?id=com.scannerradio" target="_blank">📱 Scanner Radio App</a>
+                </div>
             </details>
         </div>
     </div>
@@ -742,9 +749,9 @@
         // Station information
         const stations = {
             'test': { 
-                name: 'Test Audio Stream', 
-                desc: 'Working test stream to verify audio functionality',
-                url: 'https://streams.kqed.org/kqedradio'
+                name: 'SomaFM Groove Salad', 
+                desc: 'Reliable test stream - ambient electronic music',
+                url: 'https://ice1.somafm.com/groovesalad-256-mp3'
             },
             'broadcastify-info': {
                 name: 'Broadcastify Access Info',
@@ -869,7 +876,7 @@
             }
             
             if (selectedStation === 'test') {
-                updateStreamInfo('🎵 Test stream selected - this should work to verify your audio is functioning.');
+                updateStreamInfo('🎵 SomaFM test stream - ambient electronic music. Should work reliably to test your audio setup. You can also use the browser audio controls below.');
             } else {
                 updateStreamInfo('⚠️ Broadcastify streams may be blocked by CORS restrictions. If no audio plays, try the official Broadcastify website.');
             }
@@ -1556,7 +1563,7 @@
         
         // Set initial stream info
         if (stationSelect.value === 'test') {
-            updateStreamInfo('🎵 Test stream selected - this should work to verify your audio is functioning.');
+            updateStreamInfo('🎵 SomaFM test stream selected - ambient electronic music that should work reliably. You can also use the browser audio controls below to test.');
         } else {
             updateStreamInfo('⚠️ Broadcastify streams may be blocked by CORS restrictions. Try the test stream first.');
         }
