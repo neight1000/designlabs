@@ -313,7 +313,28 @@
                 <span id="currentTime">Loading...</span>
             </div>
         </div>
-                <div class="stations-grid" id="stationsGrid">
+        
+        <div class="audio-player" id="audioPlayer" style="display: none;">
+            <audio id="audioElement" controls preload="none">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="status" id="status">Select a station to start listening</div>
+            <div class="feed-info" id="feedInfo" style="display: none;">
+                <div class="listener-count">
+                    <div class="listener-icon"></div>
+                    <span id="listenerCount">Loading...</span>
+                </div>
+                <div class="activity-indicator">
+                    <div class="activity-dot" id="activityDot"></div>
+                    <span id="activityStatus">Checking activity...</span>
+                </div>
+                <button id="refreshInfo" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
+                    ↻
+                </button>
+            </div>
+        </div>
+        
+        <div class="stations-grid" id="stationsGrid">
             <!-- Station cards will be generated here -->
         </div>
         
@@ -331,25 +352,6 @@
                onmouseout="this.style.background='rgba(78, 205, 196, 0.2)'">
                 Refresh Station Data
             </button>
-        </div>
-        <div class="audio-player" id="audioPlayer" style="display: none;">
-            <audio id="audioElement" controls preload="none">
-                Your browser does not support the audio element.
-            </audio>
-            <div class="status" id="status"></div>
-            <div class="feed-info" id="feedInfo" style="display: none;">
-                <div class="listener-count">
-                    <div class="listener-icon"></div>
-                    <span id="listenerCount">Loading...</span>
-                </div>
-                <div class="activity-indicator">
-                    <div class="activity-dot" id="activityDot"></div>
-                    <span id="activityStatus">Checking activity...</span>
-                </div>
-                <button id="refreshInfo" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
-                    ↻
-                </button>
-            </div>
         </div>
         <div class="footer">
             <p>Live emergency radio feeds from Broadcastify</p>
@@ -416,7 +418,11 @@
 
         async function fetchFeedInfo(feedName) {
             const feedId = feedIds[feedName];
-            if (!feedId) return;
+            if (!feedId) {
+                listenerCount.textContent = 'No data available';
+                activityStatus.textContent = 'Unknown feed';
+                return;
+            }
 
             try {
                 // Show feed info
@@ -426,15 +432,40 @@
                 activityDot.className = 'activity-dot';
 
                 // Fetch listener count and activity from Broadcastify
-                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`);
+                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
                 const html = await response.text();
                 
-                // Parse listener count (this is a simplified approach)
-                const listenerMatch = html.match(/(\d+)\s+listeners?/i);
-                const listenerCountValue = listenerMatch ? listenerMatch[1] : 'Unknown';
+                // Parse listener count - look for various patterns
+                let listenerCountValue = 'Unknown';
+                const listenerPatterns = [
+                    /(\d+)\s+listeners?/i,
+                    /(\d+)\s+people\s+listening/i,
+                    /listeners?:\s*(\d+)/i
+                ];
                 
-                // Check if feed is active (has recent activity)
-                const isActive = html.includes('active') || html.includes('live') || listenerCountValue > 0;
+                for (const pattern of listenerPatterns) {
+                    const match = html.match(pattern);
+                    if (match) {
+                        listenerCountValue = match[1];
+                        break;
+                    }
+                }
+                
+                // Check if feed is active (has recent activity or listeners)
+                const isActive = html.includes('active') || 
+                               html.includes('live') || 
+                               html.includes('online') ||
+                               (listenerCountValue !== 'Unknown' && parseInt(listenerCountValue) > 0);
                 
                 // Update display
                 listenerCount.textContent = `${listenerCountValue} listeners`;
@@ -568,16 +599,49 @@
         // Fetch info for individual card
         async function fetchCardInfo(feedName, card) {
             const feedId = feedIds[feedName];
-            if (!feedId) return;
+            if (!feedId) {
+                const listenerCountEl = card.querySelector('.listener-count');
+                const activityTextEl = card.querySelector('.activity-text');
+                listenerCountEl.textContent = 'No data available';
+                activityTextEl.textContent = 'Unknown feed';
+                return;
+            }
 
             try {
-                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`);
+                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
                 const html = await response.text();
                 
-                const listenerMatch = html.match(/(\d+)\s+listeners?/i);
-                const listenerCountValue = listenerMatch ? listenerMatch[1] : 'Unknown';
+                // Parse listener count - look for various patterns
+                let listenerCountValue = 'Unknown';
+                const listenerPatterns = [
+                    /(\d+)\s+listeners?/i,
+                    /(\d+)\s+people\s+listening/i,
+                    /listeners?:\s*(\d+)/i
+                ];
                 
-                const isActive = html.includes('active') || html.includes('live') || listenerCountValue > 0;
+                for (const pattern of listenerPatterns) {
+                    const match = html.match(pattern);
+                    if (match) {
+                        listenerCountValue = match[1];
+                        break;
+                    }
+                }
+                
+                // Check if feed is active (has recent activity or listeners)
+                const isActive = html.includes('active') || 
+                               html.includes('live') || 
+                               html.includes('online') ||
+                               (listenerCountValue !== 'Unknown' && parseInt(listenerCountValue) > 0);
                 
                 const listenerCountEl = card.querySelector('.listener-count');
                 const activityTextEl = card.querySelector('.activity-text');
@@ -623,6 +687,10 @@
             audioElement.src = streamUrl;
             audioPlayer.style.display = 'block';
             updateStatus(`Loading ${feedName}...`, 'paused');
+            
+            // Show feed info and fetch data
+            feedInfo.style.display = 'flex';
+            fetchFeedInfo(feedName);
             
             // Update card states
             updateCardStates(feedName);
@@ -709,6 +777,13 @@
             
             // Add refresh button event listener
             document.getElementById('refreshData').addEventListener('click', refreshAllStationData);
+            
+            // Add refresh info button event listener
+            refreshInfo.addEventListener('click', () => {
+                if (currentFeed) {
+                    fetchFeedInfo(currentFeed);
+                }
+            });
         });
         document.addEventListener('click', () => {
             if (audioElement.paused && audioElement.readyState >= 2) {
