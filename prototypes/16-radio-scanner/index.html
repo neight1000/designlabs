@@ -252,7 +252,8 @@
                     })
                     .catch(error => {
                         console.error('Playback failed:', error);
-                        updateStatus(`Error loading stream. Please try again.`, 'error');
+                        // Don't show error for autoplay restrictions, just show ready to play
+                        updateStatus(`Ready to play: ${feedName} (click play button)`, 'paused');
                     });
             }
         }
@@ -288,7 +289,18 @@
         audioElement.addEventListener('canplay', () => {
             const selectedFeed = feedSelect.value;
             if (selectedFeed) {
-                updateStatus(`Connected: ${selectedFeed}`, 'playing');
+                if (audioElement.paused) {
+                    updateStatus(`Ready: ${selectedFeed} (click play to start)`, 'paused');
+                } else {
+                    updateStatus(`Connected: ${selectedFeed}`, 'playing');
+                }
+            }
+        });
+
+        audioElement.addEventListener('loadeddata', () => {
+            const selectedFeed = feedSelect.value;
+            if (selectedFeed && audioElement.paused) {
+                updateStatus(`Stream loaded: ${selectedFeed} (click play to start)`, 'paused');
             }
         });
 
@@ -298,6 +310,21 @@
             feedSelect.value = "King County Fire & Police Dispatch";
             loadFeed("King County Fire & Police Dispatch");
         });
+
+        // Add click handler for better user experience
+        document.addEventListener('click', () => {
+            // If audio is paused but ready, try to play on first user interaction
+            if (audioElement.paused && audioElement.readyState >= 2) {
+                const selectedFeed = feedSelect.value;
+                if (selectedFeed) {
+                    audioElement.play().then(() => {
+                        updateStatus(`Now playing: ${selectedFeed}`, 'playing');
+                    }).catch(() => {
+                        // User will need to click play manually
+                    });
+                }
+            }
+        }, { once: true });
     </script>
 </body>
 </html> 
