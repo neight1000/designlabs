@@ -388,9 +388,44 @@
             backdrop-filter: blur(10px);
         }
 
-        .station-selector select:focus {
-            outline: 2px solid #667eea;
-            outline-offset: 2px;
+        .stream-info {
+            background: rgba(255, 165, 2, 0.1);
+            border: 1px solid rgba(255, 165, 2, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .stream-info p {
+            margin-bottom: 8px;
+        }
+
+        .stream-info p:last-child {
+            margin-bottom: 0;
+        }
+
+        .access-links {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+
+        .access-links a {
+            background: var(--accent-gradient);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .access-links a:hover {
+            transform: translateY(-1px);
         }
 
         #waveformCanvas {
@@ -552,13 +587,19 @@
         <div class="station-selector">
             <label for="stationSelect">📻 Scanner Channel:</label>
             <select id="stationSelect" aria-label="Select scanner channel">
-                <option value="41164">🚒 Kirkland Fire/EMS (Most Active)</option>
+                <option value="test">🎵 Test Audio Stream (Working)</option>
+                <option value="broadcastify-info">ℹ️ About Broadcastify Streams</option>
+                <option value="41164">🚒 Kirkland Fire/EMS (Try Direct)</option>
                 <option value="31423">👮 King County Police Northeast</option>
                 <option value="40685">🚔 King County Police South</option>
                 <option value="41938">🔥 King County & Seattle Fire</option>
                 <option value="41913">📡 ValleyCom Multi-Agency</option>
-                <option value="36853">📻 Kirkland Live Scanner (Original)</option>
             </select>
+        </div>
+
+        <div class="stream-info" id="streamInfo">
+            <p><strong>⚠️ Known Issue:</strong> Broadcastify blocks direct web access due to CORS restrictions.</p>
+            <p><strong>✅ Recommended:</strong> Use the official Broadcastify website or mobile app for reliable access.</p>
         </div>
 
         <div class="audio-container">
@@ -656,6 +697,7 @@
         const audio = document.getElementById('scanner');
         const audioSource = document.getElementById('audioSource');
         const stationSelect = document.getElementById('stationSelect');
+        const streamInfo = document.getElementById('streamInfo');
         const playBtn = document.getElementById('playBtn');
         const retryBtn = document.getElementById('retryBtn');
         const testBtn = document.getElementById('testBtn');
@@ -699,12 +741,41 @@
 
         // Station information
         const stations = {
-            '41164': { name: 'Kirkland Fire/EMS', desc: 'Covers Kirkland, Bellevue, Bothell area' },
-            '31423': { name: 'King County Police Northeast', desc: 'NORCOM trunk group' },
-            '40685': { name: 'King County Police South', desc: 'Auburn, Kent, Renton, Tukwila area' },
-            '41938': { name: 'King County & Seattle Fire', desc: 'Combined fire systems' },
-            '41913': { name: 'ValleyCom Multi-Agency', desc: 'Multiple cities and departments' },
-            '36853': { name: 'Kirkland Live Scanner', desc: 'Original Kirkland feed' }
+            'test': { 
+                name: 'Test Audio Stream', 
+                desc: 'Working test stream to verify audio functionality',
+                url: 'https://streams.kqed.org/kqedradio'
+            },
+            'broadcastify-info': {
+                name: 'Broadcastify Access Info',
+                desc: 'Information about accessing live scanner feeds',
+                url: null
+            },
+            '41164': { 
+                name: 'Kirkland Fire/EMS', 
+                desc: 'Covers Kirkland, Bellevue, Bothell area',
+                url: 'https://broadcastify.cdnstream1.com/41164'
+            },
+            '31423': { 
+                name: 'King County Police Northeast', 
+                desc: 'NORCOM trunk group',
+                url: 'https://broadcastify.cdnstream1.com/31423'
+            },
+            '40685': { 
+                name: 'King County Police South', 
+                desc: 'Auburn, Kent, Renton, Tukwila area',
+                url: 'https://broadcastify.cdnstream1.com/40685'
+            },
+            '41938': { 
+                name: 'King County & Seattle Fire', 
+                desc: 'Combined fire systems',
+                url: 'https://broadcastify.cdnstream1.com/41938'
+            },
+            '41913': { 
+                name: 'ValleyCom Multi-Agency', 
+                desc: 'Multiple cities and departments',
+                url: 'https://broadcastify.cdnstream1.com/41913'
+            }
         };
 
         // Enhanced initialization
@@ -791,21 +862,56 @@
                 pauseStream();
             }
             
+            // Handle special cases
+            if (selectedStation === 'broadcastify-info') {
+                showBroadcastifyInfo();
+                return;
+            }
+            
+            if (selectedStation === 'test') {
+                updateStreamInfo('🎵 Test stream selected - this should work to verify your audio is functioning.');
+            } else {
+                updateStreamInfo('⚠️ Broadcastify streams may be blocked by CORS restrictions. If no audio plays, try the official Broadcastify website.');
+            }
+            
             // Update audio source
-            audioSource.src = `https://broadcastify.cdnstream1.com/${selectedStation}`;
-            audio.load();
-            
-            // Update status
-            updateStatus(`📻 Selected: ${stationInfo.name} - ${stationInfo.desc}`);
-            
-            // Reset retry count and hide retry button
-            retryCount = 0;
-            retryBtn.style.display = 'none';
-            testBtn.style.display = 'none';
-            isFirstPlay = true;
-            
-            // Update page title
-            document.title = `🔊 ${stationInfo.name}`;
+            if (stationInfo.url) {
+                audioSource.src = stationInfo.url;
+                audio.load();
+                
+                // Update status
+                updateStatus(`📻 Selected: ${stationInfo.name} - ${stationInfo.desc}`);
+                
+                // Reset retry count and hide retry button
+                retryCount = 0;
+                retryBtn.style.display = 'none';
+                testBtn.style.display = 'none';
+                isFirstPlay = true;
+                
+                // Update page title
+                document.title = `🔊 ${stationInfo.name}`;
+            }
+        }
+
+        function showBroadcastifyInfo() {
+            updateStreamInfo(`
+                <p><strong>🎧 How to Access King County Scanners:</strong></p>
+                <p><strong>Option 1:</strong> Visit <a href="https://www.broadcastify.com/listen/ctid/2974" target="_blank">Broadcastify King County</a> directly</p>
+                <p><strong>Option 2:</strong> Download the official Broadcastify app</p>
+                <p><strong>Option 3:</strong> Use a dedicated scanner app like Scanner Radio</p>
+                <div class="access-links">
+                    <a href="https://www.broadcastify.com/listen/feed/41164" target="_blank">🚒 Kirkland Fire/EMS</a>
+                    <a href="https://www.broadcastify.com/listen/feed/31423" target="_blank">👮 King County Police NE</a>
+                    <a href="https://www.broadcastify.com/listen/feed/40685" target="_blank">🚔 King County Police S</a>
+                </div>
+            `);
+            updateStatus('ℹ️ Select a working stream from the dropdown to test audio functionality');
+            document.title = '🔊 Scanner Access Information';
+        }
+
+        function updateStreamInfo(content) {
+            const streamInfo = document.getElementById('streamInfo');
+            streamInfo.innerHTML = content;
         }
 
         function setupAudioVisualization() {
@@ -1004,20 +1110,37 @@
             hideSpinner();
             
             let errorMessage = '❌ Connection failed';
+            let helpMessage = '';
             
             if (error.name === 'NotAllowedError') {
                 errorMessage = '🔒 Audio blocked - please check browser settings';
-                showTroubleshooting();
+                helpMessage = 'Try clicking the audio icon in your browser\'s address bar to allow audio.';
             } else if (error.name === 'NotSupportedError') {
                 errorMessage = '🚫 Audio format not supported';
+                helpMessage = 'Try the test stream to verify your browser supports audio.';
                 testBtn.style.display = 'inline-block';
             } else if (error.name === 'AbortError') {
-                errorMessage = '⚠️ Connection interrupted';
+                errorMessage = '⚠️ Connection interrupted - likely CORS restriction';
+                helpMessage = 'Broadcastify blocks direct web access. Use their official website instead.';
+            } else if (error.message && error.message.includes('CORS')) {
+                errorMessage = '🚫 CORS Policy Blocked';
+                helpMessage = 'Broadcastify prevents external websites from accessing their streams directly.';
             } else {
                 errorMessage = '📡 Stream temporarily unavailable';
+                helpMessage = 'This may be due to CORS restrictions or the feed being offline.';
             }
             
             updateStatus(errorMessage);
+            
+            // Show helpful information
+            if (helpMessage) {
+                updateStreamInfo(`
+                    <p><strong>⚠️ ${errorMessage}</strong></p>
+                    <p>${helpMessage}</p>
+                    <p><strong>Recommended:</strong> Visit <a href="https://www.broadcastify.com/listen/ctid/2974" target="_blank">Broadcastify.com</a> for reliable access to King County scanners.</p>
+                `);
+            }
+            
             retryBtn.style.display = 'inline-block';
             
             if (retryCount < maxRetries) {
@@ -1429,7 +1552,14 @@
         
         // Set initial status with selected station
         const initialStation = stations[stationSelect.value];
-        updateStatus(`📻 Ready: ${initialStation.name} - Click Play to start streaming`);
+        updateStatus(`📻 Ready: ${initialStation.name} - Click Play to test audio functionality`);
+        
+        // Set initial stream info
+        if (stationSelect.value === 'test') {
+            updateStreamInfo('🎵 Test stream selected - this should work to verify your audio is functioning.');
+        } else {
+            updateStreamInfo('⚠️ Broadcastify streams may be blocked by CORS restrictions. Try the test stream first.');
+        }
     </script>
 </body>
 </html>
