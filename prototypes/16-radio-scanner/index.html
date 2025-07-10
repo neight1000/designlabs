@@ -587,7 +587,9 @@
         <div class="station-selector">
             <label for="stationSelect">📻 Scanner Channel:</label>
             <select id="stationSelect" aria-label="Select scanner channel">
-                <option value="test">🎵 SomaFM Test Stream (Should Work)</option>
+                <option value="local-test">🔊 Local Audio Test (Generate Tone)</option>
+                <option value="test">📻 BBC World Service Test</option>
+                <option value="test2">📻 NPR Stream Test</option>
                 <option value="broadcastify-info">ℹ️ About Broadcastify Streams</option>
                 <option value="41164">🚒 Kirkland Fire/EMS (Try Direct)</option>
                 <option value="31423">👮 King County Police Northeast</option>
@@ -613,9 +615,7 @@
             </div>
             
             <audio id="scanner" preload="metadata" controls style="width: 100%; margin: 10px 0;" aria-label="Live scanner audio">
-                <source id="audioSource" src="https://ice1.somafm.com/groovesalad-256-mp3" type="audio/mpeg">
-                <source src="https://streams.publicradio.org/kqed.mp3" type="audio/mpeg">
-                <source src="https://playerservices.streamtheworld.com/api/livestream-redirect/KQEDFM.mp3" type="audio/mpeg">
+                <source id="audioSource" src="" type="audio/mpeg">
                 Your browser does not support audio streaming.
             </audio>
             
@@ -627,8 +627,8 @@
                     <button id="retryBtn" onclick="retryConnection()" style="display: none;" aria-label="Retry connection">
                         🔄 Retry
                     </button>
-                    <button id="testBtn" onclick="testAudio()" style="display: none;" aria-label="Test audio">
-                        🎵 Test Audio
+                    <button id="testBtn" onclick="testAudioDirectly()" aria-label="Test audio directly">
+                        🎵 Direct Test
                     </button>
                 </div>
                 
@@ -748,10 +748,20 @@
 
         // Station information
         const stations = {
+            'local-test': {
+                name: 'Local Audio Test',
+                desc: 'Generate test tone locally (no internet required)',
+                url: null
+            },
             'test': { 
-                name: 'SomaFM Groove Salad', 
-                desc: 'Reliable test stream - ambient electronic music',
-                url: 'https://ice1.somafm.com/groovesalad-256-mp3'
+                name: 'BBC Radio Stream', 
+                desc: 'BBC World Service - should work without CORS issues',
+                url: 'https://stream.live.vc.bbcmedia.co.uk/bbc_world_service'
+            },
+            'test2': {
+                name: 'NPR Stream',
+                desc: 'NPR live stream - alternative test',
+                url: 'https://npr-ice.streamguys1.com/live.mp3'
             },
             'broadcastify-info': {
                 name: 'Broadcastify Access Info',
@@ -875,29 +885,31 @@
                 return;
             }
             
-            if (selectedStation === 'test') {
-                updateStreamInfo('🎵 SomaFM test stream - ambient electronic music. Should work reliably to test your audio setup. You can also use the browser audio controls below.');
-            } else {
-                updateStreamInfo('⚠️ Broadcastify streams may be blocked by CORS restrictions. If no audio plays, try the official Broadcastify website.');
-            }
-            
-            // Update audio source
-            if (stationInfo.url) {
+            if (selectedStation === 'local-test') {
+                updateStreamInfo('🔊 Local audio test - generates a tone using your browser\'s Web Audio API. This will definitely work if your audio system is functioning.');
+                // Don't set any source for local test - we'll generate audio programmatically
+                audioSource.src = '';
+            } else if (selectedStation === 'test' || selectedStation === 'test2') {
+                updateStreamInfo('📻 Public radio test stream - should work without CORS restrictions. These are major broadcasters that allow web access.');
                 audioSource.src = stationInfo.url;
                 audio.load();
-                
-                // Update status
-                updateStatus(`📻 Selected: ${stationInfo.name} - ${stationInfo.desc}`);
-                
-                // Reset retry count and hide retry button
-                retryCount = 0;
-                retryBtn.style.display = 'none';
-                testBtn.style.display = 'none';
-                isFirstPlay = true;
-                
-                // Update page title
-                document.title = `🔊 ${stationInfo.name}`;
+            } else {
+                updateStreamInfo('⚠️ Broadcastify streams may be blocked by CORS restrictions. If no audio plays, try the official Broadcastify website.');
+                audioSource.src = stationInfo.url;
+                audio.load();
             }
+            
+            // Update status
+            updateStatus(`📻 Selected: ${stationInfo.name} - ${stationInfo.desc}`);
+            
+            // Reset retry count and hide retry button
+            retryCount = 0;
+            retryBtn.style.display = 'none';
+            testBtn.style.display = 'none';
+            isFirstPlay = true;
+            
+            // Update page title
+            document.title = `🔊 ${stationInfo.name}`;
         }
 
         function showBroadcastifyInfo() {
@@ -1071,11 +1083,9 @@
         }
 
         async function togglePlay() {
-            if (!userInteracted) {
-                updateStatus('🎯 Click Play to start - browser requires user interaction');
-                return;
-            }
-
+            // Ensure user interaction is recorded
+            userInteracted = true;
+            
             if (isPlaying) {
                 pauseStream();
             } else {
@@ -1103,6 +1113,11 @@
         }
 
         function pauseStream() {
+            if (stationSelect.value === 'local-test') {
+                stopLocalAudioTest();
+                return;
+            }
+            
             audio.pause();
             isPlaying = false;
             playBtn.textContent = '▶️ Play Stream';
@@ -1190,30 +1205,43 @@
             }, 8000);
         }
 
-        async function testAudio() {
+        async function testAudioDirectly() {
             try {
-                // Create a simple test tone
-                if (!audioContext) {
-                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                updateStatus('🔊 Testing Web Audio API directly...');
+                
+                // Create audio context
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
                 }
                 
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
+                // Create a simple 1-second beep
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
                 
                 oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
+                gainNode.connect(audioCtx.destination);
                 
-                oscillator.frequency.value = 440; // A note
-                gainNode.gain.value = 0.1;
+                oscillator.frequency.value = 800; // Higher pitch beep
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+                gainNode.gain.linearRampToValueAtTime(0.1, audioCtx.currentTime + 0.1);
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.9);
                 
                 oscillator.start();
-                setTimeout(() => oscillator.stop(), 500);
+                oscillator.stop(audioCtx.currentTime + 1);
                 
-                updateStatus('🎵 Test tone played - audio system working');
-                testBtn.style.display = 'none';
+                updateStatus('🔊 Direct test beep played - did you hear it?');
+                
+                setTimeout(() => {
+                    updateStatus('✅ If you heard the beep, your audio system works fine!');
+                }, 1100);
                 
             } catch (error) {
-                updateStatus('🔇 Audio system not available');
+                console.error('Direct audio test failed:', error);
+                updateStatus('❌ Direct audio test failed: ' + error.message);
             }
         }
 
