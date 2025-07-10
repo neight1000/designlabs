@@ -1,11 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en-US">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WA Live Scanner Feeds</title>
+    <meta name="description" content="Live emergency radio feeds for Police, Fire & EMS Dispatch in Washington State.">
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #4ecdc4;
+            --secondary: #ff6b6b;
+            --light-bg: rgba(255,255,255,0.1);
+            --container-bg: rgba(255,255,255,0.05);
+            --border-light: rgba(255,255,255,0.2);
+            --border-mid: rgba(255,255,255,0.1);
+            --shadow: 0 8px 32px rgba(0,0,0,0.3);
+            --active: #00ff00;
+            --quiet: #b8c5d6;
+            --error: #e57373;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box;}
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -13,90 +26,87 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
         }
-        .container {
-            max-width: 600px;
+        header, footer {
             width: 100%;
             text-align: center;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 40px 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--container-bg);
+            padding: 1.5rem 0;
         }
-        
-        .info-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding: 15px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 0.9rem;
-        }
-        
-        .location-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .location-icon {
-            width: 16px;
-            height: 16px;
-            background: #4ecdc4;
-            border-radius: 50%;
-        }
-        
-        .time-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .time-icon {
-            width: 16px;
-            height: 16px;
-            background: #ff6b6b;
-            border-radius: 50%;
-        }
-        
-
-        h1 {
+        header h1 {
             font-size: 2.5rem;
             font-weight: 700;
-            margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background: linear-gradient(45deg, var(--secondary), var(--primary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            margin-bottom: .4em;
         }
-        .subtitle {
+        header .subtitle {
             font-size: 1.1rem;
-            color: #b8c5d6;
-            margin-bottom: 40px;
+            color: var(--quiet);
             font-weight: 300;
         }
-
-        .audio-player { width: 100%; margin-top: 20px; }
-        audio {
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
             width: 100%;
-            height: 60px;
+            max-width: 700px;
+            background: var(--light-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2em 2em 1em 2em;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-light);
+            margin: 2em auto 1em auto;
+        }
+        nav[aria-label="Feed Search"] {
+            margin-bottom: 1em;
+            display: flex;
+            gap: 1em;
+            justify-content: center;
+        }
+        input[type="search"] {
+            padding: .5em .9em;
+            border-radius: 7px;
+            border: 1px solid var(--border-mid);
+            background: #232b47;
+            color: white;
+            font-size: 1rem;
+        }
+        .info-bar {
+            display: flex; justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5em;
+            padding: 1em 1.5em;
+            background: var(--container-bg);
             border-radius: 12px;
-            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border-mid);
+            font-size: .9rem;
+            flex-wrap: wrap;
+        }
+        .info-bar > div { display: flex; align-items: center; gap: 8px; }
+        .location-icon, .time-icon {
+            width: 16px; height: 16px; border-radius: 50%;
+        }
+        .location-icon { background: var(--primary);}
+        .time-icon { background: var(--secondary);}
+        .audio-player { width: 100%; margin-top: 1em; }
+        audio {
+            width: 100%; height: 60px;
+            border-radius: 12px;
+            background: var(--light-bg);
         }
         .status {
-            margin-top: 20px;
-            padding: 15px;
+            margin-top: 1.2em;
+            padding: 1em;
             border-radius: 10px;
             font-weight: 500;
-            transition: all 0.3s ease;
+            transition: all .3s ease;
         }
         .status.playing {
             background: rgba(76, 175, 80, 0.2);
@@ -111,376 +121,205 @@
         .status.error {
             background: rgba(244, 67, 54, 0.2);
             border: 1px solid rgba(244, 67, 54, 0.3);
-            color: #e57373;
+            color: var(--error);
         }
-        .footer {
-            margin-top: 30px;
-            font-size: 0.9rem;
-            color: #8b9dc3;
-            opacity: 0.8;
-        }
-        
         .feed-info {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 15px;
-            padding: 10px 15px;
-            background: rgba(255, 255, 255, 0.05);
+            margin-top: 1em;
+            padding: .7em 1.2em;
+            background: var(--container-bg);
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: .95em;
         }
-        
-        .listener-count {
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        .listener-count, .activity-indicator {
+            display: flex; align-items: center; gap: 6px;
         }
-        
-        .listener-icon {
-            width: 12px;
-            height: 12px;
-            background: #4ecdc4;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
+        .listener-icon, .activity-dot {
+            width: 12px; height: 12px; border-radius: 50%;
         }
-        
-        .activity-indicator {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .activity-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ff6b6b;
-            animation: blink 1.5s infinite;
-        }
-        
-        .activity-dot.active {
-            background: #4ecdc4;
-        }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.3; }
-        }
-        
+        .listener-icon { background: var(--primary); animation: pulse 2s infinite;}
+        .activity-dot { background: var(--secondary); animation: blink 1.5s infinite;}
+        .activity-dot.active { background: var(--primary);}
+        @keyframes pulse { 0% {opacity: 1;} 50% {opacity: .5;} 100% {opacity: 1;} }
+        @keyframes blink { 0%,50% {opacity: 1;} 51%,100% {opacity: .3;} }
         .stations-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            gap: 1.3em;
+            margin-top: 2em;
         }
-        
         .station-card {
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: var(--light-bg);
+            border: 1px solid var(--border-light);
             border-radius: 15px;
-            padding: 20px;
+            padding: 1.2em;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all .3s ease;
             backdrop-filter: blur(10px);
+            position: relative;
         }
-        
-        .station-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-            border-color: #4ecdc4;
+        .station-card:hover, .station-card.active {
+            border-color: var(--primary);
+            background: rgba(78, 205, 196, 0.13);
+            z-index: 2;
         }
-        
-        .station-card.active {
-            border-color: #4ecdc4;
-            background: rgba(78, 205, 196, 0.1);
-        }
-        
         .station-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: .8em;
         }
-        
         .station-name {
             font-size: 1.1rem;
             font-weight: 600;
             color: white;
-            margin-bottom: 5px;
+            margin-bottom: 3px;
         }
-        
         .station-type {
-            font-size: 0.8rem;
-            color: #4ecdc4;
+            font-size: .8rem;
+            color: var(--primary);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: .5px;
         }
-        
         .station-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
-            font-size: 0.9rem;
+            font-size: .97em;
+            margin-bottom: .7em;
         }
-        
-        .listener-info {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .activity-status {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #ff6b6b;
-            animation: blink 1.5s infinite;
-        }
-        
-        .status-dot.active {
-            background: #4ecdc4;
-        }
-        
+        .listener-info, .activity-status { display: flex; align-items: center; gap: 5px;}
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--secondary); animation: blink 1.5s infinite;}
+        .status-dot.active { background: var(--primary);}
         .play-button {
             width: 100%;
-            padding: 12px;
+            padding: .7em;
             background: rgba(78, 205, 196, 0.2);
             border: 1px solid rgba(78, 205, 196, 0.3);
             border-radius: 8px;
             color: white;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all .3s ease;
         }
-        
-        .play-button:hover {
-            background: rgba(78, 205, 196, 0.3);
-        }
-        
+        .play-button:hover, .play-button:focus { background: rgba(78, 205, 196, 0.3);}
         .play-button.playing {
             background: rgba(76, 175, 80, 0.3);
             border-color: rgba(76, 175, 80, 0.5);
         }
-        
-        /* Vintage CB Radio Visualizer */
-        .radio-visualizer {
-            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-            border: 2px solid #333;
-            border-radius: 8px;
-            padding: 15px;
-            margin: 15px 0;
-            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
-            position: relative;
-            overflow: hidden;
-        }
-        
+        /* Visualizer */
+        .radio-visualizer { background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            border: 2px solid #333; border-radius: 8px; padding: 15px; margin: 1em 0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); position: relative; overflow: hidden;}
         .visualizer-display {
-            background: #000;
-            border: 1px solid #444;
-            border-radius: 4px;
-            height: 60px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            padding: 5px;
-            gap: 2px;
+            background: #000; border: 1px solid #444; border-radius: 4px; height: 60px;
+            display: flex; align-items: flex-end; justify-content: space-between; padding: 5px; gap: 2px;
         }
-        
-        .frequency-display {
-            background: #000;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 8px 12px;
-            margin-bottom: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            color: #00ff00;
-            text-align: center;
-            text-shadow: 0 0 5px #00ff00;
-            letter-spacing: 2px;
+        .frequency-display { background: #000; border: 1px solid #444; border-radius: 4px; padding: 8px 12px; margin-bottom: 10px; font-family: 'Courier New', monospace; font-size: 14px; color: var(--active); text-align:center; letter-spacing:2px;}
+        .signal-bar { background: linear-gradient(180deg, var(--active) 0%, #ffff00 50%, var(--secondary) 100%); border-radius: 2px; min-width: 8px; transition: height .1s; box-shadow: 0 0 5px currentColor;}
+        .signal-bar.inactive { background: #333; box-shadow: none;}
+        .radio-label, .channel-indicator, .squelch-indicator {
+            position: absolute; font-size: 10px; font-family: 'Courier New', monospace;
         }
-        
-        .signal-bar {
-            background: linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%);
-            border-radius: 2px;
-            min-width: 8px;
-            transition: height 0.1s ease;
-            box-shadow: 0 0 5px currentColor;
+        .radio-label { top: 5px; right: 10px; color: #666; text-transform: uppercase;}
+        .channel-indicator { bottom: 5px; left: 10px; color: var(--active);}
+        .squelch-indicator { bottom: 5px; right: 10px; color: var(--secondary); }
+        .squelch-indicator.active { color: var(--active); animation: squelch .5s ease-in-out infinite alternate;}
+        @keyframes squelch { 0% {opacity: .5;} 100% {opacity: 1;} }
+        .radio-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;}
+        .radio-control { background: #222; border: 1px solid #444; border-radius: 4px; padding: 5px; text-align: center; font-size: 10px; color: #ccc;}
+        .help {
+            margin: 2em 0 0 0;
+            padding: 1em;
+            background: var(--container-bg);
+            border-radius: 10px;
+            color: #b8c5d6;
+            font-size: .98em;
         }
-        
-        .signal-bar.inactive {
-            background: #333;
-            box-shadow: none;
+        .footer {
+            font-size: .92rem;
+            color: #8b9dc3;
+            opacity: .85;
         }
-        
-        .radio-label {
-            position: absolute;
-            top: 5px;
-            right: 10px;
-            font-size: 10px;
-            color: #666;
-            font-family: 'Courier New', monospace;
-            text-transform: uppercase;
-        }
-        
-        .channel-indicator {
-            position: absolute;
-            bottom: 5px;
-            left: 10px;
-            font-size: 10px;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .squelch-indicator {
-            position: absolute;
-            bottom: 5px;
-            right: 10px;
-            font-size: 10px;
-            color: #ff6b6b;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .squelch-indicator.active {
-            color: #00ff00;
-            animation: squelch 0.5s ease-in-out infinite alternate;
-        }
-        
-        @keyframes squelch {
-            0% { opacity: 0.5; }
-            100% { opacity: 1; }
-        }
-        
-        .radio-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .radio-control {
-            background: #222;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 5px;
-            text-align: center;
-            font-size: 10px;
-            color: #ccc;
-            font-family: 'Courier New', monospace;
-        }
+        .footer small { color: #ffb74d; font-size: .85em;}
         @media (max-width: 768px) {
-            .container { padding: 30px 20px; margin: 10px; }
-            h1 { font-size: 2rem; }
-            .subtitle { font-size: 1rem; }
-            select { padding: 12px 15px; font-size: 0.95rem; }
-            
-            .info-bar {
-                flex-direction: column;
-                gap: 10px;
-                padding: 12px 15px;
-            }
-            
-            .info-bar > div {
-                width: 100%;
-                justify-content: center;
-            }
+            .container { padding: 1.5em .9em; }
+            header h1 { font-size: 2rem;}
         }
         @media (max-width: 480px) {
-            h1 { font-size: 1.8rem; }
-            .container { padding: 25px 15px; }
+            header h1 { font-size: 1.3rem;}
+            .container { padding: 1em .3em;}
+            .stations-grid { gap: .7em;}
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <header role="banner">
         <h1>WA Live Scanner Feeds</h1>
-        <p class="subtitle">Police, Fire & EMS Dispatch — Washington State</p>
-        
-        <div class="info-bar" id="infoBar">
-            <div class="location-info">
-                <div class="location-icon"></div>
-                <span id="location">Getting location...</span>
+        <div class="subtitle">Police, Fire &amp; EMS Dispatch — Washington State</div>
+    </header>
+    <main role="main">
+        <div class="container" aria-label="Live Scanner Feeds">
+            <nav aria-label="Feed Search">
+                <input type="search" id="feedSearch" placeholder="Search for city, agency, or type..." aria-label="Search feeds">
+                <button id="clearSearch" aria-label="Clear search" type="button" title="Clear search" style="display:none;">✖</button>
+            </nav>
+            <div class="info-bar" id="infoBar">
+                <div><span class="location-icon" aria-hidden="true"></span><span id="location">Getting location…</span></div>
+                <div><span class="time-icon" aria-hidden="true"></span><span id="currentTime">Loading…</span></div>
             </div>
-            <div class="time-info">
-                <div class="time-icon"></div>
-                <span id="currentTime">Loading...</span>
+            <section class="audio-player" id="audioPlayer" style="display: none;" aria-live="polite">
+                <div class="radio-visualizer" aria-label="Vintage CB Radio Visualizer">
+                    <div class="radio-label">Scanner</div>
+                    <div class="frequency-display" id="frequencyDisplay">--.--- MHz</div>
+                    <div class="visualizer-display" id="visualizerDisplay"></div>
+                    <div class="channel-indicator" id="channelIndicator">CH: --</div>
+                    <div class="squelch-indicator" id="squelchIndicator">SQL</div>
+                    <div class="radio-grid">
+                        <div class="radio-control" title="Volume (adjust in your browser)">VOL</div>
+                        <div class="radio-control" title="Squelch threshold (visual only)">SQL</div>
+                    </div>
+                </div>
+                <audio id="audioElement" controls preload="none" aria-label="Live scanner stream">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="status" id="status" aria-live="polite">Select a station to start listening</div>
+                <div class="feed-info" id="feedInfo" style="display:none;">
+                    <div class="listener-count">
+                        <span class="listener-icon" aria-hidden="true"></span>
+                        <span id="listenerCount">Loading…</span>
+                    </div>
+                    <div class="activity-indicator">
+                        <span class="activity-dot" id="activityDot" aria-hidden="true"></span>
+                        <span id="activityStatus">Checking activity…</span>
+                    </div>
+                    <button id="refreshInfo" aria-label="Refresh feed info" title="Refresh feed info" type="button">↻</button>
+                </div>
+            </section>
+            <section id="stationsSection" aria-label="Scanner Feeds">
+                <div class="stations-grid" id="stationsGrid"></div>
+            </section>
+            <div style="text-align:center;margin-top:1em;">
+                <button id="refreshData" type="button" aria-label="Refresh all feeds">Refresh Station Data</button>
             </div>
+            <aside class="help" aria-label="How to use">
+                <strong>How to use:</strong>
+                <ul>
+                    <li>Browse or search for the agency or city feed you want.</li>
+                    <li>Click <b>Play</b> to listen to a feed. "Now Playing" is highlighted.</li>
+                    <li>Status and listener count update live.</li>
+                    <li>If a feed is quiet, it may be due to no current emergency calls.</li>
+                </ul>
+            </aside>
         </div>
-        
-        <div class="audio-player" id="audioPlayer" style="display: none;">
-            <div class="radio-visualizer">
-                <div class="radio-label">Scanner</div>
-                <div class="frequency-display" id="frequencyDisplay">--.--- MHz</div>
-                <div class="visualizer-display" id="visualizerDisplay">
-                    <!-- Signal bars will be generated here -->
-                </div>
-                <div class="channel-indicator" id="channelIndicator">CH: --</div>
-                <div class="squelch-indicator" id="squelchIndicator">SQL</div>
-                <div class="radio-grid">
-                    <div class="radio-control">VOL</div>
-                    <div class="radio-control">SQL</div>
-                </div>
-            </div>
-            <audio id="audioElement" controls preload="none">
-                Your browser does not support the audio element.
-            </audio>
-            <div class="status" id="status">Select a station to start listening</div>
-            <div class="feed-info" id="feedInfo" style="display: none;">
-                <div class="listener-count">
-                    <div class="listener-icon"></div>
-                    <span id="listenerCount">Loading...</span>
-                </div>
-                <div class="activity-indicator">
-                    <div class="activity-dot" id="activityDot"></div>
-                    <span id="activityStatus">Checking activity...</span>
-                </div>
-                <button id="refreshInfo" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
-                    ↻
-                </button>
-            </div>
-        </div>
-        
-        <div class="stations-grid" id="stationsGrid">
-            <!-- Station cards will be generated here -->
-        </div>
-        
-        <div style="text-align: center; margin-top: 20px;">
-            <button id="refreshData" style="
-                background: rgba(78, 205, 196, 0.2);
-                border: 1px solid rgba(78, 205, 196, 0.3);
-                color: white;
-                padding: 10px 20px;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: all 0.3s ease;
-            " onmouseover="this.style.background='rgba(78, 205, 196, 0.3)'" 
-               onmouseout="this.style.background='rgba(78, 205, 196, 0.2)'">
-                Refresh Station Data
-            </button>
-        </div>
-        <div class="footer">
-            <p>Live emergency radio feeds from Broadcastify</p>
-            <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: Emergency feeds may be silent when no calls are active</p>
-        </div>
-    </div>
+    </main>
+    <footer role="contentinfo" class="footer">
+        <div>Live emergency radio feeds from Broadcastify</div>
+        <small>Note: Feeds may be silent when no calls are active. This project is for informational/educational purposes only.</small>
+    </footer>
     <script>
+        // Feed data
         const feeds = {
             "King County Fire & Police Dispatch": "https://broadcastify.cdnstream1.com/36938",
             "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://broadcastify.cdnstream1.com/31423",
@@ -494,11 +333,8 @@
             "Vancouver Police": "https://broadcastify.cdnstream1.com/31430",
             "Vancouver Fire": "https://broadcastify.cdnstream1.com/31431",
             "Bellevue Police": "https://broadcastify.cdnstream1.com/31432",
-            "Bellevue Fire": "https://broadcastify.cdnstream1.com/31433",
-
+            "Bellevue Fire": "https://broadcastify.cdnstream1.com/31433"
         };
-
-        // Feed IDs for Broadcastify API (NOAA feeds don't have listener counts)
         const feedIds = {
             "King County Fire & Police Dispatch": "36938",
             "Kirkland Police Dispatch (NORCOM NCPOL-2)": "31423",
@@ -514,7 +350,37 @@
             "Bellevue Police": "31432",
             "Bellevue Fire": "31433"
         };
-        const feedSelect = document.getElementById('feedSelect');
+        const frequencies = {
+            "King County Fire & Police Dispatch": "154.430",
+            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "155.370",
+            "Yakima City/County Police, Fire & EMS": "155.475",
+            "Seattle Police": "154.920",
+            "Seattle Fire": "154.280",
+            "Tacoma Police": "155.370",
+            "Tacoma Fire": "154.280",
+            "Spokane Police": "155.370",
+            "Spokane Fire": "154.280",
+            "Vancouver Police": "155.370",
+            "Vancouver Fire": "154.280",
+            "Bellevue Police": "155.370",
+            "Bellevue Fire": "154.280"
+        };
+        const channels = {
+            "King County Fire & Police Dispatch": "01",
+            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "02",
+            "Yakima City/County Police, Fire & EMS": "03",
+            "Seattle Police": "04",
+            "Seattle Fire": "05",
+            "Tacoma Police": "06",
+            "Tacoma Fire": "07",
+            "Spokane Police": "08",
+            "Spokane Fire": "09",
+            "Vancouver Police": "10",
+            "Vancouver Fire": "11",
+            "Bellevue Police": "12",
+            "Bellevue Fire": "13"
+        };
+        // DOM refs
         const audioElement = document.getElementById('audioElement');
         const audioPlayer = document.getElementById('audioPlayer');
         const status = document.getElementById('status');
@@ -523,8 +389,6 @@
         const activityDot = document.getElementById('activityDot');
         const activityStatus = document.getElementById('activityStatus');
         const refreshInfo = document.getElementById('refreshInfo');
-        
-        // Info bar elements
         const locationElement = document.getElementById('location');
         const currentTimeElement = document.getElementById('currentTime');
         const stationsGrid = document.getElementById('stationsGrid');
@@ -532,15 +396,11 @@
         const frequencyDisplay = document.getElementById('frequencyDisplay');
         const channelIndicator = document.getElementById('channelIndicator');
         const squelchIndicator = document.getElementById('squelchIndicator');
-        
-        let currentFeed = null;
-        let refreshInterval = null;
-        let timeInterval = null;
-        let userLocation = null;
-        let visualizerInterval = null;
-        let audioContext = null;
-        let analyser = null;
-        let microphone = null;
+        const refreshData = document.getElementById('refreshData');
+        const feedSearch = document.getElementById('feedSearch');
+        const clearSearchBtn = document.getElementById('clearSearch');
+        let currentFeed = null, refreshInterval = null, visualizerInterval = null;
+
         // Initialize visualizer
         function initializeVisualizer() {
             visualizerDisplay.innerHTML = '';
@@ -548,259 +408,67 @@
                 const bar = document.createElement('div');
                 bar.className = 'signal-bar inactive';
                 bar.style.height = '5px';
+                bar.style.willChange = 'height';
                 visualizerDisplay.appendChild(bar);
             }
         }
-        
-        // Update visualizer with audio data
-        function updateVisualizer(audioData) {
-            const bars = visualizerDisplay.querySelectorAll('.signal-bar');
-            const barCount = bars.length;
-            
-            bars.forEach((bar, index) => {
-                const dataIndex = Math.floor((index / barCount) * audioData.length);
-                const value = audioData[dataIndex] || 0;
-                const height = Math.max(5, (value / 255) * 50);
-                
-                bar.style.height = `${height}px`;
-                bar.classList.toggle('inactive', value < 10);
-            });
-        }
-        
-        // Simulate visualizer activity when audio is playing
+        // Simulate visualizer
         function simulateVisualizer() {
             const bars = visualizerDisplay.querySelectorAll('.signal-bar');
-            
-            // Create a wave pattern that looks like radio signal
-            const time = Date.now() * 0.01;
-            const centerIndex = Math.floor(bars.length / 2);
-            
-            bars.forEach((bar, index) => {
+            const time = Date.now() * 0.01, center = Math.floor(bars.length/2);
+            bars.forEach((bar, i) => {
                 if (audioElement.played.length > 0 && !audioElement.paused) {
-                    // Create a bell curve effect around the center
-                    const distanceFromCenter = Math.abs(index - centerIndex);
-                    const maxHeight = 50 - (distanceFromCenter * 2);
-                    
-                    // Add some randomness and wave motion
-                    const wave = Math.sin(time + index * 0.3) * 5;
-                    const random = Math.random() * 10;
-                    const height = Math.max(5, Math.min(maxHeight, 15 + wave + random));
-                    
+                    const dist = Math.abs(i-center);
+                    const maxHeight = 50-(dist*2);
+                    const wave = Math.sin(time+i*0.3)*5, random = Math.random()*10;
+                    const height = Math.max(5, Math.min(maxHeight, 15+wave+random));
                     bar.style.height = `${height}px`;
                     bar.classList.remove('inactive');
-                    
-                    // Add color variation based on signal strength
-                    if (height > 30) {
-                        bar.style.background = 'linear-gradient(180deg, #ff0000 0%, #ffff00 50%, #00ff00 100%)';
-                    } else if (height > 20) {
-                        bar.style.background = 'linear-gradient(180deg, #ffff00 0%, #00ff00 100%)';
-                    } else {
-                        bar.style.background = 'linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%)';
-                    }
+                    if (height>30) bar.style.background='linear-gradient(180deg,#ff0000 0%,#ffff00 50%,#00ff00 100%)';
+                    else if (height>20) bar.style.background='linear-gradient(180deg,#ffff00 0%,#00ff00 100%)';
+                    else bar.style.background='linear-gradient(180deg,#00ff00 0%,#ffff00 50%,#ff0000 100%)';
                 }
             });
         }
-        
-        // Update frequency display
-        function updateFrequencyDisplay(feedName) {
-            const frequencies = {
-                "King County Fire & Police Dispatch": "154.430",
-                "Kirkland Police Dispatch (NORCOM NCPOL-2)": "155.370",
-                "Yakima City/County Police, Fire & EMS": "155.475",
-                "Seattle Police": "154.920",
-                "Seattle Fire": "154.280",
-                "Tacoma Police": "155.370",
-                "Tacoma Fire": "154.280",
-                "Spokane Police": "155.370",
-                "Spokane Fire": "154.280",
-                "Vancouver Police": "155.370",
-                "Vancouver Fire": "154.280",
-                "Bellevue Police": "155.370",
-                "Bellevue Fire": "154.280"
-            };
-            
-            const freq = frequencies[feedName] || "---.---";
-            frequencyDisplay.textContent = `${freq} MHz`;
-        }
-        
-        // Update channel indicator
-        function updateChannelIndicator(feedName) {
-            const channels = {
-                "King County Fire & Police Dispatch": "01",
-                "Kirkland Police Dispatch (NORCOM NCPOL-2)": "02",
-                "Yakima City/County Police, Fire & EMS": "03",
-                "Seattle Police": "04",
-                "Seattle Fire": "05",
-                "Tacoma Police": "06",
-                "Tacoma Fire": "07",
-                "Spokane Police": "08",
-                "Spokane Fire": "09",
-                "Vancouver Police": "10",
-                "Vancouver Fire": "11",
-                "Bellevue Police": "12",
-                "Bellevue Fire": "13"
-            };
-            
-            const channel = channels[feedName] || "--";
-            channelIndicator.textContent = `CH: ${channel}`;
-        }
-        
-        function updateStatus(message, type = 'playing') {
-            status.textContent = message;
-            status.className = `status ${type}`;
-        }
-
-        async function fetchFeedInfo(feedName) {
-            const feedId = feedIds[feedName];
-            if (!feedId) {
-                listenerCount.textContent = 'No data available';
-                activityStatus.textContent = 'Unknown feed';
-                return;
-            }
-
-            try {
-                // Show feed info
-                feedInfo.style.display = 'flex';
-                listenerCount.textContent = 'Loading...';
-                activityStatus.textContent = 'Checking activity...';
-                activityDot.className = 'activity-dot';
-
-                // Fetch listener count and activity from Broadcastify
-                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`, {
-                    method: 'GET',
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-                
-                const html = await response.text();
-                
-                // Parse listener count - look for various patterns
-                let listenerCountValue = 'Unknown';
-                const listenerPatterns = [
-                    /(\d+)\s+listeners?/i,
-                    /(\d+)\s+people\s+listening/i,
-                    /listeners?:\s*(\d+)/i
-                ];
-                
-                for (const pattern of listenerPatterns) {
-                    const match = html.match(pattern);
-                    if (match) {
-                        listenerCountValue = match[1];
-                        break;
-                    }
-                }
-                
-                // Check if feed is active (has recent activity or listeners)
-                const isActive = html.includes('active') || 
-                               html.includes('live') || 
-                               html.includes('online') ||
-                               (listenerCountValue !== 'Unknown' && parseInt(listenerCountValue) > 0);
-                
-                // Update display
-                listenerCount.textContent = `${listenerCountValue} listeners`;
-                activityStatus.textContent = isActive ? 'Active' : 'Quiet';
-                activityDot.className = `activity-dot ${isActive ? 'active' : ''}`;
-                
-            } catch (error) {
-                console.error('Error fetching feed info:', error);
-                listenerCount.textContent = 'Data unavailable';
-                activityStatus.textContent = 'Status unknown';
-                activityDot.className = 'activity-dot';
-            }
-        }
-
-        function updateFeedInfo(feedName) {
-            if (feedName && feedIds[feedName]) {
-                currentFeed = feedName;
-                fetchFeedInfo(feedName);
-                
-                // Start auto-refresh every 30 seconds
-                if (refreshInterval) clearInterval(refreshInterval);
-                refreshInterval = setInterval(() => {
-                    if (currentFeed) {
-                        fetchFeedInfo(currentFeed);
-                    }
-                }, 30000);
-            } else {
-                feedInfo.style.display = 'none';
-                currentFeed = null;
-                if (refreshInterval) {
-                    clearInterval(refreshInterval);
-                    refreshInterval = null;
-                }
-            }
-        }
-
-        // Update current time
+        // Info bar: Time/location
         function updateTime() {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            });
-            currentTimeElement.textContent = timeString;
+            currentTimeElement.textContent = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
         }
-
-        // Get user location
         function getUserLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        userLocation = {
-                            lat: position.coords.latitude,
-                            lon: position.coords.longitude
-                        };
-                        getLocationName(userLocation.lat, userLocation.lon);
-                        getWeatherData(userLocation.lat, userLocation.lon);
+                    (pos)=>{
+                        getLocationName(pos.coords.latitude, pos.coords.longitude);
                     },
-                    (error) => {
-                        console.error('Error getting location:', error);
-                        locationElement.textContent = 'Location unavailable';
-                        // Use default Seattle location for weather
-                        getWeatherData(47.6062, -122.3321);
+                    (err)=>{
+                        locationElement.textContent='Location unavailable';
                     }
                 );
-            } else {
-                locationElement.textContent = 'Location not supported';
-                // Use default Seattle location for weather
-                getWeatherData(47.6062, -122.3321);
-            }
+            } else locationElement.textContent='Location not supported';
         }
-
-        // Get location name from coordinates
-        async function getLocationName(lat, lon) {
+        async function getLocationName(lat,lon) {
             try {
-                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
-                const data = await response.json();
-                const city = data.address.city || data.address.town || data.address.village || 'Unknown';
-                const state = data.address.state || '';
+                const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
+                const data = await resp.json();
+                const city = data.address.city||data.address.town||data.address.village||'Unknown';
+                const state = data.address.state||'';
                 locationElement.textContent = `${city}, ${state}`;
-            } catch (error) {
-                console.error('Error getting location name:', error);
+            } catch {
                 locationElement.textContent = 'Location unavailable';
             }
         }
-
-        // Generate station cards
-        function generateStationCards() {
+        // Station card rendering
+        function generateStationCards(filter='') {
             stationsGrid.innerHTML = '';
-            
-            Object.entries(feeds).forEach(([name, url]) => {
+            let found = false;
+            Object.entries(feeds).forEach(([name, url])=>{
+                if (filter && !name.toLowerCase().includes(filter.toLowerCase())) return;
+                found = true;
                 const card = document.createElement('div');
                 card.className = 'station-card';
                 card.dataset.feedName = name;
-                
-                const type = name.includes('Police') ? 'Police' : 
-                           name.includes('Fire') ? 'Fire' : 
-                           name.includes('EMS') ? 'EMS' : 'Emergency';
-                
+                const type = name.includes('Police') ? 'Police' : name.includes('Fire') ? 'Fire' : name.includes('EMS') ? 'EMS' : 'Emergency';
                 card.innerHTML = `
                     <div class="station-header">
                         <div>
@@ -810,251 +478,188 @@
                     </div>
                     <div class="station-meta">
                         <div class="listener-info">
-                            <div class="listener-icon"></div>
-                            <span class="listener-count">Loading...</span>
+                            <span class="listener-icon" aria-hidden="true"></span>
+                            <span class="listener-count">Loading…</span>
                         </div>
                         <div class="activity-status">
-                            <div class="status-dot"></div>
-                            <span class="activity-text">Checking...</span>
+                            <span class="status-dot"></span>
+                            <span class="activity-text">Checking…</span>
                         </div>
                     </div>
-                    <button class="play-button" onclick="loadFeed('${name}')">
-                        Play Stream
-                    </button>
+                    <button class="play-button" type="button" aria-label="Play ${name}" title="Play ${name}">Play Stream</button>
                 `;
-                
+                // Play button handler
+                card.querySelector('.play-button').addEventListener('click',()=>loadFeed(name));
                 stationsGrid.appendChild(card);
-                
-                // Fetch feed info for this card
                 fetchCardInfo(name, card);
             });
+            if (!found) stationsGrid.innerHTML = '<div style="padding:1em;text-align:center;color:#b8c5d6;">No feeds found.</div>';
         }
-
-        // Fetch info for individual card
+        // Card info (listener count/activity)
         async function fetchCardInfo(feedName, card) {
             const feedId = feedIds[feedName];
+            const listenerCountEl = card.querySelector('.listener-count');
+            const activityTextEl = card.querySelector('.activity-text');
+            const statusDotEl = card.querySelector('.status-dot');
             if (!feedId) {
-                const listenerCountEl = card.querySelector('.listener-count');
-                const activityTextEl = card.querySelector('.activity-text');
-                listenerCountEl.textContent = 'No data available';
-                activityTextEl.textContent = 'Unknown feed';
+                listenerCountEl.textContent = 'No data';
+                activityTextEl.textContent = 'Unknown';
                 return;
             }
-
             try {
-                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`, {
-                    method: 'GET',
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                const resp = await fetch(`https://www.broadcastify.com/feed/${feedId}`);
+                if (!resp.ok) throw new Error();
+                const html = await resp.text();
+                let listenerCountVal = 'Unknown';
+                const patterns = [ /(\d+)\s+listeners?/i, /(\d+)\s+people\s+listening/i, /listeners?:\s*(\d+)/i ];
+                for (const pat of patterns) {
+                    const m = html.match(pat);
+                    if (m) { listenerCountVal = m[1]; break; }
                 }
-                
-                const html = await response.text();
-                
-                // Parse listener count - look for various patterns
-                let listenerCountValue = 'Unknown';
-                const listenerPatterns = [
-                    /(\d+)\s+listeners?/i,
-                    /(\d+)\s+people\s+listening/i,
-                    /listeners?:\s*(\d+)/i
-                ];
-                
-                for (const pattern of listenerPatterns) {
-                    const match = html.match(pattern);
-                    if (match) {
-                        listenerCountValue = match[1];
-                        break;
-                    }
-                }
-                
-                // Check if feed is active (has recent activity or listeners)
-                const isActive = html.includes('active') || 
-                               html.includes('live') || 
-                               html.includes('online') ||
-                               (listenerCountValue !== 'Unknown' && parseInt(listenerCountValue) > 0);
-                
-                const listenerCountEl = card.querySelector('.listener-count');
-                const activityTextEl = card.querySelector('.activity-text');
-                const statusDotEl = card.querySelector('.status-dot');
-                
-                listenerCountEl.textContent = `${listenerCountValue} listeners`;
+                const isActive = html.includes('active')||html.includes('live')||html.includes('online')||(listenerCountVal!=='Unknown'&&parseInt(listenerCountVal)>0);
+                listenerCountEl.textContent = `${listenerCountVal} listeners`;
                 activityTextEl.textContent = isActive ? 'Active' : 'Quiet';
-                statusDotEl.className = `status-dot ${isActive ? 'active' : ''}`;
-                
-            } catch (error) {
-                console.error('Error fetching card info:', error);
-                const listenerCountEl = card.querySelector('.listener-count');
-                const activityTextEl = card.querySelector('.activity-text');
-                
+                statusDotEl.className = `status-dot${isActive?' active':''}`;
+            } catch {
                 listenerCountEl.textContent = 'Data unavailable';
                 activityTextEl.textContent = 'Status unknown';
             }
         }
-
-        // Initialize info bar
-        function initializeInfoBar() {
-            // Start time updates
-            updateTime();
-            timeInterval = setInterval(updateTime, 1000);
-            
-            // Get location
-            getUserLocation();
-            
-            // Generate station cards
-            generateStationCards();
+        // Main feed info
+        async function fetchFeedInfo(feedName) {
+            const feedId = feedIds[feedName];
+            if (!feedId) {
+                listenerCount.textContent = 'No data';
+                activityStatus.textContent = 'Unknown feed';
+                return;
+            }
+            try {
+                feedInfo.style.display='flex';
+                listenerCount.textContent='Loading…';
+                activityStatus.textContent='Checking…';
+                activityDot.className='activity-dot';
+                const resp = await fetch(`https://www.broadcastify.com/feed/${feedId}`);
+                if (!resp.ok) throw new Error();
+                const html = await resp.text();
+                let listenerCountVal = 'Unknown';
+                const patterns = [ /(\d+)\s+listeners?/i, /(\d+)\s+people\s+listening/i, /listeners?:\s*(\d+)/i ];
+                for (const pat of patterns) {
+                    const m = html.match(pat);
+                    if (m) { listenerCountVal = m[1]; break; }
+                }
+                const isActive = html.includes('active')||html.includes('live')||html.includes('online')||(listenerCountVal!=='Unknown'&&parseInt(listenerCountVal)>0);
+                listenerCount.textContent = `${listenerCountVal} listeners`;
+                activityStatus.textContent = isActive ? 'Active' : 'Quiet';
+                activityDot.className = `activity-dot${isActive?' active':''}`;
+            } catch {
+                listenerCount.textContent = 'Data unavailable';
+                activityStatus.textContent = 'Status unknown';
+                activityDot.className='activity-dot';
+            }
         }
+        function updateStatus(message, type='playing') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+        // Frequency/channel indicators
+        function updateFrequencyDisplay(feedName) {
+            frequencyDisplay.textContent = `${frequencies[feedName]||'--.---'} MHz`;
+        }
+        function updateChannelIndicator(feedName) {
+            channelIndicator.textContent = `CH: ${channels[feedName]||'--'}`;
+        }
+        // Card state
+        function updateCardStates(selectedFeedName) {
+            document.querySelectorAll('.station-card').forEach(card=>{
+                card.classList.remove('active');
+                const btn = card.querySelector('.play-button');
+                btn.textContent = 'Play Stream';
+                btn.classList.remove('playing');
+                if (card.dataset.feedName===selectedFeedName) {
+                    card.classList.add('active');
+                    btn.textContent = 'Now Playing';
+                    btn.classList.add('playing');
+                }
+            });
+        }
+        // Load/Play feed
         function loadFeed(feedName) {
             if (!feedName || !feeds[feedName]) {
                 audioPlayer.style.display = 'none';
                 return;
             }
-            
             currentFeed = feedName;
-            const streamUrl = feeds[feedName];
-            
             audioElement.pause();
             audioElement.currentTime = 0;
-            audioElement.src = streamUrl;
+            audioElement.src = feeds[feedName];
             audioPlayer.style.display = 'block';
-            updateStatus(`Loading ${feedName}...`, 'paused');
-            
-            // Initialize and update visualizer displays
+            updateStatus(`Loading ${feedName}…`,'paused');
             initializeVisualizer();
             updateFrequencyDisplay(feedName);
             updateChannelIndicator(feedName);
-            
-            // Show feed info and fetch data
-            feedInfo.style.display = 'flex';
+            feedInfo.style.display='flex';
             fetchFeedInfo(feedName);
-            
-            // Update card states
             updateCardStates(feedName);
-            
             const playPromise = audioElement.play();
-            if (playPromise !== undefined) {
-                playPromise
-                    .then(() => {
-                        updateStatus(`Now playing: ${feedName}`, 'playing');
-                    })
-                    .catch(error => {
-                        console.error('Playback failed:', error);
-                        updateStatus(`Ready to play: ${feedName} (click play button)`, 'paused');
-                    });
-            }
+            if (playPromise !== undefined) playPromise
+                .then(()=>updateStatus(`Now playing: ${feedName}`,'playing'))
+                .catch(()=>updateStatus(`Ready to play: ${feedName} (click play button)`,'paused'));
         }
-        // Update card states when feed is loaded
-        function updateCardStates(selectedFeedName) {
-            document.querySelectorAll('.station-card').forEach(card => {
-                card.classList.remove('active');
-                const button = card.querySelector('.play-button');
-                button.textContent = 'Play Stream';
-                button.classList.remove('playing');
-                
-                if (card.dataset.feedName === selectedFeedName) {
-                    card.classList.add('active');
-                    button.textContent = 'Now Playing';
-                    button.classList.add('playing');
-                }
-            });
-        }
-        audioElement.addEventListener('play', () => {
+        // Audio events
+        audioElement.addEventListener('play',()=>{
             if (currentFeed) {
-                updateStatus(`Now playing: ${currentFeed}`, 'playing');
+                updateStatus(`Now playing: ${currentFeed}`,'playing');
                 squelchIndicator.classList.add('active');
-                
-                // Start visualizer animation
                 if (visualizerInterval) clearInterval(visualizerInterval);
                 visualizerInterval = setInterval(simulateVisualizer, 200);
             }
         });
-        audioElement.addEventListener('pause', () => {
+        audioElement.addEventListener('pause',()=>{
             if (currentFeed) {
-                updateStatus(`Paused: ${currentFeed}`, 'paused');
+                updateStatus(`Paused: ${currentFeed}`,'paused');
                 squelchIndicator.classList.remove('active');
-                
-                // Stop visualizer animation
-                if (visualizerInterval) {
-                    clearInterval(visualizerInterval);
-                    visualizerInterval = null;
-                }
-                
-                // Reset visualizer bars
-                const bars = visualizerDisplay.querySelectorAll('.signal-bar');
-                bars.forEach(bar => {
-                    bar.style.height = '5px';
-                    bar.classList.add('inactive');
+                if (visualizerInterval) clearInterval(visualizerInterval);
+                visualizerInterval=null;
+                visualizerDisplay.querySelectorAll('.signal-bar').forEach(bar=>{
+                    bar.style.height='5px'; bar.classList.add('inactive');
                 });
             }
         });
-        audioElement.addEventListener('error', (e) => {
-            console.error('Audio error:', e);
-            if (currentFeed) {
-                updateStatus(`Feed offline: ${currentFeed}`, 'error');
+        audioElement.addEventListener('error',()=>{
+            if (currentFeed) updateStatus(`Feed offline: ${currentFeed}`,'error');
+            else updateStatus('Stream error. Please try a different feed.','error');
+        });
+        // Feed info refresh (per feed)
+        function updateFeedInfo(feedName) {
+            if (feedName && feedIds[feedName]) {
+                currentFeed = feedName;
+                fetchFeedInfo(feedName);
+                if (refreshInterval) clearInterval(refreshInterval);
+                refreshInterval = setInterval(()=>{ if (currentFeed) fetchFeedInfo(currentFeed); }, 30000);
             } else {
-                updateStatus('Stream error. Please try selecting a different feed.', 'error');
+                feedInfo.style.display='none';
+                currentFeed = null;
+                if (refreshInterval) { clearInterval(refreshInterval); refreshInterval=null;}
             }
-        });
-        audioElement.addEventListener('loadstart', () => {
-            updateStatus('Connecting to stream...', 'paused');
-        });
-        audioElement.addEventListener('canplay', () => {
-            if (currentFeed) {
-                if (audioElement.paused) {
-                    updateStatus(`Connected: ${currentFeed} (stream ready - may be silent)`, 'paused');
-                } else {
-                    updateStatus(`Connected: ${currentFeed}`, 'playing');
-                }
-            }
-        });
-        audioElement.addEventListener('loadeddata', () => {
-            if (currentFeed && audioElement.paused) {
-                updateStatus(`Connected: ${currentFeed} (stream ready - may be silent)`, 'paused');
-            }
-        });
-        // Refresh all station data
-        function refreshAllStationData() {
-            document.querySelectorAll('.station-card').forEach(card => {
-                const feedName = card.dataset.feedName;
-                const listenerCountEl = card.querySelector('.listener-count');
-                const activityTextEl = card.querySelector('.activity-text');
-                
-                listenerCountEl.textContent = 'Refreshing...';
-                activityTextEl.textContent = 'Checking...';
-                
-                fetchCardInfo(feedName, card);
-            });
         }
-
-        window.addEventListener('load', () => {
-            // Initialize info bar
-            initializeInfoBar();
-            
-            // Initialize visualizer
-            initializeVisualizer();
-            
-            // Add refresh button event listener
-            document.getElementById('refreshData').addEventListener('click', refreshAllStationData);
-            
-            // Add refresh info button event listener
-            refreshInfo.addEventListener('click', () => {
-                if (currentFeed) {
-                    fetchFeedInfo(currentFeed);
-                }
-            });
+        refreshInfo.addEventListener('click',()=>{ if(currentFeed) fetchFeedInfo(currentFeed); });
+        // All cards refresh
+        refreshData.addEventListener('click',()=>generateStationCards(feedSearch.value));
+        // Search/filter
+        feedSearch.addEventListener('input', function(){
+            const val = this.value.trim();
+            generateStationCards(val);
+            clearSearchBtn.style.display = val.length ? 'inline-block' : 'none';
         });
-        document.addEventListener('click', () => {
-            if (audioElement.paused && audioElement.readyState >= 2) {
-                if (currentFeed) {
-                    audioElement.play().then(() => {
-                        updateStatus(`Now playing: ${currentFeed}`, 'playing');
-                    }).catch(() => {});
-                }
-            }
-        }, { once: true });
+        clearSearchBtn.addEventListener('click', function(){
+            feedSearch.value = '';
+            generateStationCards('');
+            this.style.display = 'none';
+        });
+        // Live time update
+        setInterval(updateTime, 1000);
+        // Init
+        updateTime(); getUserLocation(); generateStationCards();
     </script>
 </body>
-</html> 
+</html>
