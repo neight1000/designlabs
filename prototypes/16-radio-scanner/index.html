@@ -107,23 +107,32 @@
             margin-bottom: 15px;
         }
 
-        .listen-btn {
-            background: #00ff00;
-            color: #000;
-            padding: 12px 24px;
-            border: none;
+        .audio-player {
+            width: 100%;
+            margin: 15px 0;
             border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: inline-block;
+            background: #0a0a0a;
+            border: 1px solid #00ff00;
         }
 
-        .listen-btn:hover {
-            background: #00aa00;
-            box-shadow: 0 0 15px #00ff00;
+        .audio-player::-webkit-media-controls-panel {
+            background: #1a1a1a;
+        }
+
+        .audio-player::-webkit-media-controls-play-button {
+            background: #00ff00;
+            border-radius: 50%;
+        }
+
+        .station-status {
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            color: #00aa00;
         }
 
         @media (max-width: 768px) {
@@ -169,53 +178,83 @@
         </div>
 
         <div class="stations-grid">
-            <a href="https://www.weather.gov/nwr/station?site=KHB60" target="_blank" class="station-card">
+            <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Seattle</div>
-                <div class="station-info">Seattle, WA</div>
-                <div class="station-info">162.550 MHz</div>
+                <div class="station-info">Seattle, WA • 162.550 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Seattle and King County area</div>
-                <button class="listen-btn">Listen Live →</button>
-            </a>
+                <audio controls class="audio-player">
+                    <source src="https://ice6.securenetsystems.net/KHB60" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="station-status">
+                    <span class="status-text">Click play to listen live</span>
+                </div>
+            </div>
 
-            <a href="https://www.weather.gov/nwr/station?site=KEC89" target="_blank" class="station-card">
+            <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Tacoma</div>
-                <div class="station-info">Tacoma, WA</div>
-                <div class="station-info">162.400 MHz</div>
+                <div class="station-info">Tacoma, WA • 162.400 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Tacoma and Pierce County area</div>
-                <button class="listen-btn">Listen Live →</button>
-            </a>
+                <audio controls class="audio-player">
+                    <source src="https://ice6.securenetsystems.net/KEC89" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="station-status">
+                    <span class="status-text">Click play to listen live</span>
+                </div>
+            </div>
 
-            <a href="https://www.weather.gov/nwr/station?site=KHB61" target="_blank" class="station-card">
+            <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Everett</div>
-                <div class="station-info">Everett, WA</div>
-                <div class="station-info">162.475 MHz</div>
+                <div class="station-info">Everett, WA • 162.475 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Everett and Snohomish County area</div>
-                <button class="listen-btn">Listen Live →</button>
-            </a>
+                <audio controls class="audio-player">
+                    <source src="https://ice6.securenetsystems.net/KHB61" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="station-status">
+                    <span class="status-text">Click play to listen live</span>
+                </div>
+            </div>
 
-            <a href="https://www.weather.gov/nwr/station?site=KEC88" target="_blank" class="station-card">
+            <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Yakima</div>
-                <div class="station-info">Yakima, WA</div>
-                <div class="station-info">162.425 MHz</div>
+                <div class="station-info">Yakima, WA • 162.425 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Yakima and Central Washington</div>
-                <button class="listen-btn">Listen Live →</button>
-            </a>
+                <audio controls class="audio-player">
+                    <source src="https://ice6.securenetsystems.net/KEC88" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="station-status">
+                    <span class="status-text">Click play to listen live</span>
+                </div>
+            </div>
 
-            <a href="https://www.weather.gov/nwr/station?site=KHB62" target="_blank" class="station-card">
+            <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Olympia</div>
-                <div class="station-info">Olympia, WA</div>
-                <div class="station-info">162.450 MHz</div>
+                <div class="station-info">Olympia, WA • 162.450 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Olympia and Thurston County area</div>
-                <button class="listen-btn">Listen Live →</button>
-            </a>
+                <audio controls class="audio-player">
+                    <source src="https://ice6.securenetsystems.net/KHB62" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="station-status">
+                    <span class="status-text">Click play to listen live</span>
+                </div>
+            </div>
 
-            <a href="https://www.weather.gov/nwr/station?site=KHB63" target="_blank" class="station-card">
+            <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Bellingham</div>
-                <div class="station-info">Bellingham, WA</div>
-                <div class="station-info">162.500 MHz</div>
+                <div class="station-info">Bellingham, WA • 162.500 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Bellingham and Whatcom County area</div>
-                <button class="listen-btn">Listen Live →</button>
-            </a>
+                <audio controls class="audio-player">
+                    <source src="https://ice6.securenetsystems.net/KHB63" type="audio/mpeg">
+                    Your browser does not support the audio element.
+                </audio>
+                <div class="station-status">
+                    <span class="status-text">Click play to listen live</span>
+                </div>
+            </div>
         </div>
     </div>
 
