@@ -200,7 +200,7 @@
 
         <div class="footer">
             <p>Live emergency radio feeds from Broadcastify</p>
-            <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: Stream URLs may need to be updated with actual working feeds</p>
+            <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: Emergency feeds may be silent when no calls are active</p>
         </div>
     </div>
 
@@ -326,7 +326,7 @@
             const selectedFeed = feedSelect.value;
             if (selectedFeed) {
                 if (audioElement.paused) {
-                    updateStatus(`Ready: ${selectedFeed} (click play to start)`, 'paused');
+                    updateStatus(`Connected: ${selectedFeed} (stream ready - may be silent)`, 'paused');
                 } else {
                     updateStatus(`Connected: ${selectedFeed}`, 'playing');
                 }
@@ -336,7 +336,17 @@
         audioElement.addEventListener('loadeddata', () => {
             const selectedFeed = feedSelect.value;
             if (selectedFeed && audioElement.paused) {
-                updateStatus(`Stream loaded: ${selectedFeed} (click play to start)`, 'paused');
+                updateStatus(`Connected: ${selectedFeed} (stream ready - may be silent)`, 'paused');
+            }
+        });
+
+        audioElement.addEventListener('error', (e) => {
+            console.error('Audio error:', e);
+            const selectedFeed = feedSelect.value;
+            if (selectedFeed) {
+                updateStatus(`Feed offline: ${selectedFeed}`, 'error');
+            } else {
+                updateStatus('Stream error. Please try selecting a different feed.', 'error');
             }
         });
 
