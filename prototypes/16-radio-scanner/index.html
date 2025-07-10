@@ -275,6 +275,115 @@
             background: rgba(76, 175, 80, 0.3);
             border-color: rgba(76, 175, 80, 0.5);
         }
+        
+        /* Vintage CB Radio Visualizer */
+        .radio-visualizer {
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .visualizer-display {
+            background: #000;
+            border: 1px solid #444;
+            border-radius: 4px;
+            height: 60px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 5px;
+            gap: 2px;
+        }
+        
+        .frequency-display {
+            background: #000;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #00ff00;
+            text-align: center;
+            text-shadow: 0 0 5px #00ff00;
+            letter-spacing: 2px;
+        }
+        
+        .signal-bar {
+            background: linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%);
+            border-radius: 2px;
+            min-width: 8px;
+            transition: height 0.1s ease;
+            box-shadow: 0 0 5px currentColor;
+        }
+        
+        .signal-bar.inactive {
+            background: #333;
+            box-shadow: none;
+        }
+        
+        .radio-label {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 10px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+        
+        .channel-indicator {
+            position: absolute;
+            bottom: 5px;
+            left: 10px;
+            font-size: 10px;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .squelch-indicator {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 10px;
+            color: #ff6b6b;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .squelch-indicator.active {
+            color: #00ff00;
+            animation: squelch 0.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes squelch {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .radio-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .radio-control {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 5px;
+            text-align: center;
+            font-size: 10px;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+        }
         @media (max-width: 768px) {
             .container { padding: 30px 20px; margin: 10px; }
             h1 { font-size: 2rem; }
@@ -315,6 +424,19 @@
         </div>
         
         <div class="audio-player" id="audioPlayer" style="display: none;">
+            <div class="radio-visualizer">
+                <div class="radio-label">Scanner</div>
+                <div class="frequency-display" id="frequencyDisplay">--.--- MHz</div>
+                <div class="visualizer-display" id="visualizerDisplay">
+                    <!-- Signal bars will be generated here -->
+                </div>
+                <div class="channel-indicator" id="channelIndicator">CH: --</div>
+                <div class="squelch-indicator" id="squelchIndicator">SQL</div>
+                <div class="radio-grid">
+                    <div class="radio-control">VOL</div>
+                    <div class="radio-control">SQL</div>
+                </div>
+            </div>
             <audio id="audioElement" controls preload="none">
                 Your browser does not support the audio element.
             </audio>
@@ -406,11 +528,123 @@
         const locationElement = document.getElementById('location');
         const currentTimeElement = document.getElementById('currentTime');
         const stationsGrid = document.getElementById('stationsGrid');
+        const visualizerDisplay = document.getElementById('visualizerDisplay');
+        const frequencyDisplay = document.getElementById('frequencyDisplay');
+        const channelIndicator = document.getElementById('channelIndicator');
+        const squelchIndicator = document.getElementById('squelchIndicator');
         
         let currentFeed = null;
         let refreshInterval = null;
         let timeInterval = null;
         let userLocation = null;
+        let visualizerInterval = null;
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        // Initialize visualizer
+        function initializeVisualizer() {
+            visualizerDisplay.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'signal-bar inactive';
+                bar.style.height = '5px';
+                visualizerDisplay.appendChild(bar);
+            }
+        }
+        
+        // Update visualizer with audio data
+        function updateVisualizer(audioData) {
+            const bars = visualizerDisplay.querySelectorAll('.signal-bar');
+            const barCount = bars.length;
+            
+            bars.forEach((bar, index) => {
+                const dataIndex = Math.floor((index / barCount) * audioData.length);
+                const value = audioData[dataIndex] || 0;
+                const height = Math.max(5, (value / 255) * 50);
+                
+                bar.style.height = `${height}px`;
+                bar.classList.toggle('inactive', value < 10);
+            });
+        }
+        
+        // Simulate visualizer activity when audio is playing
+        function simulateVisualizer() {
+            const bars = visualizerDisplay.querySelectorAll('.signal-bar');
+            
+            // Create a wave pattern that looks like radio signal
+            const time = Date.now() * 0.01;
+            const centerIndex = Math.floor(bars.length / 2);
+            
+            bars.forEach((bar, index) => {
+                if (audioElement.played.length > 0 && !audioElement.paused) {
+                    // Create a bell curve effect around the center
+                    const distanceFromCenter = Math.abs(index - centerIndex);
+                    const maxHeight = 50 - (distanceFromCenter * 2);
+                    
+                    // Add some randomness and wave motion
+                    const wave = Math.sin(time + index * 0.3) * 5;
+                    const random = Math.random() * 10;
+                    const height = Math.max(5, Math.min(maxHeight, 15 + wave + random));
+                    
+                    bar.style.height = `${height}px`;
+                    bar.classList.remove('inactive');
+                    
+                    // Add color variation based on signal strength
+                    if (height > 30) {
+                        bar.style.background = 'linear-gradient(180deg, #ff0000 0%, #ffff00 50%, #00ff00 100%)';
+                    } else if (height > 20) {
+                        bar.style.background = 'linear-gradient(180deg, #ffff00 0%, #00ff00 100%)';
+                    } else {
+                        bar.style.background = 'linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%)';
+                    }
+                }
+            });
+        }
+        
+        // Update frequency display
+        function updateFrequencyDisplay(feedName) {
+            const frequencies = {
+                "King County Fire & Police Dispatch": "154.430",
+                "Kirkland Police Dispatch (NORCOM NCPOL-2)": "155.370",
+                "Yakima City/County Police, Fire & EMS": "155.475",
+                "Seattle Police": "154.920",
+                "Seattle Fire": "154.280",
+                "Tacoma Police": "155.370",
+                "Tacoma Fire": "154.280",
+                "Spokane Police": "155.370",
+                "Spokane Fire": "154.280",
+                "Vancouver Police": "155.370",
+                "Vancouver Fire": "154.280",
+                "Bellevue Police": "155.370",
+                "Bellevue Fire": "154.280"
+            };
+            
+            const freq = frequencies[feedName] || "---.---";
+            frequencyDisplay.textContent = `${freq} MHz`;
+        }
+        
+        // Update channel indicator
+        function updateChannelIndicator(feedName) {
+            const channels = {
+                "King County Fire & Police Dispatch": "01",
+                "Kirkland Police Dispatch (NORCOM NCPOL-2)": "02",
+                "Yakima City/County Police, Fire & EMS": "03",
+                "Seattle Police": "04",
+                "Seattle Fire": "05",
+                "Tacoma Police": "06",
+                "Tacoma Fire": "07",
+                "Spokane Police": "08",
+                "Spokane Fire": "09",
+                "Vancouver Police": "10",
+                "Vancouver Fire": "11",
+                "Bellevue Police": "12",
+                "Bellevue Fire": "13"
+            };
+            
+            const channel = channels[feedName] || "--";
+            channelIndicator.textContent = `CH: ${channel}`;
+        }
+        
         function updateStatus(message, type = 'playing') {
             status.textContent = message;
             status.className = `status ${type}`;
@@ -688,6 +922,11 @@
             audioPlayer.style.display = 'block';
             updateStatus(`Loading ${feedName}...`, 'paused');
             
+            // Initialize and update visualizer displays
+            initializeVisualizer();
+            updateFrequencyDisplay(feedName);
+            updateChannelIndicator(feedName);
+            
             // Show feed info and fetch data
             feedInfo.style.display = 'flex';
             fetchFeedInfo(feedName);
@@ -725,11 +964,30 @@
         audioElement.addEventListener('play', () => {
             if (currentFeed) {
                 updateStatus(`Now playing: ${currentFeed}`, 'playing');
+                squelchIndicator.classList.add('active');
+                
+                // Start visualizer animation
+                if (visualizerInterval) clearInterval(visualizerInterval);
+                visualizerInterval = setInterval(simulateVisualizer, 200);
             }
         });
         audioElement.addEventListener('pause', () => {
             if (currentFeed) {
                 updateStatus(`Paused: ${currentFeed}`, 'paused');
+                squelchIndicator.classList.remove('active');
+                
+                // Stop visualizer animation
+                if (visualizerInterval) {
+                    clearInterval(visualizerInterval);
+                    visualizerInterval = null;
+                }
+                
+                // Reset visualizer bars
+                const bars = visualizerDisplay.querySelectorAll('.signal-bar');
+                bars.forEach(bar => {
+                    bar.style.height = '5px';
+                    bar.classList.add('inactive');
+                });
             }
         });
         audioElement.addEventListener('error', (e) => {
@@ -774,6 +1032,9 @@
         window.addEventListener('load', () => {
             // Initialize info bar
             initializeInfoBar();
+            
+            // Initialize visualizer
+            initializeVisualizer();
             
             // Add refresh button event listener
             document.getElementById('refreshData').addEventListener('click', refreshAllStationData);
