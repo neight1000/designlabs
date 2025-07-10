@@ -108,6 +108,60 @@
             color: #8b9dc3;
             opacity: 0.8;
         }
+        
+        .feed-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .listener-count {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .listener-icon {
+            width: 12px;
+            height: 12px;
+            background: #4ecdc4;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .activity-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            animation: blink 1.5s infinite;
+        }
+        
+        .activity-dot.active {
+            background: #4ecdc4;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
         @media (max-width: 768px) {
             .container { padding: 30px 20px; margin: 10px; }
             h1 { font-size: 2rem; }
@@ -148,6 +202,19 @@
                 Your browser does not support the audio element.
             </audio>
             <div class="status" id="status"></div>
+            <div class="feed-info" id="feedInfo" style="display: none;">
+                <div class="listener-count">
+                    <div class="listener-icon"></div>
+                    <span id="listenerCount">Loading...</span>
+                </div>
+                <div class="activity-indicator">
+                    <div class="activity-dot" id="activityDot"></div>
+                    <span id="activityStatus">Checking activity...</span>
+                </div>
+                <button id="refreshInfo" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
+                    ↻
+                </button>
+            </div>
         </div>
         <div class="footer">
             <p>Live emergency radio feeds from Broadcastify</p>
@@ -170,13 +237,95 @@
             "Bellevue Police": "https://broadcastify.cdnstream1.com/31432",
             "Bellevue Fire": "https://broadcastify.cdnstream1.com/31433"
         };
+
+        // Feed IDs for Broadcastify API
+        const feedIds = {
+            "King County Fire & Police Dispatch": "36938",
+            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "31423",
+            "Yakima City/County Police, Fire & EMS": "11194",
+            "Seattle Police": "31424",
+            "Seattle Fire": "31425",
+            "Tacoma Police": "31426",
+            "Tacoma Fire": "31427",
+            "Spokane Police": "31428",
+            "Spokane Fire": "31429",
+            "Vancouver Police": "31430",
+            "Vancouver Fire": "31431",
+            "Bellevue Police": "31432",
+            "Bellevue Fire": "31433"
+        };
         const feedSelect = document.getElementById('feedSelect');
         const audioElement = document.getElementById('audioElement');
         const audioPlayer = document.getElementById('audioPlayer');
         const status = document.getElementById('status');
+        const feedInfo = document.getElementById('feedInfo');
+        const listenerCount = document.getElementById('listenerCount');
+        const activityDot = document.getElementById('activityDot');
+        const activityStatus = document.getElementById('activityStatus');
+        const refreshInfo = document.getElementById('refreshInfo');
+        
+        let currentFeed = null;
+        let refreshInterval = null;
         function updateStatus(message, type = 'playing') {
             status.textContent = message;
             status.className = `status ${type}`;
+        }
+
+        async function fetchFeedInfo(feedName) {
+            const feedId = feedIds[feedName];
+            if (!feedId) return;
+
+            try {
+                // Show feed info
+                feedInfo.style.display = 'flex';
+                listenerCount.textContent = 'Loading...';
+                activityStatus.textContent = 'Checking activity...';
+                activityDot.className = 'activity-dot';
+
+                // Fetch listener count and activity from Broadcastify
+                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`);
+                const html = await response.text();
+                
+                // Parse listener count (this is a simplified approach)
+                const listenerMatch = html.match(/(\d+)\s+listeners?/i);
+                const listenerCountValue = listenerMatch ? listenerMatch[1] : 'Unknown';
+                
+                // Check if feed is active (has recent activity)
+                const isActive = html.includes('active') || html.includes('live') || listenerCountValue > 0;
+                
+                // Update display
+                listenerCount.textContent = `${listenerCountValue} listeners`;
+                activityStatus.textContent = isActive ? 'Active' : 'Quiet';
+                activityDot.className = `activity-dot ${isActive ? 'active' : ''}`;
+                
+            } catch (error) {
+                console.error('Error fetching feed info:', error);
+                listenerCount.textContent = 'Data unavailable';
+                activityStatus.textContent = 'Status unknown';
+                activityDot.className = 'activity-dot';
+            }
+        }
+
+        function updateFeedInfo(feedName) {
+            if (feedName && feedIds[feedName]) {
+                currentFeed = feedName;
+                fetchFeedInfo(feedName);
+                
+                // Start auto-refresh every 30 seconds
+                if (refreshInterval) clearInterval(refreshInterval);
+                refreshInterval = setInterval(() => {
+                    if (currentFeed) {
+                        fetchFeedInfo(currentFeed);
+                    }
+                }, 30000);
+            } else {
+                feedInfo.style.display = 'none';
+                currentFeed = null;
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
         }
         function loadFeed(feedName) {
             if (!feedName || !feeds[feedName]) {
@@ -189,6 +338,10 @@
             audioElement.src = streamUrl;
             audioPlayer.style.display = 'block';
             updateStatus(`Loading ${feedName}...`, 'paused');
+            
+            // Fetch feed info (listener count and activity)
+            updateFeedInfo(feedName);
+            
             const playPromise = audioElement.play();
             if (playPromise !== undefined) {
                 playPromise
@@ -203,6 +356,12 @@
         }
         feedSelect.addEventListener('change', (e) => {
             loadFeed(e.target.value);
+        });
+
+        refreshInfo.addEventListener('click', () => {
+            if (currentFeed) {
+                fetchFeedInfo(currentFeed);
+            }
         });
         audioElement.addEventListener('play', () => {
             const selectedFeed = feedSelect.value;
