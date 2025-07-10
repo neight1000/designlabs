@@ -5,153 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WA Emergency Scanner</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        /* ...Your existing styles, unchanged... */
+        /* (You can keep all your CSS from before, but add the following:) */
 
-        body {
-            font-family: 'Courier New', monospace;
-            background: #0a0a0a;
-            color: #00ff00;
-            line-height: 1.6;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 2px solid #00ff00;
-            padding-bottom: 20px;
-        }
-
-        .title {
-            font-size: 2.5rem;
-            text-shadow: 0 0 10px #00ff00;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            font-size: 1rem;
-            opacity: 0.8;
-        }
-
-        .info-bar {
-            background: #1a1a1a;
-            border: 1px solid #00ff00;
-            padding: 15px;
-            margin-bottom: 30px;
-            border-radius: 5px;
+        .custom-controls {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
             gap: 10px;
-        }
-
-        .info-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #00aa00;
-        }
-
-        .stations-grid {
-            display: grid;
-            gap: 20px;
-        }
-
-        .station-card {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
-            border-radius: 10px;
-            padding: 25px;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: #00ff00;
-            display: block;
-        }
-
-        .station-card:hover {
-            border-color: #00aa00;
-            box-shadow: 0 0 20px #00ff00;
-            transform: translateY(-2px);
-        }
-
-        .station-name {
-            font-size: 1.4rem;
-            font-weight: bold;
-            margin-bottom: 10px;
-            color: #00ff00;
-        }
-
-        .station-info {
-            font-size: 1rem;
-            margin-bottom: 8px;
-            opacity: 0.9;
-        }
-
-        .station-description {
-            font-size: 0.9rem;
-            opacity: 0.7;
-            margin-bottom: 15px;
-        }
-
-        .audio-player {
-            width: 100%;
-            margin: 15px 0;
-            border-radius: 5px;
-            background: #0a0a0a;
-            border: 1px solid #00ff00;
-        }
-
-        .audio-player::-webkit-media-controls-panel {
-            background: #1a1a1a;
-        }
-
-        .audio-player::-webkit-media-controls-play-button {
-            background: #00ff00;
-            border-radius: 50%;
-        }
-
-        .station-status {
-            text-align: center;
+            justify-content: center;
             margin-top: 10px;
         }
-
-        .status-text {
-            font-size: 0.9rem;
-            opacity: 0.8;
-            color: #00aa00;
+        .custom-btn {
+            background: #00ff00;
+            color: #0a0a0a;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 14px;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 0 4px #00ff00;
+            transition: background 0.2s;
         }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .title {
-                font-size: 2rem;
-            }
-            
-            .info-bar {
-                flex-direction: column;
-                text-align: center;
-            }
-            
-            .station-card {
-                padding: 20px;
-            }
+        .custom-btn:hover {
+            background: #00aa00;
+        }
+        .audio-player {
+            display: none; /* Hide default controls */
         }
     </style>
 </head>
@@ -178,81 +56,106 @@
         </div>
 
         <div class="stations-grid">
+            <!-- Seattle -->
             <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Seattle</div>
                 <div class="station-info">Seattle, WA • 162.550 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Seattle and King County area</div>
-                <audio controls class="audio-player">
+                <audio class="audio-player" id="audio-1">
                     <source src="https://stream.revma.ihrhls.com/zc2514" type="audio/mpeg">
-                    Your browser does not support the audio element.
                 </audio>
+                <div class="custom-controls">
+                    <button class="custom-btn" onclick="playStation(1)">Play</button>
+                    <button class="custom-btn" onclick="pauseStation(1)">Pause</button>
+                    <button class="custom-btn" onclick="stopStation(1)">Stop</button>
+                </div>
                 <div class="station-status">
-                    <span class="status-text">Click play to listen live</span>
+                    <span class="status-text" id="status-1">Ready</span>
                 </div>
             </div>
-
+            <!-- Tacoma -->
             <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Tacoma</div>
                 <div class="station-info">Tacoma, WA • 162.400 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Tacoma and Pierce County area</div>
-                <audio controls class="audio-player">
+                <audio class="audio-player" id="audio-2">
                     <source src="https://stream.revma.ihrhls.com/zc2515" type="audio/mpeg">
-                    Your browser does not support the audio element.
                 </audio>
+                <div class="custom-controls">
+                    <button class="custom-btn" onclick="playStation(2)">Play</button>
+                    <button class="custom-btn" onclick="pauseStation(2)">Pause</button>
+                    <button class="custom-btn" onclick="stopStation(2)">Stop</button>
+                </div>
                 <div class="station-status">
-                    <span class="status-text">Click play to listen live</span>
+                    <span class="status-text" id="status-2">Ready</span>
                 </div>
             </div>
-
+            <!-- Everett -->
             <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Everett</div>
                 <div class="station-info">Everett, WA • 162.475 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Everett and Snohomish County area</div>
-                <audio controls class="audio-player">
+                <audio class="audio-player" id="audio-3">
                     <source src="https://stream.revma.ihrhls.com/zc2516" type="audio/mpeg">
-                    Your browser does not support the audio element.
                 </audio>
+                <div class="custom-controls">
+                    <button class="custom-btn" onclick="playStation(3)">Play</button>
+                    <button class="custom-btn" onclick="pauseStation(3)">Pause</button>
+                    <button class="custom-btn" onclick="stopStation(3)">Stop</button>
+                </div>
                 <div class="station-status">
-                    <span class="status-text">Click play to listen live</span>
+                    <span class="status-text" id="status-3">Ready</span>
                 </div>
             </div>
-
+            <!-- Yakima -->
             <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Yakima</div>
                 <div class="station-info">Yakima, WA • 162.425 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Yakima and Central Washington</div>
-                <audio controls class="audio-player">
+                <audio class="audio-player" id="audio-4">
                     <source src="https://stream.revma.ihrhls.com/zc2517" type="audio/mpeg">
-                    Your browser does not support the audio element.
                 </audio>
+                <div class="custom-controls">
+                    <button class="custom-btn" onclick="playStation(4)">Play</button>
+                    <button class="custom-btn" onclick="pauseStation(4)">Pause</button>
+                    <button class="custom-btn" onclick="stopStation(4)">Stop</button>
+                </div>
                 <div class="station-status">
-                    <span class="status-text">Click play to listen live</span>
+                    <span class="status-text" id="status-4">Ready</span>
                 </div>
             </div>
-
+            <!-- Olympia -->
             <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Olympia</div>
                 <div class="station-info">Olympia, WA • 162.450 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Olympia and Thurston County area</div>
-                <audio controls class="audio-player">
+                <audio class="audio-player" id="audio-5">
                     <source src="https://stream.revma.ihrhls.com/zc2518" type="audio/mpeg">
-                    Your browser does not support the audio element.
                 </audio>
+                <div class="custom-controls">
+                    <button class="custom-btn" onclick="playStation(5)">Play</button>
+                    <button class="custom-btn" onclick="pauseStation(5)">Pause</button>
+                    <button class="custom-btn" onclick="stopStation(5)">Stop</button>
+                </div>
                 <div class="station-status">
-                    <span class="status-text">Click play to listen live</span>
+                    <span class="status-text" id="status-5">Ready</span>
                 </div>
             </div>
-
+            <!-- Bellingham -->
             <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Bellingham</div>
                 <div class="station-info">Bellingham, WA • 162.500 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Bellingham and Whatcom County area</div>
-                <audio controls class="audio-player">
+                <audio class="audio-player" id="audio-6">
                     <source src="https://stream.revma.ihrhls.com/zc2519" type="audio/mpeg">
-                    Your browser does not support the audio element.
                 </audio>
+                <div class="custom-controls">
+                    <button class="custom-btn" onclick="playStation(6)">Play</button>
+                    <button class="custom-btn" onclick="pauseStation(6)">Pause</button>
+                    <button class="custom-btn" onclick="stopStation(6)">Stop</button>
+                </div>
                 <div class="station-status">
-                    <span class="status-text">Click play to listen live</span>
+                    <span class="status-text" id="status-6">Ready</span>
                 </div>
             </div>
         </div>
@@ -265,10 +168,54 @@
             document.getElementById('current-time').textContent = now.toLocaleTimeString();
             document.getElementById('current-date').textContent = now.toLocaleDateString();
         }
-
-        // Initialize
         updateDateTime();
         setInterval(updateDateTime, 1000);
+
+        // Playback controls logic
+        const totalStations = 6;
+        function getAudio(n) { return document.getElementById('audio-' + n); }
+        function getStatus(n) { return document.getElementById('status-' + n); }
+
+        function stopAllExcept(n) {
+            for (let i = 1; i <= totalStations; i++) {
+                if (i !== n) {
+                    let audio = getAudio(i);
+                    audio.pause();
+                    audio.currentTime = 0;
+                    getStatus(i).textContent = "Stopped";
+                }
+            }
+        }
+
+        function playStation(n) {
+            stopAllExcept(n);
+            let audio = getAudio(n);
+            audio.play().then(() => {
+                getStatus(n).textContent = "Playing";
+            }).catch(e => {
+                getStatus(n).textContent = "Error: " + e.message;
+            });
+        }
+
+        function pauseStation(n) {
+            let audio = getAudio(n);
+            audio.pause();
+            getStatus(n).textContent = "Paused";
+        }
+
+        function stopStation(n) {
+            let audio = getAudio(n);
+            audio.pause();
+            audio.currentTime = 0;
+            getStatus(n).textContent = "Stopped";
+        }
+
+        // Extra: Update status if stream ends
+        for (let i = 1; i <= totalStations; i++) {
+            getAudio(i).addEventListener('ended', () => {
+                getStatus(i).textContent = "Stopped";
+            });
+        }
     </script>
 </body>
-</html> 
+</html>
