@@ -5,9 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WA Emergency Scanner</title>
     <style>
-        /* ...Your existing styles, unchanged... */
-        /* (You can keep all your CSS from before, but add the following:) */
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff00;
+            line-height: 1.6;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 20px;
+        }
+        .title {
+            font-size: 2.5rem;
+            text-shadow: 0 0 10px #00ff00;
+            margin-bottom: 10px;
+        }
+        .subtitle { font-size: 1rem; opacity: 0.8; }
+        .info-bar {
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            padding: 15px;
+            margin-bottom: 30px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .info-item { display: flex; align-items: center; gap: 8px; }
+        .info-label { font-weight: bold; color: #00aa00; }
+        .stations-grid { display: grid; gap: 20px; }
+        .station-card {
+            background: #1a1a1a;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #00ff00;
+            display: block;
+        }
+        .station-card:hover {
+            border-color: #00aa00;
+            box-shadow: 0 0 20px #00ff00;
+            transform: translateY(-2px);
+        }
+        .station-name {
+            font-size: 1.4rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ff00;
+        }
+        .station-info { font-size: 1rem; margin-bottom: 8px; opacity: 0.9; }
+        .station-description { font-size: 0.9rem; opacity: 0.7; margin-bottom: 15px; }
+        .audio-player { display: none; }
         .custom-controls {
             display: flex;
             gap: 10px;
@@ -25,11 +81,15 @@
             box-shadow: 0 0 4px #00ff00;
             transition: background 0.2s;
         }
-        .custom-btn:hover {
-            background: #00aa00;
-        }
-        .audio-player {
-            display: none; /* Hide default controls */
+        .custom-btn:focus { outline: 2px solid #00aa00; }
+        .custom-btn:hover { background: #00aa00; }
+        .station-status { text-align: center; margin-top: 10px; }
+        .status-text { font-size: 0.9rem; opacity: 0.8; color: #00aa00; }
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .title { font-size: 2rem; }
+            .info-bar { flex-direction: column; text-align: center; }
+            .station-card { padding: 20px; }
         }
     </style>
 </head>
@@ -39,7 +99,6 @@
             <h1 class="title">WA NOAA Weather Radio</h1>
             <p class="subtitle">Free Weather & Emergency Information</p>
         </div>
-
         <div class="info-bar">
             <div class="info-item">
                 <span class="info-label">Time:</span>
@@ -54,23 +113,22 @@
                 <span id="current-date">Loading...</span>
             </div>
         </div>
-
         <div class="stations-grid">
             <!-- Seattle -->
             <div class="station-card">
                 <div class="station-name">NOAA Weather Radio - Seattle</div>
                 <div class="station-info">Seattle, WA • 162.550 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Seattle and King County area</div>
-                <audio class="audio-player" id="audio-1">
+                <audio class="audio-player" data-station="1">
                     <source src="https://stream.revma.ihrhls.com/zc2514" type="audio/mpeg">
                 </audio>
                 <div class="custom-controls">
-                    <button class="custom-btn" onclick="playStation(1)">Play</button>
-                    <button class="custom-btn" onclick="pauseStation(1)">Pause</button>
-                    <button class="custom-btn" onclick="stopStation(1)">Stop</button>
+                    <button class="custom-btn" data-action="play" aria-label="Play Seattle station">Play</button>
+                    <button class="custom-btn" data-action="pause" aria-label="Pause Seattle station">Pause</button>
+                    <button class="custom-btn" data-action="stop" aria-label="Stop Seattle station">Stop</button>
                 </div>
                 <div class="station-status">
-                    <span class="status-text" id="status-1">Ready</span>
+                    <span class="status-text" data-status="1">Ready</span>
                 </div>
             </div>
             <!-- Tacoma -->
@@ -78,16 +136,16 @@
                 <div class="station-name">NOAA Weather Radio - Tacoma</div>
                 <div class="station-info">Tacoma, WA • 162.400 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Tacoma and Pierce County area</div>
-                <audio class="audio-player" id="audio-2">
+                <audio class="audio-player" data-station="2">
                     <source src="https://stream.revma.ihrhls.com/zc2515" type="audio/mpeg">
                 </audio>
                 <div class="custom-controls">
-                    <button class="custom-btn" onclick="playStation(2)">Play</button>
-                    <button class="custom-btn" onclick="pauseStation(2)">Pause</button>
-                    <button class="custom-btn" onclick="stopStation(2)">Stop</button>
+                    <button class="custom-btn" data-action="play" aria-label="Play Tacoma station">Play</button>
+                    <button class="custom-btn" data-action="pause" aria-label="Pause Tacoma station">Pause</button>
+                    <button class="custom-btn" data-action="stop" aria-label="Stop Tacoma station">Stop</button>
                 </div>
                 <div class="station-status">
-                    <span class="status-text" id="status-2">Ready</span>
+                    <span class="status-text" data-status="2">Ready</span>
                 </div>
             </div>
             <!-- Everett -->
@@ -95,16 +153,16 @@
                 <div class="station-name">NOAA Weather Radio - Everett</div>
                 <div class="station-info">Everett, WA • 162.475 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Everett and Snohomish County area</div>
-                <audio class="audio-player" id="audio-3">
+                <audio class="audio-player" data-station="3">
                     <source src="https://stream.revma.ihrhls.com/zc2516" type="audio/mpeg">
                 </audio>
                 <div class="custom-controls">
-                    <button class="custom-btn" onclick="playStation(3)">Play</button>
-                    <button class="custom-btn" onclick="pauseStation(3)">Pause</button>
-                    <button class="custom-btn" onclick="stopStation(3)">Stop</button>
+                    <button class="custom-btn" data-action="play" aria-label="Play Everett station">Play</button>
+                    <button class="custom-btn" data-action="pause" aria-label="Pause Everett station">Pause</button>
+                    <button class="custom-btn" data-action="stop" aria-label="Stop Everett station">Stop</button>
                 </div>
                 <div class="station-status">
-                    <span class="status-text" id="status-3">Ready</span>
+                    <span class="status-text" data-status="3">Ready</span>
                 </div>
             </div>
             <!-- Yakima -->
@@ -112,16 +170,16 @@
                 <div class="station-name">NOAA Weather Radio - Yakima</div>
                 <div class="station-info">Yakima, WA • 162.425 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Yakima and Central Washington</div>
-                <audio class="audio-player" id="audio-4">
+                <audio class="audio-player" data-station="4">
                     <source src="https://stream.revma.ihrhls.com/zc2517" type="audio/mpeg">
                 </audio>
                 <div class="custom-controls">
-                    <button class="custom-btn" onclick="playStation(4)">Play</button>
-                    <button class="custom-btn" onclick="pauseStation(4)">Pause</button>
-                    <button class="custom-btn" onclick="stopStation(4)">Stop</button>
+                    <button class="custom-btn" data-action="play" aria-label="Play Yakima station">Play</button>
+                    <button class="custom-btn" data-action="pause" aria-label="Pause Yakima station">Pause</button>
+                    <button class="custom-btn" data-action="stop" aria-label="Stop Yakima station">Stop</button>
                 </div>
                 <div class="station-status">
-                    <span class="status-text" id="status-4">Ready</span>
+                    <span class="status-text" data-status="4">Ready</span>
                 </div>
             </div>
             <!-- Olympia -->
@@ -129,16 +187,16 @@
                 <div class="station-name">NOAA Weather Radio - Olympia</div>
                 <div class="station-info">Olympia, WA • 162.450 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Olympia and Thurston County area</div>
-                <audio class="audio-player" id="audio-5">
+                <audio class="audio-player" data-station="5">
                     <source src="https://stream.revma.ihrhls.com/zc2518" type="audio/mpeg">
                 </audio>
                 <div class="custom-controls">
-                    <button class="custom-btn" onclick="playStation(5)">Play</button>
-                    <button class="custom-btn" onclick="pauseStation(5)">Pause</button>
-                    <button class="custom-btn" onclick="stopStation(5)">Stop</button>
+                    <button class="custom-btn" data-action="play" aria-label="Play Olympia station">Play</button>
+                    <button class="custom-btn" data-action="pause" aria-label="Pause Olympia station">Pause</button>
+                    <button class="custom-btn" data-action="stop" aria-label="Stop Olympia station">Stop</button>
                 </div>
                 <div class="station-status">
-                    <span class="status-text" id="status-5">Ready</span>
+                    <span class="status-text" data-status="5">Ready</span>
                 </div>
             </div>
             <!-- Bellingham -->
@@ -146,21 +204,20 @@
                 <div class="station-name">NOAA Weather Radio - Bellingham</div>
                 <div class="station-info">Bellingham, WA • 162.500 MHz</div>
                 <div class="station-description">NOAA Weather Radio for Bellingham and Whatcom County area</div>
-                <audio class="audio-player" id="audio-6">
+                <audio class="audio-player" data-station="6">
                     <source src="https://stream.revma.ihrhls.com/zc2519" type="audio/mpeg">
                 </audio>
                 <div class="custom-controls">
-                    <button class="custom-btn" onclick="playStation(6)">Play</button>
-                    <button class="custom-btn" onclick="pauseStation(6)">Pause</button>
-                    <button class="custom-btn" onclick="stopStation(6)">Stop</button>
+                    <button class="custom-btn" data-action="play" aria-label="Play Bellingham station">Play</button>
+                    <button class="custom-btn" data-action="pause" aria-label="Pause Bellingham station">Pause</button>
+                    <button class="custom-btn" data-action="stop" aria-label="Stop Bellingham station">Stop</button>
                 </div>
                 <div class="station-status">
-                    <span class="status-text" id="status-6">Ready</span>
+                    <span class="status-text" data-status="6">Ready</span>
                 </div>
             </div>
         </div>
     </div>
-
     <script>
         // Update time and date
         function updateDateTime() {
@@ -172,50 +229,61 @@
         setInterval(updateDateTime, 1000);
 
         // Playback controls logic
-        const totalStations = 6;
-        function getAudio(n) { return document.getElementById('audio-' + n); }
-        function getStatus(n) { return document.getElementById('status-' + n); }
+        const audios = Array.from(document.querySelectorAll('.audio-player'));
+        const statuses = Array.from(document.querySelectorAll('.status-text'));
 
-        function stopAllExcept(n) {
-            for (let i = 1; i <= totalStations; i++) {
-                if (i !== n) {
-                    let audio = getAudio(i);
+        function pauseAllExcept(audioToPlay) {
+            audios.forEach(audio => {
+                if (audio !== audioToPlay) {
                     audio.pause();
                     audio.currentTime = 0;
-                    getStatus(i).textContent = "Stopped";
+                    const st = document.querySelector(`.status-text[data-status="${audio.dataset.station}"]`);
+                    if (st) st.textContent = "Stopped";
                 }
-            }
-        }
-
-        function playStation(n) {
-            stopAllExcept(n);
-            let audio = getAudio(n);
-            audio.play().then(() => {
-                getStatus(n).textContent = "Playing";
-            }).catch(e => {
-                getStatus(n).textContent = "Error: " + e.message;
             });
         }
 
-        function pauseStation(n) {
-            let audio = getAudio(n);
-            audio.pause();
-            getStatus(n).textContent = "Paused";
+        function setStatus(station, text) {
+            const st = document.querySelector(`.status-text[data-status="${station}"]`);
+            if (st) st.textContent = text;
         }
 
-        function stopStation(n) {
-            let audio = getAudio(n);
-            audio.pause();
-            audio.currentTime = 0;
-            getStatus(n).textContent = "Stopped";
-        }
+        document.querySelectorAll('.custom-controls').forEach(controls => {
+            controls.addEventListener('click', function(e) {
+                if (e.target.matches('button[data-action]')) {
+                    const action = e.target.getAttribute('data-action');
+                    const card = e.target.closest('.station-card');
+                    const audio = card.querySelector('.audio-player');
+                    const station = audio.dataset.station;
 
-        // Extra: Update status if stream ends
-        for (let i = 1; i <= totalStations; i++) {
-            getAudio(i).addEventListener('ended', () => {
-                getStatus(i).textContent = "Stopped";
+                    if (action === 'play') {
+                        pauseAllExcept(audio);
+                        // Fix: Only play after others are paused
+                        setTimeout(() => {
+                            audio.play().then(() => {
+                                setStatus(station, "Playing");
+                            }).catch(err => {
+                                setStatus(station, "Error: " + err.message);
+                            });
+                        }, 50);
+                    } else if (action === 'pause') {
+                        audio.pause();
+                        setStatus(station, "Paused");
+                    } else if (action === 'stop') {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        setStatus(station, "Stopped");
+                    }
+                }
             });
-        }
+        });
+
+        // Set status to "Stopped" if stream ends
+        audios.forEach(audio => {
+            audio.addEventListener('ended', () => {
+                setStatus(audio.dataset.station, "Stopped");
+            });
+        });
     </script>
 </body>
 </html>
