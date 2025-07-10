@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SomaFM Curated</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background-color: #121212;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+    select, audio {
+      margin: 1rem 0;
+      width: 100%;
+      max-width: 500px;
+      padding: 0.5rem;
+    }
+    #info {
+      margin-top: 1rem;
+      font-size: 1rem;
+      text-align: center;
+      max-width: 600px;
+    }
+    canvas {
+      margin-top: 2rem;
+      width: 100%;
+      max-width: 600px;
+      height: 100px;
+      background: #222;
+    }
+  </style>
+</head>
+<body>
+  <h1>SomaFM Curated</h1>
+  <select id="stationSelect"></select>
+  <audio id="audioPlayer" controls autoplay></audio>
+  <div id="info"></div>
+  <canvas id="visualizer"></canvas>
+
+  <script>
+    const stations = [
+      "groovesalad",
+      "defcon",
+      "secretagent",
+      "dronezone",
+      "lush",
+      "spacestation",
+      "digitalis",
+      "dubstep",
+      "beatblender",
+      "metal"
+    ];
+
+    const apiURL = "https://api.somafm.com/channels.json";
+    const select = document.getElementById("stationSelect");
+    const audio = document.getElementById("audioPlayer");
+    const info = document.getElementById("info");
+    const canvas = document.getElementById("visualizer");
+    const ctx = canvas.getContext("2d");
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    let audioCtx, analyser, source, dataArray;
+
+    function setupVisualizer() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioCtx.createAnalyser();
+      source = audioCtx.createMediaElementSource(audio);
+      source.connect(analyser);
+      analyser.connect(audioCtx.destination);
+      analyser.fftSize = 256;
+      dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+      function draw() {
+        requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+        ctx.fillStyle = "#222";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        const barWidth = canvas.width / dataArray.length;
+        for (let i = 0; i < dataArray.length; i++) {
+          const barHeight = dataArray[i] / 2;
+          ctx.fillStyle = `hsl(${i * 3}, 100%, 60%)`;
+          ctx.fillRect(i * barWidth, canvas.height - barHeight, barWidth, barHeight);
+        }
+      }
+      draw();
+    }
+
+    async function loadStations() {
+      const res = await fetch(apiURL);
+      const json = await res.json();
+      const filtered = json.channels.filter(ch => stations.includes(ch.id));
+      filtered.forEach(ch => {
+        const opt = document.createElement("option");
+        opt.value = ch.streams[0].url;
+        opt.textContent = `${ch.title} – ${ch.description}`;
+        opt.dataset.title = ch.title;
+        opt.dataset.desc = ch.description;
+        select.appendChild(opt);
+      });
+      select.dispatchEvent(new Event("change"));
+    }
+
+    select.addEventListener("change", () => {
+      const selected = select.options[select.selectedIndex];
+      audio.src = selected.value;
+      info.textContent = `${selected.dataset.title}: ${selected.dataset.desc}`;
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    });
+
+    audio.addEventListener("play", () => {
+      if (!audioCtx) setupVisualizer();
+    });
+
+    loadStations();
+  </script>
+</body>
+</html>
