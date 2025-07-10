@@ -10,7 +10,6 @@
             padding: 0;
             box-sizing: border-box;
         }
-
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -22,7 +21,6 @@
             justify-content: center;
             padding: 20px;
         }
-
         .container {
             max-width: 600px;
             width: 100%;
@@ -34,7 +32,6 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
-
         h1 {
             font-size: 2.5rem;
             font-weight: 700;
@@ -44,18 +41,15 @@
             -webkit-text-fill-color: transparent;
             background-clip: text;
         }
-
         .subtitle {
             font-size: 1.1rem;
             color: #b8c5d6;
             margin-bottom: 40px;
             font-weight: 300;
         }
-
         .feed-selector {
             margin-bottom: 30px;
         }
-
         label {
             display: block;
             font-size: 1.1rem;
@@ -63,7 +57,6 @@
             color: #e8f4fd;
             font-weight: 500;
         }
-
         select {
             width: 100%;
             padding: 15px 20px;
@@ -76,31 +69,26 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         }
-
         select:focus {
             outline: none;
             border-color: #4ecdc4;
             box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
         }
-
         select option {
             background: #1a1a2e;
             color: white;
             padding: 10px;
         }
-
         .audio-player {
             width: 100%;
             margin-top: 20px;
         }
-
         audio {
             width: 100%;
             height: 60px;
             border-radius: 12px;
             background: rgba(255, 255, 255, 0.1);
         }
-
         .status {
             margin-top: 20px;
             padding: 15px;
@@ -108,57 +96,47 @@
             font-weight: 500;
             transition: all 0.3s ease;
         }
-
         .status.playing {
             background: rgba(76, 175, 80, 0.2);
             border: 1px solid rgba(76, 175, 80, 0.3);
             color: #81c784;
         }
-
         .status.paused {
             background: rgba(255, 152, 0, 0.2);
             border: 1px solid rgba(255, 152, 0, 0.3);
             color: #ffb74d;
         }
-
         .status.error {
             background: rgba(244, 67, 54, 0.2);
             border: 1px solid rgba(244, 67, 54, 0.3);
             color: #e57373;
         }
-
         .footer {
             margin-top: 30px;
             font-size: 0.9rem;
             color: #8b9dc3;
             opacity: 0.8;
         }
-
         @media (max-width: 768px) {
             .container {
                 padding: 30px 20px;
                 margin: 10px;
             }
-
             h1 {
                 font-size: 2rem;
             }
-
             .subtitle {
                 font-size: 1rem;
             }
-
             select {
                 padding: 12px 15px;
                 font-size: 0.95rem;
             }
         }
-
         @media (max-width: 480px) {
             h1 {
                 font-size: 1.8rem;
             }
-
             .container {
                 padding: 25px 15px;
             }
@@ -168,105 +146,85 @@
 <body>
     <div class="container">
         <h1>WA Live Scanner Feeds</h1>
-        <p class="subtitle">Police, Fire & EMS Dispatch — King County, Kirkland, Yakima</p>
-        
+        <p class="subtitle">Police, Fire & EMS Dispatch — OpenMHz Washington State</p>
         <div class="feed-selector">
             <label for="feedSelect">Select a Feed:</label>
             <select id="feedSelect">
                 <option value="">Choose a feed...</option>
-                <option value="King County Fire & Police Dispatch">King County Fire & Police Dispatch</option>
-                <option value="King County Sheriff Dispatch">King County Sheriff Dispatch</option>
-                <option value="King County Fire District 2">King County Fire District 2</option>
-                <option value="King County Fire District 10">King County Fire District 10</option>
-                <option value="King County Fire District 20">King County Fire District 20</option>
-                <option value="King County Fire District 26">King County Fire District 26</option>
-                <option value="King County Fire District 27">King County Fire District 27</option>
-                <option value="Kirkland Police Dispatch (NORCOM NCPOL-2)">Kirkland Police Dispatch (NORCOM NCPOL-2)</option>
-                <option value="Yakima City/County Police, Fire & EMS">Yakima City/County Police, Fire & EMS</option>
-                <option value="Seattle Police Department">Seattle Police Department</option>
-                <option value="Seattle Fire Department">Seattle Fire Department</option>
-                <option value="Tacoma Police Department">Tacoma Police Department</option>
-                <option value="Tacoma Fire Department">Tacoma Fire Department</option>
-                <option value="Spokane Police Department">Spokane Police Department</option>
-                <option value="Spokane Fire Department">Spokane Fire Department</option>
-                <option value="Vancouver Police Department">Vancouver Police Department</option>
-                <option value="Vancouver Fire Department">Vancouver Fire Department</option>
-                <option value="Bellevue Police Department">Bellevue Police Department</option>
-                <option value="Bellevue Fire Department">Bellevue Fire Department</option>
+                <option value="Seattle/King County (KCERS)">Seattle/King County (KCERS)</option>
+                <option value="Seattle Fire">Seattle Fire</option>
+                <option value="Seattle Police">Seattle Police</option>
+                <option value="King County Fire">King County Fire</option>
+                <option value="King County Sheriff">King County Sheriff</option>
+                <option value="WSP District 1 (Tacoma)">WSP District 1 (Tacoma)</option>
+                <option value="WSP District 2 (Bellevue)">WSP District 2 (Bellevue)</option>
+                <option value="WSP District 3 (Bremerton)">WSP District 3 (Bremerton)</option>
+                <option value="WSP District 4 (Spokane)">WSP District 4 (Spokane)</option>
+                <option value="WSP District 5 (Vancouver)">WSP District 5 (Vancouver)</option>
+                <option value="WSP District 6 (Wenatchee)">WSP District 6 (Wenatchee)</option>
+                <option value="WSP District 7 (Marysville)">WSP District 7 (Marysville)</option>
+                <option value="WSP District 8 (Port Angeles)">WSP District 8 (Port Angeles)</option>
+                <option value="Tacoma/Pierce County (PCWARN)">Tacoma/Pierce County (PCWARN)</option>
+                <option value="Tacoma Fire">Tacoma Fire</option>
+                <option value="Tacoma Police">Tacoma Police</option>
+                <option value="Spokane County (SRECS)">Spokane County (SRECS)</option>
+                <option value="Spokane Fire">Spokane Fire</option>
+                <option value="Spokane Police">Spokane Police</option>
             </select>
-
         </div>
-
         <div class="audio-player" id="audioPlayer" style="display: none;">
             <audio id="audioElement" controls preload="none">
                 Your browser does not support the audio element.
             </audio>
             <div class="status" id="status"></div>
         </div>
-
         <div class="footer">
             <p>Live emergency radio feeds from OpenMHz</p>
             <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: Emergency feeds may be silent when no calls are active</p>
         </div>
     </div>
-
     <script>
         const feeds = {
-            "King County Fire & Police Dispatch": "https://openmhz.com/stream/king-county-fire-police",
-            "King County Sheriff Dispatch": "https://openmhz.com/stream/king-county-sheriff", 
-            "King County Fire District 2": "https://openmhz.com/stream/king-county-fire-district-2",
-            "King County Fire District 10": "https://openmhz.com/stream/king-county-fire-district-10",
-            "King County Fire District 20": "https://openmhz.com/stream/king-county-fire-district-20",
-            "King County Fire District 26": "https://openmhz.com/stream/king-county-fire-district-26",
-            "King County Fire District 27": "https://openmhz.com/stream/king-county-fire-district-27",
-            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://openmhz.com/stream/kirkland-police",
-            "Yakima City/County Police, Fire & EMS": "https://openmhz.com/stream/yakima-police-fire",
-            "Seattle Police Department": "https://openmhz.com/stream/seattle-police",
-            "Seattle Fire Department": "https://openmhz.com/stream/seattle-fire",
-            "Tacoma Police Department": "https://openmhz.com/stream/tacoma-police",
-            "Tacoma Fire Department": "https://openmhz.com/stream/tacoma-fire",
-            "Spokane Police Department": "https://openmhz.com/stream/spokane-police",
-            "Spokane Fire Department": "https://openmhz.com/stream/spokane-fire",
-            "Vancouver Police Department": "https://openmhz.com/stream/vancouver-police",
-            "Vancouver Fire Department": "https://openmhz.com/stream/vancouver-fire",
-            "Bellevue Police Department": "https://openmhz.com/stream/bellevue-police",
-            "Bellevue Fire Department": "https://openmhz.com/stream/bellevue-fire"
+            "Seattle/King County (KCERS)": "https://openmhz.com/system/kcers",
+            "Seattle Fire": "https://openmhz.com/system/kcers/tg/368",
+            "Seattle Police": "https://openmhz.com/system/kcers/tg/36848",
+            "King County Fire": "https://openmhz.com/system/kcers/tg/36816",
+            "King County Sheriff": "https://openmhz.com/system/kcers/tg/36880",
+            "WSP District 1 (Tacoma)": "https://openmhz.com/system/wsp/tg/16",
+            "WSP District 2 (Bellevue)": "https://openmhz.com/system/wsp/tg/32",
+            "WSP District 3 (Bremerton)": "https://openmhz.com/system/wsp/tg/48",
+            "WSP District 4 (Spokane)": "https://openmhz.com/system/wsp/tg/64",
+            "WSP District 5 (Vancouver)": "https://openmhz.com/system/wsp/tg/80",
+            "WSP District 6 (Wenatchee)": "https://openmhz.com/system/wsp/tg/96",
+            "WSP District 7 (Marysville)": "https://openmhz.com/system/wsp/tg/112",
+            "WSP District 8 (Port Angeles)": "https://openmhz.com/system/wsp/tg/128",
+            "Tacoma/Pierce County (PCWARN)": "https://openmhz.com/system/pcwarn",
+            "Tacoma Fire": "https://openmhz.com/system/pcwarn/tg/16",
+            "Tacoma Police": "https://openmhz.com/system/pcwarn/tg/48",
+            "Spokane County (SRECS)": "https://openmhz.com/system/srecs",
+            "Spokane Fire": "https://openmhz.com/system/srecs/tg/16",
+            "Spokane Police": "https://openmhz.com/system/srecs/tg/48"
         };
-
         const feedSelect = document.getElementById('feedSelect');
         const audioElement = document.getElementById('audioElement');
         const audioPlayer = document.getElementById('audioPlayer');
         const status = document.getElementById('status');
-
         function updateStatus(message, type = 'playing') {
             status.textContent = message;
             status.className = `status ${type}`;
         }
-
         function loadFeed(feedName) {
             if (!feedName || !feeds[feedName]) {
                 audioPlayer.style.display = 'none';
                 return;
             }
-
             const streamUrl = feeds[feedName];
-            
-            // Stop current audio if playing
             audioElement.pause();
             audioElement.currentTime = 0;
-            
-            // Set new source
             audioElement.src = streamUrl;
-            
-            // Show player
             audioPlayer.style.display = 'block';
-            
-            // Update status
             updateStatus(`Loading ${feedName}...`, 'paused');
-            
-            // Attempt to play
             const playPromise = audioElement.play();
-            
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
@@ -274,42 +232,37 @@
                     })
                     .catch(error => {
                         console.error('Playback failed:', error);
-                        // Don't show error for autoplay restrictions, just show ready to play
                         updateStatus(`Ready to play: ${feedName} (click play button)`, 'paused');
                     });
             }
         }
-
-        // Event listeners
         feedSelect.addEventListener('change', (e) => {
             loadFeed(e.target.value);
         });
-
-
-
         audioElement.addEventListener('play', () => {
             const selectedFeed = feedSelect.value;
             if (selectedFeed) {
                 updateStatus(`Now playing: ${selectedFeed}`, 'playing');
             }
         });
-
         audioElement.addEventListener('pause', () => {
             const selectedFeed = feedSelect.value;
             if (selectedFeed) {
                 updateStatus(`Paused: ${selectedFeed}`, 'paused');
             }
         });
-
         audioElement.addEventListener('error', (e) => {
             console.error('Audio error:', e);
-            updateStatus('Stream error. Please try selecting a different feed.', 'error');
+            const selectedFeed = feedSelect.value;
+            if (selectedFeed) {
+                updateStatus(`Feed offline: ${selectedFeed}`, 'error');
+            } else {
+                updateStatus('Stream error. Please try selecting a different feed.', 'error');
+            }
         });
-
         audioElement.addEventListener('loadstart', () => {
             updateStatus('Connecting to stream...', 'paused');
         });
-
         audioElement.addEventListener('canplay', () => {
             const selectedFeed = feedSelect.value;
             if (selectedFeed) {
@@ -320,45 +273,28 @@
                 }
             }
         });
-
         audioElement.addEventListener('loadeddata', () => {
             const selectedFeed = feedSelect.value;
             if (selectedFeed && audioElement.paused) {
                 updateStatus(`Connected: ${selectedFeed} (stream ready - may be silent)`, 'paused');
             }
         });
-
-        audioElement.addEventListener('error', (e) => {
-            console.error('Audio error:', e);
-            const selectedFeed = feedSelect.value;
-            if (selectedFeed) {
-                updateStatus(`Feed offline: ${selectedFeed}`, 'error');
-            } else {
-                updateStatus('Stream error. Please try selecting a different feed.', 'error');
-            }
-        });
-
-        // Auto-load first feed on page load
         window.addEventListener('load', () => {
-            // Set the first option as default
-            feedSelect.value = "King County Fire & Police Dispatch";
-            loadFeed("King County Fire & Police Dispatch");
+            feedSelect.value = "Seattle/King County (KCERS)";
+            loadFeed("Seattle/King County (KCERS)");
         });
-
-        // Add click handler for better user experience
         document.addEventListener('click', () => {
-            // If audio is paused but ready, try to play on first user interaction
             if (audioElement.paused && audioElement.readyState >= 2) {
                 const selectedFeed = feedSelect.value;
                 if (selectedFeed) {
                     audioElement.play().then(() => {
                         updateStatus(`Now playing: ${selectedFeed}`, 'playing');
                     }).catch(() => {
-                        // User will need to click play manually
                     });
                 }
             }
         }, { once: true });
     </script>
 </body>
-</html> 
+</html>
+
