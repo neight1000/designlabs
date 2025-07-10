@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#16213e">
+    <meta name="description" content="Live police and fire scanner for Kirkland, WA">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='24' font-size='24'>🔊</text></svg>">
+    <title>🔊 Kirkland Live Scanner</title>
+    <style>
+        :root {
+            --primary-bg: linear-gradient(135deg, #1a1a2e, #16213e);
+            --glass-bg: rgba(255, 255, 255, 0.1);
+            --glass-border: rgba(255, 255, 255, 0.2);
+            --accent-gradient: linear-gradient(45deg, #667eea, #764ba2);
+            --text-primary: #ffffff;
+            --text-secondary: #b8c5d6;
+            --error-color: #ff4757;
+            --success-color: #2ed573;
+            --warning-color: #ffa502;
+            --info-color: #3742fa;
+        }
+
+        @media (prefers-color-scheme: light) {
+            :root {
+                --primary-bg: linear-gradient(135deg, #f8f9fa, #e9ecef);
+                --glass-bg: rgba(0, 0, 0, 0.05);
+                --glass-border: rgba(0, 0, 0, 0.1);
+                --text-primary: #212529;
+                --text-secondary: #6c757d;
+            }
+        }
+
+        @media (prefers-contrast: high) {
+            :root {
+                --glass-bg: rgba(255, 255, 255, 0.9);
+                --glass-border: rgba(255, 255, 255, 1);
+                --text-secondary: var(--text-primary);
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--primary-bg);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            font-size: 16px;
+        }
+
+        .container {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--glass-border);
+            max-width: 480px;
+            width: 100%;
+            position: relative;
+        }
+
+        .offline-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--error-color);
+            color: white;
+            padding: 12px;
+            font-size: 0.9rem;
+            text-align: center;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .offline-banner.show {
+            transform: translateY(0);
+        }
+
+        .pwa-banner {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--info-color);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 15px rgba(55, 66, 250, 0.3);
+            z-index: 1000;
+        }
+
+        .pwa-banner.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 8px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        .timestamp {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-family: 'SF Mono', 'Monaco', 'Cascadia Code', monospace;
+            background: var(--glass-bg);
+            padding: 8px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .audio-container {
+            margin: 24px 0;
+        }
+
+        .waveform-container {
+            height: 64px;
+            background: var(--glass-bg);
+            border-radius: 32px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid var(--glass-border);
+        }
+
+        .waveform {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            height: 100%;
+            padding: 16px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .waveform.active {
+            opacity: 1;
+        }
+
+        .waveform-bar {
+            width: 3px;
+            background: linear-gradient(to top, #667eea, #764ba2);
+            border-radius: 2px;
+            transition: height 0.1s ease;
+            height: 8px;
+            min-height: 8px;
+        }
+
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .placeholder-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        audio {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .main-controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--accent-gradient);
+            border: none;
+            border-radius: 24px;
+            color: white;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            position: relative;
+            min-width: 120px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        button:focus-visible {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--glass-bg);
+            padding: 16px 20px;
+            border-radius: 24px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .volume-button {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            padding: 8px;
+            min-width: auto;
+            box-shadow: none;
+            font-size: 1.2rem;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            outline: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s ease;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #667eea;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .volume-value {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .status {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 16px;
+            background: var(--glass-bg);
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--glass-border);
+            line-height: 1.4;
+        }
+
+        .live-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--error-color);
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .connection-quality {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            margin-top: 12px;
+        }
+
+        .signal-bar {
+            width: 4px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            transition: background 0.3s ease;
+        }
+
+        .signal-bar.active {
+            background: var(--success-color);
+        }
+
+        .last-heard {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .station-selector {
+            margin-bottom: 20px;
+        }
+
+        .station-selector label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .station-selector select {
+            width: 100%;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 12px 16px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            cursor: pointer;
+            backdrop-filter: blur(10px);
+        }
+
+        .station-selector select:focus {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+
+        #waveformCanvas {
+            width: 100%;
+            height: 64px;
+            border-radius: 32px;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            display: none;
+        }
+
+        #waveformCanvas.active {
+            display: block;
+        }
+
+        .sleep-timer {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--glass-bg);
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            font-size: 0.9rem;
+        }
+
+        .sleep-timer select {
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .keyboard-hint {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(10px);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            border: 1px solid var(--glass-border);
+            max-width: 200px;
+            z-index: 100;
+        }
+
+        .keyboard-hint.show {
+            opacity: 0.9;
+        }
+
+        .troubleshoot {
+            margin-top: 16px;
+            padding: 12px;
+            background: rgba(255, 165, 2, 0.1);
+            border: 1px solid rgba(255, 165, 2, 0.3);
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: var(--warning-color);
+        }
+
+        .troubleshoot details {
+            cursor: pointer;
+        }
+
+        .troubleshoot summary {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .troubleshoot ul {
+            text-align: left;
+            padding-left: 16px;
+            line-height: 1.4;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 24px 20px;
+                margin: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            .main-controls {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            button {
+                width: 100%;
+                max-width: 280px;
+            }
+
+            .keyboard-hint {
+                display: none;
+            }
+
+            .troubleshoot {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* High contrast mode improvements */
+        @media (prefers-contrast: high) {
+            button {
+                border: 2px solid var(--text-primary);
+            }
+            
+            .waveform-bar {
+                background: var(--text-primary);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-banner" id="offlineBanner">
+        📵 No internet connection - scanner will resume when online
+    </div>
+
+    <div class="pwa-banner" id="pwaBanner" onclick="installPWA()" role="button" tabindex="0">
+        📱 Add to Home Screen
+    </div>
+
+    <div class="container">
+        <h1>🔊 Kirkland Live Scanner</h1>
+        <p class="subtitle">Streaming live police & fire dispatch for Kirkland, WA.</p>
+        
+        <div class="timestamp" id="timestamp" role="status" aria-live="polite">
+            Loading...
+        </div>
+        
+        <div class="station-selector">
+            <label for="stationSelect">📻 Scanner Channel:</label>
+            <select id="stationSelect" aria-label="Select scanner channel">
+                <option value="41164">🚒 Kirkland Fire/EMS (Most Active)</option>
+                <option value="31423">👮 King County Police Northeast</option>
+                <option value="40685">🚔 King County Police South</option>
+                <option value="41938">🔥 King County & Seattle Fire</option>
+                <option value="41913">📡 ValleyCom Multi-Agency</option>
+                <option value="36853">📻 Kirkland Live Scanner (Original)</option>
+            </select>
+        </div>
+
+        <div class="audio-container">
+            <div class="waveform-container" role="img" aria-label="Audio visualization">
+                <div class="spinner" id="loadingSpinner"></div>
+                <canvas id="waveformCanvas" width="400" height="64"></canvas>
+                <div class="waveform" id="waveform" style="display: none;"></div>
+                <div class="placeholder-text" id="placeholderText" style="display: none;">
+                    🎵 Select a channel and click Play to see visualization
+                </div>
+            </div>
+            
+            <audio id="scanner" preload="none" crossorigin="anonymous" aria-label="Live scanner audio">
+                <source id="audioSource" src="https://broadcastify.cdnstream1.com/41164" type="audio/mpeg">
+                Your browser does not support audio streaming.
+            </audio>
+            
+            <div class="controls">
+                <div class="main-controls">
+                    <button id="playBtn" onclick="togglePlay()" aria-label="Play scanner audio">
+                        ▶️ Play Stream
+                    </button>
+                    <button id="retryBtn" onclick="retryConnection()" style="display: none;" aria-label="Retry connection">
+                        🔄 Retry
+                    </button>
+                    <button id="testBtn" onclick="testAudio()" style="display: none;" aria-label="Test audio">
+                        🎵 Test Audio
+                    </button>
+                </div>
+                
+                <div class="volume-container">
+                    <button class="volume-button" id="muteBtn" onclick="toggleMute()" aria-label="Toggle mute">
+                        🔊
+                    </button>
+                    <input type="range" class="volume-slider" id="volumeSlider" 
+                           min="0" max="100" value="70" 
+                           aria-label="Volume control" 
+                           aria-valuemin="0" aria-valuemax="100" aria-valuenow="70">
+                    <span class="volume-value" id="volumeValue" aria-live="polite">70%</span>
+                </div>
+                
+                <div class="sleep-timer">
+                    ⏱️ Sleep timer:
+                    <select id="sleepTimer" aria-label="Sleep timer duration">
+                        <option value="0">Off</option>
+                        <option value="15">15 minutes</option>
+                        <option value="30">30 minutes</option>
+                        <option value="60">1 hour</option>
+                        <option value="120">2 hours</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status" id="status" role="status" aria-live="polite">
+            <span class="live-indicator"></span>
+            Ready to stream
+            
+            <div class="connection-quality" id="connectionQuality" aria-label="Connection quality">
+                <div class="signal-bar"></div>
+                <div class="signal-bar"></div>
+                <div class="signal-bar"></div>
+                <div class="signal-bar"></div>
+            </div>
+            
+            <div class="last-heard" id="lastHeard">
+                Last transmission: Never detected
+            </div>
+        </div>
+
+        <div class="troubleshoot" id="troubleshoot" style="display: none;">
+            <details>
+                <summary>🔧 Troubleshooting</summary>
+                <ul>
+                    <li>Check your internet connection</li>
+                    <li>Try refreshing the page</li>
+                    <li>Disable ad blockers for this site</li>
+                    <li>Try a different browser</li>
+                    <li>Check if audio is enabled in browser settings</li>
+                </ul>
+            </details>
+        </div>
+    </div>
+
+    <div class="keyboard-hint" id="keyboardHint">
+        <strong>Keyboard shortcuts:</strong><br>
+        <kbd>Space</kbd> Play/Pause<br>
+        <kbd>M</kbd> Mute<br>
+        <kbd>↑↓</kbd> Volume<br>
+        <kbd>R</kbd> Retry
+    </div>
+
+    <script>
+        // Enhanced global variables
+        const audio = document.getElementById('scanner');
+        const audioSource = document.getElementById('audioSource');
+        const stationSelect = document.getElementById('stationSelect');
+        const playBtn = document.getElementById('playBtn');
+        const retryBtn = document.getElementById('retryBtn');
+        const testBtn = document.getElementById('testBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeValue = document.getElementById('volumeValue');
+        const status = document.getElementById('status');
+        const timestamp = document.getElementById('timestamp');
+        const lastHeard = document.getElementById('lastHeard');
+        const waveform = document.getElementById('waveform');
+        const waveformCanvas = document.getElementById('waveformCanvas');
+        const waveformContainer = document.getElementById('waveformContainer');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const placeholderText = document.getElementById('placeholderText');
+        const connectionQuality = document.getElementById('connectionQuality');
+        const offlineBanner = document.getElementById('offlineBanner');
+        const sleepTimer = document.getElementById('sleepTimer');
+        const keyboardHint = document.getElementById('keyboardHint');
+        const pwaBanner = document.getElementById('pwaBanner');
+        const troubleshoot = document.getElementById('troubleshoot');
+
+        // Enhanced state management
+        let isPlaying = false;
+        let isMuted = false;
+        let retryCount = 0;
+        let maxRetries = 5;
+        let retryTimeout;
+        let sleepTimeout;
+        let lastTransmissionTime = null;
+        let audioContext;
+        let analyser;
+        let source;
+        let dataArray;
+        let waveformBars = [];
+        let connectionStartTime = Date.now();
+        let deferredPrompt;
+        let userInteracted = false;
+        let isFirstPlay = true;
+        let canvasContext;
+        let animationId;
+
+        // Station information
+        const stations = {
+            '41164': { name: 'Kirkland Fire/EMS', desc: 'Covers Kirkland, Bellevue, Bothell area' },
+            '31423': { name: 'King County Police Northeast', desc: 'NORCOM trunk group' },
+            '40685': { name: 'King County Police South', desc: 'Auburn, Kent, Renton, Tukwila area' },
+            '41938': { name: 'King County & Seattle Fire', desc: 'Combined fire systems' },
+            '41913': { name: 'ValleyCom Multi-Agency', desc: 'Multiple cities and departments' },
+            '36853': { name: 'Kirkland Live Scanner', desc: 'Original Kirkland feed' }
+        };
+
+        // Enhanced initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+            setupWaveform();
+            setupKeyboardShortcuts();
+            updateTimestamp();
+            checkOnlineStatus();
+            setupPWA();
+            
+            // Update intervals
+            setInterval(updateTimestamp, 1000);
+            setInterval(updateLastHeard, 5000);
+            setInterval(updateConnectionQuality, 3000);
+            
+            // Show keyboard hint briefly on desktop
+            if (window.innerWidth > 768) {
+                setTimeout(() => {
+                    keyboardHint.classList.add('show');
+                    setTimeout(() => keyboardHint.classList.remove('show'), 4000);
+                }, 3000);
+            }
+        });
+
+        function initializeApp() {
+            // Set initial volume
+            audio.volume = 0.7;
+            audio.preload = 'none';
+            
+            // Mark user interaction
+            document.addEventListener('click', () => userInteracted = true, { once: true });
+            document.addEventListener('keydown', () => userInteracted = true, { once: true });
+            document.addEventListener('touchstart', () => userInteracted = true, { once: true });
+        }
+
+        function setupEventListeners() {
+            volumeSlider.addEventListener('input', handleVolumeChange);
+            sleepTimer.addEventListener('change', handleSleepTimer);
+            stationSelect.addEventListener('change', handleStationChange);
+            
+            // Page Visibility API for background audio
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            
+            // Enhanced audio event listeners
+            audio.addEventListener('loadstart', handleLoadStart);
+            audio.addEventListener('loadedmetadata', handleLoadedMetadata);
+            audio.addEventListener('canplay', handleCanPlay);
+            audio.addEventListener('canplaythrough', handleCanPlayThrough);
+            audio.addEventListener('playing', handlePlaying);
+            audio.addEventListener('pause', handlePause);
+            audio.addEventListener('ended', handleEnded);
+            audio.addEventListener('error', handleError);
+            audio.addEventListener('stalled', handleStalled);
+            audio.addEventListener('waiting', handleWaiting);
+            audio.addEventListener('timeupdate', handleTimeUpdate);
+            audio.addEventListener('progress', handleProgress);
+        }
+
+        function setupWaveform() {
+            // Initialize canvas for better visualizer
+            canvasContext = waveformCanvas.getContext('2d');
+            waveformCanvas.width = 400;
+            waveformCanvas.height = 64;
+            
+            // Create fallback DOM-based bars for older browsers
+            const barCount = window.innerWidth < 768 ? 30 : 45;
+            for (let i = 0; i < barCount; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'waveform-bar';
+                bar.style.height = '8px';
+                waveform.appendChild(bar);
+                waveformBars.push(bar);
+            }
+        }
+
+        function handleStationChange() {
+            const selectedStation = stationSelect.value;
+            const stationInfo = stations[selectedStation];
+            
+            // Stop current playback
+            if (isPlaying) {
+                pauseStream();
+            }
+            
+            // Update audio source
+            audioSource.src = `https://broadcastify.cdnstream1.com/${selectedStation}`;
+            audio.load();
+            
+            // Update status
+            updateStatus(`📻 Selected: ${stationInfo.name} - ${stationInfo.desc}`);
+            
+            // Reset retry count and hide retry button
+            retryCount = 0;
+            retryBtn.style.display = 'none';
+            testBtn.style.display = 'none';
+            isFirstPlay = true;
+            
+            // Update page title
+            document.title = `🔊 ${stationInfo.name}`;
+        }
+
+        function setupAudioVisualization() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+
+                if (!source) {
+                    source = audioContext.createMediaElementSource(audio);
+                    analyser = audioContext.createAnalyser();
+                    source.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                    analyser.fftSize = 256;
+                    analyser.smoothingTimeConstant = 0.8;
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                }
+                
+                animateWaveform();
+            } catch (error) {
+                console.log('Audio visualization not available:', error);
+                showPlaceholderVisualization();
+            }
+        }
+
+        function animateWaveform() {
+            if (!isPlaying) {
+                resetWaveform();
+                return;
+            }
+            
+            animationId = requestAnimationFrame(animateWaveform);
+            
+            if (analyser && dataArray && canvasContext) {
+                analyser.getByteFrequencyData(dataArray);
+                
+                // Clear canvas
+                canvasContext.clearRect(0, 0, waveformCanvas.width, waveformCanvas.height);
+                
+                // Create gradient
+                const gradient = canvasContext.createLinearGradient(0, 0, 0, waveformCanvas.height);
+                gradient.addColorStop(0, '#667eea');
+                gradient.addColorStop(1, '#764ba2');
+                
+                const barWidth = waveformCanvas.width / dataArray.length * 2;
+                let x = 0;
+                let hasActivity = false;
+                let totalActivity = 0;
+                
+                for (let i = 0; i < dataArray.length; i++) {
+                    const barHeight = (dataArray[i] / 255) * waveformCanvas.height * 0.8;
+                    
+                    canvasContext.fillStyle = gradient;
+                    canvasContext.fillRect(x, waveformCanvas.height - barHeight, barWidth, barHeight);
+                    
+                    // Add glow effect for active bars
+                    if (dataArray[i] > 30) {
+                        canvasContext.shadowColor = '#667eea';
+                        canvasContext.shadowBlur = 10;
+                        canvasContext.fillRect(x, waveformCanvas.height - barHeight, barWidth, barHeight);
+                        canvasContext.shadowBlur = 0;
+                        hasActivity = true;
+                    }
+                    
+                    totalActivity += dataArray[i];
+                    x += barWidth + 1;
+                }
+                
+                // Update transmission detection
+                if (hasActivity && totalActivity > 1000) {
+                    lastTransmissionTime = Date.now();
+                }
+                
+                // Also update DOM bars as fallback
+                updateDOMBars(dataArray);
+                
+            } else {
+                showPlaceholderVisualization();
+            }
+        }
+
+        function updateDOMBars(frequencyData) {
+            for (let i = 0; i < waveformBars.length; i++) {
+                const dataIndex = Math.floor((i / waveformBars.length) * frequencyData.length);
+                const value = frequencyData[dataIndex] || 0;
+                const normalizedValue = value / 255;
+                const height = Math.max(8, normalizedValue * 48 + 8);
+                waveformBars[i].style.height = height + 'px';
+            }
+        }
+
+        function showPlaceholderVisualization() {
+            // Fallback animation when Web Audio API isn't available
+            if (!isPlaying) return;
+            
+            waveformBars.forEach((bar, i) => {
+                const baseHeight = 8;
+                const randomHeight = Math.sin(Date.now() / 1000 + i * 0.5) * 20 + 20;
+                bar.style.height = (baseHeight + randomHeight) + 'px';
+            });
+            
+            if (isPlaying) {
+                setTimeout(showPlaceholderVisualization, 100);
+            }
+        }
+
+        function resetWaveform() {
+            waveformBars.forEach(bar => {
+                bar.style.height = '8px';
+            });
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ignore if user is typing in an input
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || 
+                    e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+                
+                switch(e.code) {
+                    case 'Space':
+                        e.preventDefault();
+                        togglePlay();
+                        break;
+                    case 'KeyM':
+                        e.preventDefault();
+                        toggleMute();
+                        break;
+                    case 'KeyR':
+                        e.preventDefault();
+                        retryConnection();
+                        break;
+                    case 'ArrowUp':
+                        e.preventDefault();
+                        adjustVolume(10);
+                        break;
+                    case 'ArrowDown':
+                        e.preventDefault();
+                        adjustVolume(-10);
+                        break;
+                    case 'KeyT':
+                        e.preventDefault();
+                        testAudio();
+                        break;
+                }
+            });
+        }
+
+        async function togglePlay() {
+            if (!userInteracted) {
+                updateStatus('🎯 Click Play to start - browser requires user interaction');
+                return;
+            }
+
+            if (isPlaying) {
+                pauseStream();
+            } else {
+                await playStream();
+            }
+        }
+
+        async function playStream() {
+            try {
+                showSpinner();
+                updateStatus('🔗 Connecting to live stream...');
+                
+                // Reset audio element for fresh connection
+                if (isFirstPlay) {
+                    audio.load();
+                    isFirstPlay = false;
+                }
+                
+                await audio.play();
+                
+            } catch (error) {
+                console.error('Play failed:', error);
+                handlePlayError(error);
+            }
+        }
+
+        function pauseStream() {
+            audio.pause();
+            isPlaying = false;
+            playBtn.textContent = '▶️ Play Stream';
+            playBtn.setAttribute('aria-label', 'Play scanner audio');
+            updateStatus('⏸️ Stream paused');
+            hideSpinner();
+            resetWaveform();
+            waveform.classList.remove('active');
+        }
+
+        function handlePlayError(error) {
+            hideSpinner();
+            
+            let errorMessage = '❌ Connection failed';
+            
+            if (error.name === 'NotAllowedError') {
+                errorMessage = '🔒 Audio blocked - please check browser settings';
+                showTroubleshooting();
+            } else if (error.name === 'NotSupportedError') {
+                errorMessage = '🚫 Audio format not supported';
+                testBtn.style.display = 'inline-block';
+            } else if (error.name === 'AbortError') {
+                errorMessage = '⚠️ Connection interrupted';
+            } else {
+                errorMessage = '📡 Stream temporarily unavailable';
+            }
+            
+            updateStatus(errorMessage);
+            retryBtn.style.display = 'inline-block';
+            
+            if (retryCount < maxRetries) {
+                scheduleRetry();
+            } else {
+                showTroubleshooting();
+            }
+        }
+
+        async function retryConnection() {
+            if (retryCount >= maxRetries) {
+                updateStatus('❌ Maximum retry attempts reached');
+                showTroubleshooting();
+                return;
+            }
+            
+            retryCount++;
+            updateStatus(`🔄 Retry attempt ${retryCount}/${maxRetries}...`);
+            showSpinner();
+            retryBtn.style.display = 'none';
+            
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            try {
+                audio.load(); // Force reload
+                await audio.play();
+                retryCount = 0; // Reset on success
+            } catch (error) {
+                handlePlayError(error);
+            }
+        }
+
+        function scheduleRetry() {
+            if (retryTimeout) clearTimeout(retryTimeout);
+            retryTimeout = setTimeout(() => {
+                if (!isPlaying && retryCount < maxRetries) {
+                    retryConnection();
+                }
+            }, 8000);
+        }
+
+        async function testAudio() {
+            try {
+                // Create a simple test tone
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.value = 440; // A note
+                gainNode.gain.value = 0.1;
+                
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 500);
+                
+                updateStatus('🎵 Test tone played - audio system working');
+                testBtn.style.display = 'none';
+                
+            } catch (error) {
+                updateStatus('🔇 Audio system not available');
+            }
+        }
+
+        function toggleMute() {
+            if (isMuted) {
+                audio.muted = false;
+                muteBtn.textContent = getVolumeIcon(audio.volume);
+                muteBtn.setAttribute('aria-label', 'Mute');
+                isMuted = false;
+                volumeSlider.style.opacity = '1';
+            } else {
+                audio.muted = true;
+                muteBtn.textContent = '🔇';
+                muteBtn.setAttribute('aria-label', 'Unmute');
+                isMuted = true;
+                volumeSlider.style.opacity = '0.5';
+            }
+        }
+
+        function handleVolumeChange() {
+            const volume = volumeSlider.value / 100;
+            audio.volume = volume;
+            volumeValue.textContent = volumeSlider.value + '%';
+            volumeSlider.setAttribute('aria-valuenow', volumeSlider.value);
+            
+            if (!isMuted) {
+                muteBtn.textContent = getVolumeIcon(volume);
+            }
+        }
+
+        function getVolumeIcon(volume) {
+            if (volume === 0) return '🔇';
+            if (volume < 0.3) return '🔈';
+            if (volume < 0.7) return '🔉';
+            return '🔊';
+        }
+
+        function adjustVolume(delta) {
+            const currentVolume = parseInt(volumeSlider.value);
+            const newVolume = Math.max(0, Math.min(100, currentVolume + delta));
+            volumeSlider.value = newVolume;
+            handleVolumeChange();
+        }
+
+        function handleSleepTimer() {
+            const minutes = parseInt(sleepTimer.value);
+            
+            if (sleepTimeout) {
+                clearTimeout(sleepTimeout);
+                sleepTimeout = null;
+            }
+            
+            if (minutes > 0) {
+                sleepTimeout = setTimeout(() => {
+                    if (isPlaying) {
+                        pauseStream();
+                        updateStatus(`😴 Sleep timer activated - stream stopped after ${minutes} minutes`);
+                    }
+                    sleepTimer.value = '0';
+                }, minutes * 60 * 1000);
+                
+                updateStatus(`⏱️ Sleep timer set for ${minutes} minute${minutes > 1 ? 's' : ''}`);
+                setTimeout(() => updateStatus('🔴 Live - Kirkland Emergency Services'), 3000);
+            }
+        }
+
+        function updateStatus(message) {
+            const signalBars = Array.from({ length: 4 }, (_, i) => 
+                `<div class="signal-bar${getSignalStrength() > i ? ' active' : ''}"></div>`
+            ).join('');
+            
+            status.innerHTML = `
+                <span class="live-indicator"></span>${message}
+                <div class="connection-quality" aria-label="Connection quality">
+                    ${signalBars}
+                </div>
+                <div class="last-heard" id="lastHeard">${getLastHeardText()}</div>
+            `;
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            const options = { 
+                weekday: 'short', 
+                month: 'short', 
+                day: 'numeric',
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            };
+            timestamp.textContent = `📅 ${now.toLocaleDateString('en-US', options)}`;
+        }
+
+        function updateLastHeard() {
+            lastHeard.textContent = getLastHeardText();
+        }
+
+        function getLastHeardText() {
+            if (!lastTransmissionTime) {
+                return 'Last transmission: None detected';
+            }
+            
+            const elapsed = Math.floor((Date.now() - lastTransmissionTime) / 1000);
+            if (elapsed < 60) {
+                return `Last transmission: ${elapsed}s ago`;
+            } else if (elapsed < 3600) {
+                const minutes = Math.floor(elapsed / 60);
+                return `Last transmission: ${minutes}m ago`;
+            } else {
+                const hours = Math.floor(elapsed / 3600);
+                return `Last transmission: ${hours}h ago`;
+            }
+        }
+
+        function getSignalStrength() {
+            if (!isPlaying) return 0;
+            
+            const elapsed = Date.now() - connectionStartTime;
+            const readyState = audio.readyState;
+            
+            if (readyState === 4 && elapsed > 5000) return 4; // Excellent
+            if (readyState >= 3 && elapsed > 3000) return 3; // Good
+            if (readyState >= 2) return 2; // Fair
+            if (readyState >= 1) return 1; // Poor
+            return 0;
+        }
+
+        function updateConnectionQuality() {
+            const strength = getSignalStrength();
+            const bars = document.querySelectorAll('.signal-bar');
+            bars.forEach((bar, index) => {
+                bar.classList.toggle('active', index < strength);
+            });
+        }
+
+        function showSpinner() {
+            loadingSpinner.style.display = 'block';
+            waveform.style.display = 'none';
+            placeholderText.style.display = 'none';
+        }
+
+        function hideSpinner() {
+            loadingSpinner.style.display = 'none';
+            
+            if (isPlaying) {
+                waveform.style.display = 'flex';
+                waveform.classList.add('active');
+            } else {
+                placeholderText.style.display = 'block';
+            }
+        }
+
+        function showTroubleshooting() {
+            troubleshoot.style.display = 'block';
+        }
+
+        function checkOnlineStatus() {
+            function updateOnlineStatus() {
+                if (navigator.onLine) {
+                    offlineBanner.classList.remove('show');
+                    if (!isPlaying && retryCount > 0 && retryCount < maxRetries) {
+                        setTimeout(() => {
+                            if (!isPlaying) retryConnection();
+                        }, 3000);
+                    }
+                } else {
+                    offlineBanner.classList.add('show');
+                    if (isPlaying) {
+                        pauseStream();
+                        updateStatus('📵 Offline - will resume when connection restored');
+                    }
+                }
+            }
+
+            window.addEventListener('online', updateOnlineStatus);
+            window.addEventListener('offline', updateOnlineStatus);
+            updateOnlineStatus();
+        }
+
+        function handleVisibilityChange() {
+            if (document.hidden && isPlaying) {
+                updateStatus('🔴 Playing in background');
+            } else if (!document.hidden && isPlaying) {
+                updateStatus('🔴 Live - Kirkland Emergency Services');
+            }
+        }
+
+        function setupPWA() {
+            // Enhanced PWA functionality
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                pwaBanner.classList.add('show');
+                
+                setTimeout(() => {
+                    if (pwaBanner.classList.contains('show')) {
+                        pwaBanner.classList.remove('show');
+                    }
+                }, 10000);
+            });
+
+            window.addEventListener('appinstalled', () => {
+                pwaBanner.classList.remove('show');
+                deferredPrompt = null;
+                updateStatus('📱 App installed successfully!');
+            });
+        }
+
+        async function installPWA() {
+            if (deferredPrompt) {
+                pwaBanner.classList.remove('show');
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                
+                if (outcome === 'accepted') {
+                    updateStatus('📱 App shortcut added');
+                }
+            } else {
+                // Fallback for browsers that support add to home screen manually
+                updateStatus('📱 Use browser menu to "Add to Home Screen"');
+                pwaBanner.classList.remove('show');
+            }
+        }
+
+        // Enhanced audio event handlers
+        function handleLoadStart() {
+            updateStatus('🔗 Connecting to stream...');
+            connectionStartTime = Date.now();
+            showSpinner();
+        }
+
+        function handleLoadedMetadata() {
+            updateStatus('📡 Stream metadata loaded');
+        }
+
+        function handleCanPlay() {
+            updateStatus('✅ Ready to stream');
+            hideSpinner();
+        }
+
+        function handleCanPlayThrough() {
+            if (isPlaying) {
+                updateStatus('🔴 Live - Kirkland Emergency Services');
+                hideSpinner();
+                setupAudioVisualization();
+            }
+        }
+
+        function handlePlaying() {
+            updateStatus('🔴 Live - Kirkland Emergency Services');
+            isPlaying = true;
+            playBtn.textContent = '⏸️ Pause';
+            playBtn.setAttribute('aria-label', 'Pause scanner audio');
+            hideSpinner();
+            retryBtn.style.display = 'none';
+            testBtn.style.display = 'none';
+            retryCount = 0;
+            
+            setupAudioVisualization();
+        }
+
+        function handlePause() {
+            updateStatus('⏸️ Stream paused');
+            isPlaying = false;
+            playBtn.textContent = '▶️ Play Stream';
+            playBtn.setAttribute('aria-label', 'Play scanner audio');
+            hideSpinner();
+            resetWaveform();
+            waveform.classList.remove('active');
+        }
+
+        function handleEnded() {
+            updateStatus('📻 Stream ended - click retry to reconnect');
+            retryBtn.style.display = 'inline-block';
+            isPlaying = false;
+            playBtn.textContent = '▶️ Play Stream';
+        }
+
+        function handleError(e) {
+            const error = e.target.error;
+            let errorMessage = '📡 Stream temporarily unavailable';
+            
+            if (error) {
+                switch (error.code) {
+                    case MediaError.MEDIA_ERR_ABORTED:
+                        errorMessage = '⚠️ Playback aborted';
+                        break;
+                    case MediaError.MEDIA_ERR_NETWORK:
+                        errorMessage = '🌐 Network error - check connection';
+                        break;
+                    case MediaError.MEDIA_ERR_DECODE:
+                        errorMessage = '🔧 Audio decode error';
+                        break;
+                    case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        errorMessage = '🚫 Stream format not supported';
+                        testBtn.style.display = 'inline-block';
+                        break;
+                }
+            }
+            
+            updateStatus(errorMessage);
+            console.error('Audio error:', error);
+            handlePlayError(new Error(errorMessage));
+        }
+
+        function handleStalled() {
+            updateStatus('⏳ Stream stalled - buffering...');
+            showSpinner();
+        }
+
+        function handleWaiting() {
+            updateStatus('⏳ Buffering...');
+            showSpinner();
+        }
+
+        function handleTimeUpdate() {
+            // Update connection quality based on playback
+            if (isPlaying && audio.currentTime > 0) {
+                connectionStartTime = Math.min(connectionStartTime, Date.now() - (audio.currentTime * 1000));
+            }
+        }
+
+        function handleProgress() {
+            // Handle buffering progress
+            if (audio.buffered.length > 0) {
+                const bufferedEnd = audio.buffered.end(audio.buffered.length - 1);
+                const duration = audio.duration || 1;
+                const bufferedPercent = (bufferedEnd / duration) * 100;
+                
+                if (bufferedPercent > 50 && isPlaying) {
+                    hideSpinner();
+                }
+            }
+        }
+
+        // Simplified PWA support without problematic service worker
+        // Note: Full offline functionality requires a hosted service worker file
+
+        // Initial state
+        hideSpinner();
+        placeholderText.style.display = 'block';
+        
+        // Set initial status with selected station
+        const initialStation = stations[stationSelect.value];
+        updateStatus(`📻 Ready: ${initialStation.name} - Click Play to start streaming`);
+    </script>
+</body>
+</html>
