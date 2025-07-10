@@ -14,7 +14,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: center;3) in
             padding: 20px;
         }
         .container {
@@ -268,7 +268,7 @@
 <body>
     <div class="container">
         <h1>WA Live Scanner Feeds</h1>
-        <p class="subtitle">Police, Fire & EMS Dispatch + NOAA Weather — Washington State</p>
+        <p class="subtitle">Police, Fire & EMS Dispatch — Washington State</p>
         
         <div class="info-bar" id="infoBar">
             <div class="location-info">
@@ -306,14 +306,7 @@
                     <option value="Bellevue Police">Bellevue Police</option>
                     <option value="Bellevue Fire">Bellevue Fire</option>
                 </optgroup>
-                <optgroup label="NOAA Weather Radio">
-                    <option value="NOAA Seattle (KHB60)">NOAA Seattle (KHB60)</option>
-                    <option value="NOAA Tacoma (KEC97)">NOAA Tacoma (KEC97)</option>
-                    <option value="NOAA Spokane (KHB60)">NOAA Spokane (KHB60)</option>
-                    <option value="NOAA Vancouver (KHB60)">NOAA Vancouver (KHB60)</option>
-                    <option value="NOAA Olympia (KHB60)">NOAA Olympia (KHB60)</option>
-                    <option value="NOAA Bellingham (KHB60)">NOAA Bellingham (KHB60)</option>
-                </optgroup>
+
             </select>
         </div>
         <div class="audio-player" id="audioPlayer" style="display: none;">
@@ -355,12 +348,7 @@
             "Vancouver Fire": "https://broadcastify.cdnstream1.com/31431",
             "Bellevue Police": "https://broadcastify.cdnstream1.com/31432",
             "Bellevue Fire": "https://broadcastify.cdnstream1.com/31433",
-            "NOAA Seattle (KHB60)": "https://stream.revma.ihrhls.com/zc1896",
-            "NOAA Tacoma (KEC97)": "https://stream.revma.ihrhls.com/zc1897",
-            "NOAA Spokane (KHB60)": "https://stream.revma.ihrhls.com/zc1898",
-            "NOAA Vancouver (KHB60)": "https://stream.revma.ihrhls.com/zc1899",
-            "NOAA Olympia (KHB60)": "https://stream.revma.ihrhls.com/zc1900",
-            "NOAA Bellingham (KHB60)": "https://stream.revma.ihrhls.com/zc1901"
+
         };
 
         // Feed IDs for Broadcastify API (NOAA feeds don't have listener counts)
@@ -405,15 +393,6 @@
         }
 
         async function fetchFeedInfo(feedName) {
-            // Handle NOAA weather feeds differently
-            if (feedName.includes('NOAA')) {
-                feedInfo.style.display = 'flex';
-                listenerCount.textContent = 'Weather Radio';
-                activityStatus.textContent = 'Live Weather';
-                activityDot.className = 'activity-dot active';
-                return;
-            }
-
             const feedId = feedIds[feedName];
             if (!feedId) return;
 
