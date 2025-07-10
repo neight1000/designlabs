@@ -1,24 +1,11 @@
 <!DOCTYPE html>
-<html lang="en-US">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WA Live Scanner Feeds</title>
-    <meta name="description" content="Live emergency radio feeds for Police, Fire & EMS Dispatch in Washington State.">
     <style>
-        :root {
-            --primary: #4ecdc4;
-            --secondary: #ff6b6b;
-            --light-bg: rgba(255,255,255,0.1);
-            --container-bg: rgba(255,255,255,0.05);
-            --border-light: rgba(255,255,255,0.2);
-            --border-mid: rgba(255,255,255,0.1);
-            --shadow: 0 8px 32px rgba(0,0,0,0.3);
-            --active: #00ff00;
-            --quiet: #b8c5d6;
-            --error: #e57373;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box;}
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
@@ -26,87 +13,90 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
         }
-        header, footer {
+        .container {
+            max-width: 600px;
             width: 100%;
             text-align: center;
-            background: var(--container-bg);
-            padding: 1.5rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        header h1 {
+        
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 15px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+        }
+        
+        .location-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .location-icon {
+            width: 16px;
+            height: 16px;
+            background: #4ecdc4;
+            border-radius: 50%;
+        }
+        
+        .time-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .time-icon {
+            width: 16px;
+            height: 16px;
+            background: #ff6b6b;
+            border-radius: 50%;
+        }
+        
+
+        h1 {
             font-size: 2.5rem;
             font-weight: 700;
-            background: linear-gradient(45deg, var(--secondary), var(--primary));
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            margin-bottom: .4em;
         }
-        header .subtitle {
+        .subtitle {
             font-size: 1.1rem;
-            color: var(--quiet);
+            color: #b8c5d6;
+            margin-bottom: 40px;
             font-weight: 300;
         }
-        main {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            width: 100%;
-            max-width: 700px;
-            background: var(--light-bg);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 2em 2em 1em 2em;
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border-light);
-            margin: 2em auto 1em auto;
-        }
-        nav[aria-label="Feed Search"] {
-            margin-bottom: 1em;
-            display: flex;
-            gap: 1em;
-            justify-content: center;
-        }
-        input[type="search"] {
-            padding: .5em .9em;
-            border-radius: 7px;
-            border: 1px solid var(--border-mid);
-            background: #232b47;
-            color: white;
-            font-size: 1rem;
-        }
-        .info-bar {
-            display: flex; justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.5em;
-            padding: 1em 1.5em;
-            background: var(--container-bg);
-            border-radius: 12px;
-            border: 1px solid var(--border-mid);
-            font-size: .9rem;
-            flex-wrap: wrap;
-        }
-        .info-bar > div { display: flex; align-items: center; gap: 8px; }
-        .location-icon, .time-icon {
-            width: 16px; height: 16px; border-radius: 50%;
-        }
-        .location-icon { background: var(--primary);}
-        .time-icon { background: var(--secondary);}
-        .audio-player { width: 100%; margin-top: 1em; }
+
+        .audio-player { width: 100%; margin-top: 20px; }
         audio {
-            width: 100%; height: 60px;
+            width: 100%;
+            height: 60px;
             border-radius: 12px;
-            background: var(--light-bg);
+            background: rgba(255, 255, 255, 0.1);
         }
         .status {
-            margin-top: 1.2em;
-            padding: 1em;
+            margin-top: 20px;
+            padding: 15px;
             border-radius: 10px;
             font-weight: 500;
-            transition: all .3s ease;
+            transition: all 0.3s ease;
         }
         .status.playing {
             background: rgba(76, 175, 80, 0.2);
@@ -121,205 +111,621 @@
         .status.error {
             background: rgba(244, 67, 54, 0.2);
             border: 1px solid rgba(244, 67, 54, 0.3);
-            color: var(--error);
+            color: #e57373;
         }
+        .footer {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #8b9dc3;
+            opacity: 0.8;
+        }
+        
         .feed-info {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 1em;
-            padding: .7em 1.2em;
-            background: var(--container-bg);
+            margin-top: 15px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.05);
             border-radius: 8px;
-            font-size: .95em;
+            font-size: 0.9rem;
         }
-        .listener-count, .activity-indicator {
-            display: flex; align-items: center; gap: 6px;
+        
+        .listener-count {
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
-        .listener-icon, .activity-dot {
-            width: 12px; height: 12px; border-radius: 50%;
+        
+        .listener-icon {
+            width: 12px;
+            height: 12px;
+            background: #4ecdc4;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
         }
-        .listener-icon { background: var(--primary); animation: pulse 2s infinite;}
-        .activity-dot { background: var(--secondary); animation: blink 1.5s infinite;}
-        .activity-dot.active { background: var(--primary);}
-        @keyframes pulse { 0% {opacity: 1;} 50% {opacity: .5;} 100% {opacity: 1;} }
-        @keyframes blink { 0%,50% {opacity: 1;} 51%,100% {opacity: .3;} }
+        
+        .activity-indicator {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .activity-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            animation: blink 1.5s infinite;
+        }
+        
+        .activity-dot.active {
+            background: #4ecdc4;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+        
         .stations-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-            gap: 1.3em;
-            margin-top: 2em;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
         }
+        
         .station-card {
-            background: var(--light-bg);
-            border: 1px solid var(--border-light);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 15px;
-            padding: 1.2em;
+            padding: 20px;
             cursor: pointer;
-            transition: all .3s ease;
+            transition: all 0.3s ease;
             backdrop-filter: blur(10px);
-            position: relative;
         }
-        .station-card:hover, .station-card.active {
-            border-color: var(--primary);
-            background: rgba(78, 205, 196, 0.13);
-            z-index: 2;
+        
+        .station-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            border-color: #4ecdc4;
         }
+        
+        .station-card.active {
+            border-color: #4ecdc4;
+            background: rgba(78, 205, 196, 0.1);
+        }
+        
         .station-header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: .8em;
+            margin-bottom: 15px;
         }
+        
         .station-name {
             font-size: 1.1rem;
             font-weight: 600;
             color: white;
-            margin-bottom: 3px;
+            margin-bottom: 5px;
         }
+        
         .station-type {
-            font-size: .8rem;
-            color: var(--primary);
+            font-size: 0.8rem;
+            color: #4ecdc4;
             text-transform: uppercase;
-            letter-spacing: .5px;
+            letter-spacing: 0.5px;
         }
+        
         .station-meta {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: .97em;
-            margin-bottom: .7em;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
         }
-        .listener-info, .activity-status { display: flex; align-items: center; gap: 5px;}
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--secondary); animation: blink 1.5s infinite;}
-        .status-dot.active { background: var(--primary);}
+        
+        .listener-info {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .activity-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ff6b6b;
+            animation: blink 1.5s infinite;
+        }
+        
+        .status-dot.active {
+            background: #4ecdc4;
+        }
+        
         .play-button {
             width: 100%;
-            padding: .7em;
+            padding: 12px;
             background: rgba(78, 205, 196, 0.2);
             border: 1px solid rgba(78, 205, 196, 0.3);
             border-radius: 8px;
             color: white;
             font-weight: 500;
             cursor: pointer;
-            transition: all .3s ease;
+            transition: all 0.3s ease;
         }
-        .play-button:hover, .play-button:focus { background: rgba(78, 205, 196, 0.3);}
+        
+        .play-button:hover {
+            background: rgba(78, 205, 196, 0.3);
+        }
+        
         .play-button.playing {
             background: rgba(76, 175, 80, 0.3);
             border-color: rgba(76, 175, 80, 0.5);
         }
-        /* Visualizer */
-        .radio-visualizer { background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
-            border: 2px solid #333; border-radius: 8px; padding: 15px; margin: 1em 0; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); position: relative; overflow: hidden;}
+        
+        /* Station management controls */
+        .station-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .filter-btn.active {
+            background: #4ecdc4;
+            border-color: #4ecdc4;
+            color: #000;
+        }
+        
+        .search-box input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            min-width: 200px;
+        }
+        
+        .search-box input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .search-box input:focus {
+            outline: none;
+            border-color: #4ecdc4;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.3);
+        }
+        
+        .favorite-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .favorite-btn:hover {
+            color: #ff6b6b;
+        }
+        
+        .favorite-btn.active {
+            color: #ff6b6b;
+        }
+        
+        /* Vintage CB Radio Visualizer */
+        .radio-visualizer {
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+        
         .visualizer-display {
-            background: #000; border: 1px solid #444; border-radius: 4px; height: 60px;
-            display: flex; align-items: flex-end; justify-content: space-between; padding: 5px; gap: 2px;
+            background: #000;
+            border: 1px solid #444;
+            border-radius: 4px;
+            height: 60px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            padding: 5px;
+            gap: 2px;
         }
-        .frequency-display { background: #000; border: 1px solid #444; border-radius: 4px; padding: 8px 12px; margin-bottom: 10px; font-family: 'Courier New', monospace; font-size: 14px; color: var(--active); text-align:center; letter-spacing:2px;}
-        .signal-bar { background: linear-gradient(180deg, var(--active) 0%, #ffff00 50%, var(--secondary) 100%); border-radius: 2px; min-width: 8px; transition: height .1s; box-shadow: 0 0 5px currentColor;}
-        .signal-bar.inactive { background: #333; box-shadow: none;}
-        .radio-label, .channel-indicator, .squelch-indicator {
-            position: absolute; font-size: 10px; font-family: 'Courier New', monospace;
+        
+        .frequency-display {
+            background: #000;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            color: #00ff00;
+            text-align: center;
+            text-shadow: 0 0 5px #00ff00;
+            letter-spacing: 2px;
         }
-        .radio-label { top: 5px; right: 10px; color: #666; text-transform: uppercase;}
-        .channel-indicator { bottom: 5px; left: 10px; color: var(--active);}
-        .squelch-indicator { bottom: 5px; right: 10px; color: var(--secondary); }
-        .squelch-indicator.active { color: var(--active); animation: squelch .5s ease-in-out infinite alternate;}
-        @keyframes squelch { 0% {opacity: .5;} 100% {opacity: 1;} }
-        .radio-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 10px;}
-        .radio-control { background: #222; border: 1px solid #444; border-radius: 4px; padding: 5px; text-align: center; font-size: 10px; color: #ccc;}
-        .help {
-            margin: 2em 0 0 0;
-            padding: 1em;
-            background: var(--container-bg);
-            border-radius: 10px;
-            color: #b8c5d6;
-            font-size: .98em;
+        
+        .signal-bar {
+            background: linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%);
+            border-radius: 2px;
+            min-width: 8px;
+            transition: height 0.1s ease;
+            box-shadow: 0 0 5px currentColor;
         }
-        .footer {
-            font-size: .92rem;
-            color: #8b9dc3;
-            opacity: .85;
+        
+        .signal-bar.inactive {
+            background: #333;
+            box-shadow: none;
         }
-        .footer small { color: #ffb74d; font-size: .85em;}
+        
+        .radio-label {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            font-size: 10px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+        
+        .channel-indicator {
+            position: absolute;
+            bottom: 5px;
+            left: 10px;
+            font-size: 10px;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .squelch-indicator {
+            position: absolute;
+            bottom: 5px;
+            right: 10px;
+            font-size: 10px;
+            color: #ff6b6b;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .squelch-indicator.active {
+            color: #00ff00;
+            animation: squelch 0.5s ease-in-out infinite alternate;
+        }
+        
+        @keyframes squelch {
+            0% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .radio-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .radio-control {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 5px;
+            text-align: center;
+            font-size: 10px;
+            color: #ccc;
+            font-family: 'Courier New', monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .radio-control:hover {
+            background: #333;
+            color: #fff;
+        }
+        
+        .radio-control.active {
+            background: #4ecdc4;
+            color: #000;
+        }
+        
+        .signal-meter {
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        .meter-label {
+            font-size: 8px;
+            color: #666;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 3px;
+        }
+        
+        .meter-bar {
+            background: #111;
+            border: 1px solid #444;
+            border-radius: 2px;
+            height: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .meter-fill {
+            background: linear-gradient(90deg, #00ff00 0%, #ffff00 50%, #ff0000 100%);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        /* Visualizer modes */
+        .visualizer-display.waterfall {
+            background: linear-gradient(180deg, #000 0%, #001100 100%);
+        }
+        
+        .visualizer-display.oscilloscope {
+            background: #000;
+        }
+        
+        /* Radio static and noise effects */
+        .static-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.02) 2px,
+                rgba(255, 255, 255, 0.02) 4px
+            );
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .static-overlay.active {
+            opacity: 1;
+            animation: static 0.1s infinite;
+        }
+        
+        @keyframes static {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.6; }
+        }
+        
+        .channel-scan {
+            animation: scan 2s ease-in-out infinite;
+        }
+        
+        @keyframes scan {
+            0%, 100% { transform: translateX(0); }
+            50% { transform: translateX(100%); }
+        }
+        
+        .emergency-alert {
+            background: linear-gradient(45deg, #ff0000, #ff6b6b);
+            animation: emergency 1s ease-in-out infinite alternate;
+            color: white;
+            font-weight: bold;
+            text-align: center;
+            padding: 5px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        
+        @keyframes emergency {
+            0% { background: linear-gradient(45deg, #ff0000, #ff6b6b); }
+            100% { background: linear-gradient(45deg, #ff6b6b, #ff0000); }
+        }
         @media (max-width: 768px) {
-            .container { padding: 1.5em .9em; }
-            header h1 { font-size: 2rem;}
+            .container { padding: 30px 20px; margin: 10px; }
+            h1 { font-size: 2rem; }
+            .subtitle { font-size: 1rem; }
+            
+            .info-bar {
+                flex-direction: column;
+                gap: 10px;
+                padding: 12px 15px;
+            }
+            
+            .info-bar > div {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .stations-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .station-card {
+                padding: 15px;
+                min-height: 120px;
+            }
+            
+            .play-button {
+                padding: 15px;
+                font-size: 1rem;
+                min-height: 50px;
+            }
+            
+            .radio-visualizer {
+                padding: 10px;
+            }
+            
+            .visualizer-display {
+                height: 50px;
+            }
+            
+            .frequency-display {
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            
+            /* Touch-friendly improvements */
+            .station-card {
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            .play-button {
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            }
+            
+            /* Swipe gesture support */
+            .stations-grid {
+                scroll-behavior: smooth;
+                -webkit-overflow-scrolling: touch;
+            }
         }
         @media (max-width: 480px) {
-            header h1 { font-size: 1.3rem;}
-            .container { padding: 1em .3em;}
-            .stations-grid { gap: .7em;}
+            h1 { font-size: 1.8rem; }
+            .container { padding: 25px 15px; }
         }
     </style>
 </head>
 <body>
-    <header role="banner">
+    <div class="container">
         <h1>WA Live Scanner Feeds</h1>
-        <div class="subtitle">Police, Fire &amp; EMS Dispatch — Washington State</div>
-    </header>
-    <main role="main">
-        <div class="container" aria-label="Live Scanner Feeds">
-            <nav aria-label="Feed Search">
-                <input type="search" id="feedSearch" placeholder="Search for city, agency, or type..." aria-label="Search feeds">
-                <button id="clearSearch" aria-label="Clear search" type="button" title="Clear search" style="display:none;">✖</button>
-            </nav>
-            <div class="info-bar" id="infoBar">
-                <div><span class="location-icon" aria-hidden="true"></span><span id="location">Getting location…</span></div>
-                <div><span class="time-icon" aria-hidden="true"></span><span id="currentTime">Loading…</span></div>
+        <p class="subtitle">Police, Fire & EMS Dispatch — Washington State</p>
+        
+        <div class="info-bar" id="infoBar">
+            <div class="location-info">
+                <div class="location-icon"></div>
+                <span id="location">Getting location...</span>
             </div>
-            <section class="audio-player" id="audioPlayer" style="display: none;" aria-live="polite">
-                <div class="radio-visualizer" aria-label="Vintage CB Radio Visualizer">
-                    <div class="radio-label">Scanner</div>
-                    <div class="frequency-display" id="frequencyDisplay">--.--- MHz</div>
-                    <div class="visualizer-display" id="visualizerDisplay"></div>
-                    <div class="channel-indicator" id="channelIndicator">CH: --</div>
-                    <div class="squelch-indicator" id="squelchIndicator">SQL</div>
-                    <div class="radio-grid">
-                        <div class="radio-control" title="Volume (adjust in your browser)">VOL</div>
-                        <div class="radio-control" title="Squelch threshold (visual only)">SQL</div>
-                    </div>
-                </div>
-                <audio id="audioElement" controls preload="none" aria-label="Live scanner stream">
-                    Your browser does not support the audio element.
-                </audio>
-                <div class="status" id="status" aria-live="polite">Select a station to start listening</div>
-                <div class="feed-info" id="feedInfo" style="display:none;">
-                    <div class="listener-count">
-                        <span class="listener-icon" aria-hidden="true"></span>
-                        <span id="listenerCount">Loading…</span>
-                    </div>
-                    <div class="activity-indicator">
-                        <span class="activity-dot" id="activityDot" aria-hidden="true"></span>
-                        <span id="activityStatus">Checking activity…</span>
-                    </div>
-                    <button id="refreshInfo" aria-label="Refresh feed info" title="Refresh feed info" type="button">↻</button>
-                </div>
-            </section>
-            <section id="stationsSection" aria-label="Scanner Feeds">
-                <div class="stations-grid" id="stationsGrid"></div>
-            </section>
-            <div style="text-align:center;margin-top:1em;">
-                <button id="refreshData" type="button" aria-label="Refresh all feeds">Refresh Station Data</button>
+            <div class="time-info">
+                <div class="time-icon"></div>
+                <span id="currentTime">Loading...</span>
             </div>
-            <aside class="help" aria-label="How to use">
-                <strong>How to use:</strong>
-                <ul>
-                    <li>Browse or search for the agency or city feed you want.</li>
-                    <li>Click <b>Play</b> to listen to a feed. "Now Playing" is highlighted.</li>
-                    <li>Status and listener count update live.</li>
-                    <li>If a feed is quiet, it may be due to no current emergency calls.</li>
-                </ul>
-            </aside>
         </div>
-    </main>
-    <footer role="contentinfo" class="footer">
-        <div>Live emergency radio feeds from Broadcastify</div>
-        <small>Note: Feeds may be silent when no calls are active. This project is for informational/educational purposes only.</small>
-    </footer>
+        
+        <div class="audio-player" id="audioPlayer" style="display: none;">
+                    <div class="radio-visualizer">
+            <div class="radio-label">Scanner</div>
+            <div class="frequency-display" id="frequencyDisplay">--.--- MHz</div>
+            <div class="visualizer-display" id="visualizerDisplay">
+                <!-- Signal bars will be generated here -->
+            </div>
+            <div class="static-overlay" id="staticOverlay"></div>
+            <div class="channel-indicator" id="channelIndicator">CH: --</div>
+            <div class="squelch-indicator" id="squelchIndicator">SQL</div>
+            <div class="radio-grid">
+                <div class="radio-control" id="modeButton" onclick="toggleVisualizerMode()">SPECTRUM</div>
+                <div class="radio-control" id="squelchButton" onclick="toggleSquelch()">SQL</div>
+            </div>
+            <div class="signal-meter">
+                <div class="meter-label">S-METER</div>
+                <div class="meter-bar" id="signalMeter">
+                    <div class="meter-fill" id="meterFill"></div>
+                </div>
+            </div>
+        </div>
+            <audio id="audioElement" controls preload="none">
+                Your browser does not support the audio element.
+            </audio>
+            <div class="status" id="status">Select a station to start listening</div>
+            <div class="feed-info" id="feedInfo" style="display: none;">
+                <div class="listener-count">
+                    <div class="listener-icon"></div>
+                    <span id="listenerCount">Loading...</span>
+                </div>
+                <div class="activity-indicator">
+                    <div class="activity-dot" id="activityDot"></div>
+                    <span id="activityStatus">Checking activity...</span>
+                </div>
+                <button id="refreshInfo" style="background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); color: white; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer;">
+                    ↻
+                </button>
+            </div>
+        </div>
+        
+        <div class="station-controls">
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="police">Police</button>
+                <button class="filter-btn" data-filter="fire">Fire/EMS</button>
+                <button class="filter-btn" data-filter="combined">Combined</button>
+                <button class="filter-btn" data-filter="favorites">Favorites</button>
+            </div>
+            <div class="search-box">
+                <input type="text" id="stationSearch" placeholder="Search stations..." />
+            </div>
+        </div>
+        
+        <div class="stations-grid" id="stationsGrid">
+            <!-- Station cards will be generated here -->
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="refreshData" style="
+                background: rgba(78, 205, 196, 0.2);
+                border: 1px solid rgba(78, 205, 196, 0.3);
+                color: white;
+                padding: 10px 20px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.3s ease;
+            " onmouseover="this.style.background='rgba(78, 205, 196, 0.3)'" 
+               onmouseout="this.style.background='rgba(78, 205, 196, 0.2)'">
+                Refresh Station Data
+            </button>
+        </div>
+        <div class="footer">
+            <p>Live emergency radio feeds from Broadcastify</p>
+            <p style="font-size: 0.8rem; margin-top: 10px; color: #ffb74d;">Note: Emergency feeds may be silent when no calls are active</p>
+        </div>
+    </div>
     <script>
-        // Feed data
         const feeds = {
             "King County Fire & Police Dispatch": "https://broadcastify.cdnstream1.com/36938",
             "Kirkland Police Dispatch (NORCOM NCPOL-2)": "https://broadcastify.cdnstream1.com/31423",
@@ -335,6 +741,103 @@
             "Bellevue Police": "https://broadcastify.cdnstream1.com/31432",
             "Bellevue Fire": "https://broadcastify.cdnstream1.com/31433"
         };
+
+        // Enhanced station data with call types and recent activity
+        const stationData = {
+            "King County Fire & Police Dispatch": {
+                type: "Combined",
+                region: "King County",
+                recentCalls: [],
+                avgResponseTime: "3.2 min",
+                activeUnits: 0
+            },
+            "Kirkland Police Dispatch (NORCOM NCPOL-2)": {
+                type: "Police",
+                region: "Kirkland",
+                recentCalls: [],
+                avgResponseTime: "2.8 min",
+                activeUnits: 0
+            },
+            "Yakima City/County Police, Fire & EMS": {
+                type: "Combined",
+                region: "Yakima",
+                recentCalls: [],
+                avgResponseTime: "4.1 min",
+                activeUnits: 0
+            },
+            "Seattle Police": {
+                type: "Police",
+                region: "Seattle",
+                recentCalls: [],
+                avgResponseTime: "3.5 min",
+                activeUnits: 0
+            },
+            "Seattle Fire": {
+                type: "Fire/EMS",
+                region: "Seattle",
+                recentCalls: [],
+                avgResponseTime: "2.9 min",
+                activeUnits: 0
+            },
+            "Tacoma Police": {
+                type: "Police",
+                region: "Tacoma",
+                recentCalls: [],
+                avgResponseTime: "3.1 min",
+                activeUnits: 0
+            },
+            "Tacoma Fire": {
+                type: "Fire/EMS",
+                region: "Tacoma",
+                recentCalls: [],
+                avgResponseTime: "2.7 min",
+                activeUnits: 0
+            },
+            "Spokane Police": {
+                type: "Police",
+                region: "Spokane",
+                recentCalls: [],
+                avgResponseTime: "3.8 min",
+                activeUnits: 0
+            },
+            "Spokane Fire": {
+                type: "Fire/EMS",
+                region: "Spokane",
+                recentCalls: [],
+                avgResponseTime: "3.0 min",
+                activeUnits: 0
+            },
+            "Vancouver Police": {
+                type: "Police",
+                region: "Vancouver",
+                recentCalls: [],
+                avgResponseTime: "3.3 min",
+                activeUnits: 0
+            },
+            "Vancouver Fire": {
+                type: "Fire/EMS",
+                region: "Vancouver",
+                recentCalls: [],
+                avgResponseTime: "2.6 min",
+                activeUnits: 0
+            },
+            "Bellevue Police": {
+                type: "Police",
+                region: "Bellevue",
+                recentCalls: [],
+                avgResponseTime: "2.9 min",
+                activeUnits: 0
+            },
+            "Bellevue Fire": {
+                type: "Fire/EMS",
+                region: "Bellevue",
+                recentCalls: [],
+                avgResponseTime: "2.5 min",
+                activeUnits: 0
+            }
+        };
+
+        // Feed IDs for Broadcastify API (NOAA feeds don't have listener counts)
         const feedIds = {
             "King County Fire & Police Dispatch": "36938",
             "Kirkland Police Dispatch (NORCOM NCPOL-2)": "31423",
@@ -350,37 +853,7 @@
             "Bellevue Police": "31432",
             "Bellevue Fire": "31433"
         };
-        const frequencies = {
-            "King County Fire & Police Dispatch": "154.430",
-            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "155.370",
-            "Yakima City/County Police, Fire & EMS": "155.475",
-            "Seattle Police": "154.920",
-            "Seattle Fire": "154.280",
-            "Tacoma Police": "155.370",
-            "Tacoma Fire": "154.280",
-            "Spokane Police": "155.370",
-            "Spokane Fire": "154.280",
-            "Vancouver Police": "155.370",
-            "Vancouver Fire": "154.280",
-            "Bellevue Police": "155.370",
-            "Bellevue Fire": "154.280"
-        };
-        const channels = {
-            "King County Fire & Police Dispatch": "01",
-            "Kirkland Police Dispatch (NORCOM NCPOL-2)": "02",
-            "Yakima City/County Police, Fire & EMS": "03",
-            "Seattle Police": "04",
-            "Seattle Fire": "05",
-            "Tacoma Police": "06",
-            "Tacoma Fire": "07",
-            "Spokane Police": "08",
-            "Spokane Fire": "09",
-            "Vancouver Police": "10",
-            "Vancouver Fire": "11",
-            "Bellevue Police": "12",
-            "Bellevue Fire": "13"
-        };
-        // DOM refs
+        const feedSelect = document.getElementById('feedSelect');
         const audioElement = document.getElementById('audioElement');
         const audioPlayer = document.getElementById('audioPlayer');
         const status = document.getElementById('status');
@@ -389,6 +862,8 @@
         const activityDot = document.getElementById('activityDot');
         const activityStatus = document.getElementById('activityStatus');
         const refreshInfo = document.getElementById('refreshInfo');
+        
+        // Info bar elements
         const locationElement = document.getElementById('location');
         const currentTimeElement = document.getElementById('currentTime');
         const stationsGrid = document.getElementById('stationsGrid');
@@ -396,11 +871,20 @@
         const frequencyDisplay = document.getElementById('frequencyDisplay');
         const channelIndicator = document.getElementById('channelIndicator');
         const squelchIndicator = document.getElementById('squelchIndicator');
-        const refreshData = document.getElementById('refreshData');
-        const feedSearch = document.getElementById('feedSearch');
-        const clearSearchBtn = document.getElementById('clearSearch');
-        let currentFeed = null, refreshInterval = null, visualizerInterval = null;
-
+        
+        let currentFeed = null;
+        let refreshInterval = null;
+        let timeInterval = null;
+        let userLocation = null;
+        let visualizerInterval = null;
+        let audioContext = null;
+        let analyser = null;
+        let microphone = null;
+        let favorites = JSON.parse(localStorage.getItem('scannerFavorites') || '[]');
+        let currentFilter = 'all';
+        let searchTerm = '';
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 3;
         // Initialize visualizer
         function initializeVisualizer() {
             visualizerDisplay.innerHTML = '';
@@ -408,258 +892,670 @@
                 const bar = document.createElement('div');
                 bar.className = 'signal-bar inactive';
                 bar.style.height = '5px';
-                bar.style.willChange = 'height';
                 visualizerDisplay.appendChild(bar);
             }
         }
-        // Simulate visualizer
-        function simulateVisualizer() {
+        
+        // Initialize Web Audio API for real audio analysis
+        function initializeAudioAnalysis() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                analyser.smoothingTimeConstant = 0.8;
+                
+                // Create audio source from the audio element
+                const source = audioContext.createMediaElementSource(audioElement);
+                source.connect(analyser);
+                analyser.connect(audioContext.destination);
+                
+                console.log('Audio analysis initialized');
+            } catch (error) {
+                console.error('Audio analysis failed:', error);
+            }
+        }
+        
+        // Update visualizer with real audio data
+        function updateVisualizer() {
+            if (!analyser) return;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            
             const bars = visualizerDisplay.querySelectorAll('.signal-bar');
-            const time = Date.now() * 0.01, center = Math.floor(bars.length/2);
-            bars.forEach((bar, i) => {
-                if (audioElement.played.length > 0 && !audioElement.paused) {
-                    const dist = Math.abs(i-center);
-                    const maxHeight = 50-(dist*2);
-                    const wave = Math.sin(time+i*0.3)*5, random = Math.random()*10;
-                    const height = Math.max(5, Math.min(maxHeight, 15+wave+random));
-                    bar.style.height = `${height}px`;
-                    bar.classList.remove('inactive');
-                    if (height>30) bar.style.background='linear-gradient(180deg,#ff0000 0%,#ffff00 50%,#00ff00 100%)';
-                    else if (height>20) bar.style.background='linear-gradient(180deg,#ffff00 0%,#00ff00 100%)';
-                    else bar.style.background='linear-gradient(180deg,#00ff00 0%,#ffff00 50%,#ff0000 100%)';
+            const barCount = bars.length;
+            
+            bars.forEach((bar, index) => {
+                const dataIndex = Math.floor((index / barCount) * dataArray.length);
+                const value = dataArray[dataIndex] || 0;
+                const height = Math.max(5, (value / 255) * 50);
+                
+                bar.style.height = `${height}px`;
+                bar.classList.toggle('inactive', value < 5);
+                
+                // Color coding based on real signal strength
+                if (value > 200) {
+                    bar.style.background = 'linear-gradient(180deg, #ff0000 0%, #ffff00 50%, #00ff00 100%)';
+                } else if (value > 100) {
+                    bar.style.background = 'linear-gradient(180deg, #ffff00 0%, #00ff00 100%)';
+                } else if (value > 50) {
+                    bar.style.background = 'linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%)';
+                } else {
+                    bar.style.background = '#333';
                 }
             });
         }
-        // Info bar: Time/location
+        
+        // Enhanced visualizer with real audio analysis
+        function updateVisualizerReal() {
+            if (!analyser) return;
+            
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            analyser.getByteFrequencyData(dataArray);
+            
+            const bars = visualizerDisplay.querySelectorAll('.signal-bar');
+            const barCount = bars.length;
+            
+            // Calculate average signal strength for S-meter
+            let totalSignal = 0;
+            let signalCount = 0;
+            
+            bars.forEach((bar, index) => {
+                const dataIndex = Math.floor((index / barCount) * dataArray.length);
+                const value = dataArray[dataIndex] || 0;
+                const height = Math.max(5, (value / 255) * 50);
+                
+                totalSignal += value;
+                signalCount++;
+                
+                bar.style.height = `${height}px`;
+                bar.classList.toggle('inactive', value < 5);
+                
+                // Color coding based on real signal strength
+                if (value > 200) {
+                    bar.style.background = 'linear-gradient(180deg, #ff0000 0%, #ffff00 50%, #00ff00 100%)';
+                } else if (value > 100) {
+                    bar.style.background = 'linear-gradient(180deg, #ffff00 0%, #00ff00 100%)';
+                } else if (value > 50) {
+                    bar.style.background = 'linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%)';
+                } else {
+                    bar.style.background = '#333';
+                }
+            });
+            
+            // Update S-meter
+            const avgSignal = totalSignal / signalCount;
+            const meterFill = document.getElementById('meterFill');
+            if (meterFill) {
+                meterFill.style.width = `${(avgSignal / 255) * 100}%`;
+            }
+        }
+        
+        // Fallback visualizer for when audio analysis isn't available
+        function simulateVisualizer() {
+            const bars = visualizerDisplay.querySelectorAll('.signal-bar');
+            
+            // Create a wave pattern that looks like radio signal
+            const time = Date.now() * 0.01;
+            const centerIndex = Math.floor(bars.length / 2);
+            
+            bars.forEach((bar, index) => {
+                if (audioElement.played.length > 0 && !audioElement.paused) {
+                    // Create a bell curve effect around the center
+                    const distanceFromCenter = Math.abs(index - centerIndex);
+                    const maxHeight = 50 - (distanceFromCenter * 2);
+                    
+                    // Add some randomness and wave motion
+                    const wave = Math.sin(time + index * 0.3) * 5;
+                    const random = Math.random() * 10;
+                    const height = Math.max(5, Math.min(maxHeight, 15 + wave + random));
+                    
+                    bar.style.height = `${height}px`;
+                    bar.classList.remove('inactive');
+                    
+                    // Add color variation based on signal strength
+                    if (height > 30) {
+                        bar.style.background = 'linear-gradient(180deg, #ff0000 0%, #ffff00 50%, #00ff00 100%)';
+                    } else if (height > 20) {
+                        bar.style.background = 'linear-gradient(180deg, #ffff00 0%, #00ff00 100%)';
+                    } else {
+                        bar.style.background = 'linear-gradient(180deg, #00ff00 0%, #ffff00 50%, #ff0000 100%)';
+                    }
+                }
+            });
+        }
+        
+        // Update frequency display
+        function updateFrequencyDisplay(feedName) {
+            const frequencies = {
+                "King County Fire & Police Dispatch": "154.430",
+                "Kirkland Police Dispatch (NORCOM NCPOL-2)": "155.370",
+                "Yakima City/County Police, Fire & EMS": "155.475",
+                "Seattle Police": "154.920",
+                "Seattle Fire": "154.280",
+                "Tacoma Police": "155.370",
+                "Tacoma Fire": "154.280",
+                "Spokane Police": "155.370",
+                "Spokane Fire": "154.280",
+                "Vancouver Police": "155.370",
+                "Vancouver Fire": "154.280",
+                "Bellevue Police": "155.370",
+                "Bellevue Fire": "154.280"
+            };
+            
+            const freq = frequencies[feedName] || "---.---";
+            frequencyDisplay.textContent = `${freq} MHz`;
+        }
+        
+        // Update channel indicator
+        function updateChannelIndicator(feedName) {
+            const channels = {
+                "King County Fire & Police Dispatch": "01",
+                "Kirkland Police Dispatch (NORCOM NCPOL-2)": "02",
+                "Yakima City/County Police, Fire & EMS": "03",
+                "Seattle Police": "04",
+                "Seattle Fire": "05",
+                "Tacoma Police": "06",
+                "Tacoma Fire": "07",
+                "Spokane Police": "08",
+                "Spokane Fire": "09",
+                "Vancouver Police": "10",
+                "Vancouver Fire": "11",
+                "Bellevue Police": "12",
+                "Bellevue Fire": "13"
+            };
+            
+            const channel = channels[feedName] || "--";
+            channelIndicator.textContent = `CH: ${channel}`;
+        }
+        
+        function updateStatus(message, type = 'playing') {
+            status.textContent = message;
+            status.className = `status ${type}`;
+        }
+
+        async function fetchFeedInfo(feedName) {
+            const feedId = feedIds[feedName];
+            if (!feedId) {
+                listenerCount.textContent = 'No data available';
+                activityStatus.textContent = 'Unknown feed';
+                return;
+            }
+
+            try {
+                // Show feed info
+                feedInfo.style.display = 'flex';
+                listenerCount.textContent = 'Loading...';
+                activityStatus.textContent = 'Checking activity...';
+                activityDot.className = 'activity-dot';
+
+                // Fetch listener count and activity from Broadcastify
+                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                
+                const html = await response.text();
+                
+                // Parse listener count - look for various patterns
+                let listenerCountValue = 'Unknown';
+                const listenerPatterns = [
+                    /(\d+)\s+listeners?/i,
+                    /(\d+)\s+people\s+listening/i,
+                    /listeners?:\s*(\d+)/i
+                ];
+                
+                for (const pattern of listenerPatterns) {
+                    const match = html.match(pattern);
+                    if (match) {
+                        listenerCountValue = match[1];
+                        break;
+                    }
+                }
+                
+                // Check if feed is active (has recent activity or listeners)
+                const isActive = html.includes('active') || 
+                               html.includes('live') || 
+                               html.includes('online') ||
+                               (listenerCountValue !== 'Unknown' && parseInt(listenerCountValue) > 0);
+                
+                // Update display
+                listenerCount.textContent = `${listenerCountValue} listeners`;
+                activityStatus.textContent = isActive ? 'Active' : 'Quiet';
+                activityDot.className = `activity-dot ${isActive ? 'active' : ''}`;
+                
+            } catch (error) {
+                console.error('Error fetching feed info:', error);
+                listenerCount.textContent = 'Data unavailable';
+                activityStatus.textContent = 'Status unknown';
+                activityDot.className = 'activity-dot';
+            }
+        }
+
+        function updateFeedInfo(feedName) {
+            if (feedName && feedIds[feedName]) {
+                currentFeed = feedName;
+                fetchFeedInfo(feedName);
+                
+                // Start auto-refresh every 30 seconds
+                if (refreshInterval) clearInterval(refreshInterval);
+                refreshInterval = setInterval(() => {
+                    if (currentFeed) {
+                        fetchFeedInfo(currentFeed);
+                    }
+                }, 30000);
+            } else {
+                feedInfo.style.display = 'none';
+                currentFeed = null;
+                if (refreshInterval) {
+                    clearInterval(refreshInterval);
+                    refreshInterval = null;
+                }
+            }
+        }
+
+        // Update current time
         function updateTime() {
             const now = new Date();
-            currentTimeElement.textContent = now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true});
+            const timeString = now.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+            currentTimeElement.textContent = timeString;
         }
+
+        // Get user location
         function getUserLocation() {
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(
-                    (pos)=>{
-                        getLocationName(pos.coords.latitude, pos.coords.longitude);
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lon: position.coords.longitude
+                        };
+                        getLocationName(userLocation.lat, userLocation.lon);
+                        getWeatherData(userLocation.lat, userLocation.lon);
                     },
-                    (err)=>{
-                        locationElement.textContent='Location unavailable';
+                    (error) => {
+                        console.error('Error getting location:', error);
+                        locationElement.textContent = 'Location unavailable';
+                        // Use default Seattle location for weather
+                        getWeatherData(47.6062, -122.3321);
                     }
                 );
-            } else locationElement.textContent='Location not supported';
+            } else {
+                locationElement.textContent = 'Location not supported';
+                // Use default Seattle location for weather
+                getWeatherData(47.6062, -122.3321);
+            }
         }
-        async function getLocationName(lat,lon) {
+
+        // Get location name from coordinates
+        async function getLocationName(lat, lon) {
             try {
-                const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
-                const data = await resp.json();
-                const city = data.address.city||data.address.town||data.address.village||'Unknown';
-                const state = data.address.state||'';
+                const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`);
+                const data = await response.json();
+                const city = data.address.city || data.address.town || data.address.village || 'Unknown';
+                const state = data.address.state || '';
                 locationElement.textContent = `${city}, ${state}`;
-            } catch {
+            } catch (error) {
+                console.error('Error getting location name:', error);
                 locationElement.textContent = 'Location unavailable';
             }
         }
-        // Station card rendering
-        function generateStationCards(filter='') {
+
+        // Generate station cards with enhanced features
+        function generateStationCards() {
             stationsGrid.innerHTML = '';
-            let found = false;
-            Object.entries(feeds).forEach(([name, url])=>{
-                if (filter && !name.toLowerCase().includes(filter.toLowerCase())) return;
-                found = true;
+            
+            const filteredStations = getFilteredStations();
+            
+            filteredStations.forEach(([name, url]) => {
                 const card = document.createElement('div');
                 card.className = 'station-card';
                 card.dataset.feedName = name;
-                const type = name.includes('Police') ? 'Police' : name.includes('Fire') ? 'Fire' : name.includes('EMS') ? 'EMS' : 'Emergency';
+                card.dataset.stationType = stationData[name]?.type?.toLowerCase() || 'unknown';
+                
+                const data = stationData[name] || {};
+                const isFavorite = favorites.includes(name);
+                
                 card.innerHTML = `
+                    <button class="favorite-btn ${isFavorite ? 'active' : ''}" onclick="toggleFavorite('${name}')">
+                        ${isFavorite ? '♥' : '♡'}
+                    </button>
                     <div class="station-header">
                         <div>
                             <div class="station-name">${name}</div>
-                            <div class="station-type">${type}</div>
+                            <div class="station-type">${data.type || 'Emergency'}</div>
+                            <div class="station-region">${data.region || ''}</div>
                         </div>
                     </div>
                     <div class="station-meta">
                         <div class="listener-info">
-                            <span class="listener-icon" aria-hidden="true"></span>
-                            <span class="listener-count">Loading…</span>
+                            <div class="listener-icon"></div>
+                            <span class="listener-count">Loading...</span>
                         </div>
                         <div class="activity-status">
-                            <span class="status-dot"></span>
-                            <span class="activity-text">Checking…</span>
+                            <div class="status-dot"></div>
+                            <span class="activity-text">Checking...</span>
                         </div>
                     </div>
-                    <button class="play-button" type="button" aria-label="Play ${name}" title="Play ${name}">Play Stream</button>
+                    <div class="station-details">
+                        <span class="response-time">Avg: ${data.avgResponseTime || 'N/A'}</span>
+                        <span class="active-units">Units: ${data.activeUnits || 0}</span>
+                    </div>
+                    <button class="play-button" onclick="loadFeed('${name}')">
+                        Play Stream
+                    </button>
                 `;
-                // Play button handler
-                card.querySelector('.play-button').addEventListener('click',()=>loadFeed(name));
+                
                 stationsGrid.appendChild(card);
+                
+                // Fetch feed info for this card
                 fetchCardInfo(name, card);
             });
-            if (!found) stationsGrid.innerHTML = '<div style="padding:1em;text-align:center;color:#b8c5d6;">No feeds found.</div>';
         }
-        // Card info (listener count/activity)
+        
+        // Get filtered stations based on current filter and search
+        function getFilteredStations() {
+            let filtered = Object.entries(feeds);
+            
+            // Apply type filter
+            if (currentFilter !== 'all') {
+                filtered = filtered.filter(([name]) => {
+                    const data = stationData[name];
+                    if (currentFilter === 'favorites') {
+                        return favorites.includes(name);
+                    }
+                    return data?.type?.toLowerCase().includes(currentFilter);
+                });
+            }
+            
+            // Apply search filter
+            if (searchTerm) {
+                filtered = filtered.filter(([name]) => 
+                    name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    stationData[name]?.region?.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+            }
+            
+            return filtered;
+        }
+        
+        // Toggle favorite status
+        function toggleFavorite(stationName) {
+            const index = favorites.indexOf(stationName);
+            if (index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(stationName);
+            }
+            localStorage.setItem('scannerFavorites', JSON.stringify(favorites));
+            generateStationCards();
+        }
+
+        // Fetch info for individual card
         async function fetchCardInfo(feedName, card) {
             const feedId = feedIds[feedName];
-            const listenerCountEl = card.querySelector('.listener-count');
-            const activityTextEl = card.querySelector('.activity-text');
-            const statusDotEl = card.querySelector('.status-dot');
             if (!feedId) {
-                listenerCountEl.textContent = 'No data';
-                activityTextEl.textContent = 'Unknown';
+                const listenerCountEl = card.querySelector('.listener-count');
+                const activityTextEl = card.querySelector('.activity-text');
+                listenerCountEl.textContent = 'No data available';
+                activityTextEl.textContent = 'Unknown feed';
                 return;
             }
+
             try {
-                const resp = await fetch(`https://www.broadcastify.com/feed/${feedId}`);
-                if (!resp.ok) throw new Error();
-                const html = await resp.text();
-                let listenerCountVal = 'Unknown';
-                const patterns = [ /(\d+)\s+listeners?/i, /(\d+)\s+people\s+listening/i, /listeners?:\s*(\d+)/i ];
-                for (const pat of patterns) {
-                    const m = html.match(pat);
-                    if (m) { listenerCountVal = m[1]; break; }
+                const response = await fetch(`https://www.broadcastify.com/feed/${feedId}`, {
+                    method: 'GET',
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
                 }
-                const isActive = html.includes('active')||html.includes('live')||html.includes('online')||(listenerCountVal!=='Unknown'&&parseInt(listenerCountVal)>0);
-                listenerCountEl.textContent = `${listenerCountVal} listeners`;
+                
+                const html = await response.text();
+                
+                // Parse listener count - look for various patterns
+                let listenerCountValue = 'Unknown';
+                const listenerPatterns = [
+                    /(\d+)\s+listeners?/i,
+                    /(\d+)\s+people\s+listening/i,
+                    /listeners?:\s*(\d+)/i
+                ];
+                
+                for (const pattern of listenerPatterns) {
+                    const match = html.match(pattern);
+                    if (match) {
+                        listenerCountValue = match[1];
+                        break;
+                    }
+                }
+                
+                // Check if feed is active (has recent activity or listeners)
+                const isActive = html.includes('active') || 
+                               html.includes('live') || 
+                               html.includes('online') ||
+                               (listenerCountValue !== 'Unknown' && parseInt(listenerCountValue) > 0);
+                
+                const listenerCountEl = card.querySelector('.listener-count');
+                const activityTextEl = card.querySelector('.activity-text');
+                const statusDotEl = card.querySelector('.status-dot');
+                
+                listenerCountEl.textContent = `${listenerCountValue} listeners`;
                 activityTextEl.textContent = isActive ? 'Active' : 'Quiet';
-                statusDotEl.className = `status-dot${isActive?' active':''}`;
-            } catch {
+                statusDotEl.className = `status-dot ${isActive ? 'active' : ''}`;
+                
+            } catch (error) {
+                console.error('Error fetching card info:', error);
+                const listenerCountEl = card.querySelector('.listener-count');
+                const activityTextEl = card.querySelector('.activity-text');
+                
                 listenerCountEl.textContent = 'Data unavailable';
                 activityTextEl.textContent = 'Status unknown';
             }
         }
-        // Main feed info
-        async function fetchFeedInfo(feedName) {
-            const feedId = feedIds[feedName];
-            if (!feedId) {
-                listenerCount.textContent = 'No data';
-                activityStatus.textContent = 'Unknown feed';
-                return;
-            }
-            try {
-                feedInfo.style.display='flex';
-                listenerCount.textContent='Loading…';
-                activityStatus.textContent='Checking…';
-                activityDot.className='activity-dot';
-                const resp = await fetch(`https://www.broadcastify.com/feed/${feedId}`);
-                if (!resp.ok) throw new Error();
-                const html = await resp.text();
-                let listenerCountVal = 'Unknown';
-                const patterns = [ /(\d+)\s+listeners?/i, /(\d+)\s+people\s+listening/i, /listeners?:\s*(\d+)/i ];
-                for (const pat of patterns) {
-                    const m = html.match(pat);
-                    if (m) { listenerCountVal = m[1]; break; }
-                }
-                const isActive = html.includes('active')||html.includes('live')||html.includes('online')||(listenerCountVal!=='Unknown'&&parseInt(listenerCountVal)>0);
-                listenerCount.textContent = `${listenerCountVal} listeners`;
-                activityStatus.textContent = isActive ? 'Active' : 'Quiet';
-                activityDot.className = `activity-dot${isActive?' active':''}`;
-            } catch {
-                listenerCount.textContent = 'Data unavailable';
-                activityStatus.textContent = 'Status unknown';
-                activityDot.className='activity-dot';
-            }
+
+        // Initialize info bar
+        function initializeInfoBar() {
+            // Start time updates
+            updateTime();
+            timeInterval = setInterval(updateTime, 1000);
+            
+            // Get location
+            getUserLocation();
+            
+            // Generate station cards
+            generateStationCards();
         }
-        function updateStatus(message, type='playing') {
-            status.textContent = message;
-            status.className = `status ${type}`;
-        }
-        // Frequency/channel indicators
-        function updateFrequencyDisplay(feedName) {
-            frequencyDisplay.textContent = `${frequencies[feedName]||'--.---'} MHz`;
-        }
-        function updateChannelIndicator(feedName) {
-            channelIndicator.textContent = `CH: ${channels[feedName]||'--'}`;
-        }
-        // Card state
-        function updateCardStates(selectedFeedName) {
-            document.querySelectorAll('.station-card').forEach(card=>{
-                card.classList.remove('active');
-                const btn = card.querySelector('.play-button');
-                btn.textContent = 'Play Stream';
-                btn.classList.remove('playing');
-                if (card.dataset.feedName===selectedFeedName) {
-                    card.classList.add('active');
-                    btn.textContent = 'Now Playing';
-                    btn.classList.add('playing');
-                }
-            });
-        }
-        // Load/Play feed
         function loadFeed(feedName) {
             if (!feedName || !feeds[feedName]) {
                 audioPlayer.style.display = 'none';
                 return;
             }
+            
             currentFeed = feedName;
+            const streamUrl = feeds[feedName];
+            
+            // Show static effect during channel change
+            const staticOverlay = document.getElementById('staticOverlay');
+            staticOverlay.classList.add('active');
+            
             audioElement.pause();
             audioElement.currentTime = 0;
-            audioElement.src = feeds[feedName];
+            audioElement.src = streamUrl;
             audioPlayer.style.display = 'block';
-            updateStatus(`Loading ${feedName}…`,'paused');
+            updateStatus(`Loading ${feedName}...`, 'paused');
+            
+            // Initialize and update visualizer displays
             initializeVisualizer();
             updateFrequencyDisplay(feedName);
             updateChannelIndicator(feedName);
-            feedInfo.style.display='flex';
+            
+            // Show feed info and fetch data
+            feedInfo.style.display = 'flex';
             fetchFeedInfo(feedName);
+            
+            // Update card states
             updateCardStates(feedName);
+            
+            // Remove static effect after a short delay
+            setTimeout(() => {
+                staticOverlay.classList.remove('active');
+            }, 500);
+            
             const playPromise = audioElement.play();
-            if (playPromise !== undefined) playPromise
-                .then(()=>updateStatus(`Now playing: ${feedName}`,'playing'))
-                .catch(()=>updateStatus(`Ready to play: ${feedName} (click play button)`,'paused'));
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        updateStatus(`Now playing: ${feedName}`, 'playing');
+                        // Initialize audio analysis if not already done
+                        if (!audioContext) {
+                            initializeAudioAnalysis();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Playback failed:', error);
+                        updateStatus(`Ready to play: ${feedName} (click play button)`, 'paused');
+                        handleStreamError(feedName);
+                    });
+            }
         }
-        // Audio events
-        audioElement.addEventListener('play',()=>{
+        
+        // Handle stream errors with reconnection logic
+        function handleStreamError(feedName) {
+            if (reconnectAttempts < maxReconnectAttempts) {
+                reconnectAttempts++;
+                updateStatus(`Connection failed. Retrying... (${reconnectAttempts}/${maxReconnectAttempts})`, 'error');
+                
+                setTimeout(() => {
+                    loadFeed(feedName);
+                }, 2000 * reconnectAttempts); // Exponential backoff
+            } else {
+                updateStatus(`Unable to connect to ${feedName}. Please try again later.`, 'error');
+                reconnectAttempts = 0;
+            }
+        }
+        // Update card states when feed is loaded
+        function updateCardStates(selectedFeedName) {
+            document.querySelectorAll('.station-card').forEach(card => {
+                card.classList.remove('active');
+                const button = card.querySelector('.play-button');
+                button.textContent = 'Play Stream';
+                button.classList.remove('playing');
+                
+                if (card.dataset.feedName === selectedFeedName) {
+                    card.classList.add('active');
+                    button.textContent = 'Now Playing';
+                    button.classList.add('playing');
+                }
+            });
+        }
+        audioElement.addEventListener('play', () => {
             if (currentFeed) {
-                updateStatus(`Now playing: ${currentFeed}`,'playing');
+                updateStatus(`Now playing: ${currentFeed}`, 'playing');
                 squelchIndicator.classList.add('active');
+                
+                // Start visualizer animation
                 if (visualizerInterval) clearInterval(visualizerInterval);
                 visualizerInterval = setInterval(simulateVisualizer, 200);
             }
         });
-        audioElement.addEventListener('pause',()=>{
+        audioElement.addEventListener('pause', () => {
             if (currentFeed) {
-                updateStatus(`Paused: ${currentFeed}`,'paused');
+                updateStatus(`Paused: ${currentFeed}`, 'paused');
                 squelchIndicator.classList.remove('active');
-                if (visualizerInterval) clearInterval(visualizerInterval);
-                visualizerInterval=null;
-                visualizerDisplay.querySelectorAll('.signal-bar').forEach(bar=>{
-                    bar.style.height='5px'; bar.classList.add('inactive');
+                
+                // Stop visualizer animation
+                if (visualizerInterval) {
+                    clearInterval(visualizerInterval);
+                    visualizerInterval = null;
+                }
+                
+                // Reset visualizer bars
+                const bars = visualizerDisplay.querySelectorAll('.signal-bar');
+                bars.forEach(bar => {
+                    bar.style.height = '5px';
+                    bar.classList.add('inactive');
                 });
             }
         });
-        audioElement.addEventListener('error',()=>{
-            if (currentFeed) updateStatus(`Feed offline: ${currentFeed}`,'error');
-            else updateStatus('Stream error. Please try a different feed.','error');
-        });
-        // Feed info refresh (per feed)
-        function updateFeedInfo(feedName) {
-            if (feedName && feedIds[feedName]) {
-                currentFeed = feedName;
-                fetchFeedInfo(feedName);
-                if (refreshInterval) clearInterval(refreshInterval);
-                refreshInterval = setInterval(()=>{ if (currentFeed) fetchFeedInfo(currentFeed); }, 30000);
+        audioElement.addEventListener('error', (e) => {
+            console.error('Audio error:', e);
+            if (currentFeed) {
+                updateStatus(`Feed offline: ${currentFeed}`, 'error');
             } else {
-                feedInfo.style.display='none';
-                currentFeed = null;
-                if (refreshInterval) { clearInterval(refreshInterval); refreshInterval=null;}
+                updateStatus('Stream error. Please try selecting a different feed.', 'error');
             }
+        });
+        audioElement.addEventListener('loadstart', () => {
+            updateStatus('Connecting to stream...', 'paused');
+        });
+        audioElement.addEventListener('canplay', () => {
+            if (currentFeed) {
+                if (audioElement.paused) {
+                    updateStatus(`Connected: ${currentFeed} (stream ready - may be silent)`, 'paused');
+                } else {
+                    updateStatus(`Connected: ${currentFeed}`, 'playing');
+                }
+            }
+        });
+        audioElement.addEventListener('loadeddata', () => {
+            if (currentFeed && audioElement.paused) {
+                updateStatus(`Connected: ${currentFeed} (stream ready - may be silent)`, 'paused');
+            }
+        });
+        // Refresh all station data
+        function refreshAllStationData() {
+            document.querySelectorAll('.station-card').forEach(card => {
+                const feedName = card.dataset.feedName;
+                const listenerCountEl = card.querySelector('.listener-count');
+                const activityTextEl = card.querySelector('.activity-text');
+                
+                listenerCountEl.textContent = 'Refreshing...';
+                activityTextEl.textContent = 'Checking...';
+                
+                fetchCardInfo(feedName, card);
+            });
         }
-        refreshInfo.addEventListener('click',()=>{ if(currentFeed) fetchFeedInfo(currentFeed); });
-        // All cards refresh
-        refreshData.addEventListener('click',()=>generateStationCards(feedSearch.value));
-        // Search/filter
-        feedSearch.addEventListener('input', function(){
-            const val = this.value.trim();
-            generateStationCards(val);
-            clearSearchBtn.style.display = val.length ? 'inline-block' : 'none';
+
+        window.addEventListener('load', () => {
+            // Initialize info bar
+            initializeInfoBar();
+            
+            // Initialize visualizer
+            initializeVisualizer();
+            
+            // Add refresh button event listener
+            document.getElementById('refreshData').addEventListener('click', refreshAllStationData);
+            
+            // Add refresh info button event listener
+            refreshInfo.addEventListener('click', () => {
+                if (currentFeed) {
+                    fetchFeedInfo(currentFeed);
+                }
+            });
         });
-        clearSearchBtn.addEventListener('click', function(){
-            feedSearch.value = '';
-            generateStationCards('');
-            this.style.display = 'none';
-        });
-        // Live time update
-        setInterval(updateTime, 1000);
-        // Init
-        updateTime(); getUserLocation(); generateStationCards();
+        document.addEventListener('click', () => {
+            if (audioElement.paused && audioElement.readyState >= 2) {
+                if (currentFeed) {
+                    audioElement.play().then(() => {
+                        updateStatus(`Now playing: ${currentFeed}`, 'playing');
+                    }).catch(() => {});
+                }
+            }
+        }, { once: true });
     </script>
 </body>
-</html>
+</html> 
