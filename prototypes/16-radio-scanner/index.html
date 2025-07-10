@@ -15,18 +15,18 @@
             font-family: 'Courier New', monospace;
             background: #0a0a0a;
             color: #00ff00;
-            overflow-x: hidden;
+            line-height: 1.6;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
             padding: 20px;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
             border-bottom: 2px solid #00ff00;
             padding-bottom: 20px;
         }
@@ -66,221 +66,69 @@
             color: #00aa00;
         }
 
-        .player-section {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
-            border-radius: 10px;
-            padding: 30px;
-            margin-bottom: 30px;
-            position: relative;
-        }
-
-        .player-title {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            text-align: center;
-            text-shadow: 0 0 5px #00ff00;
-        }
-
-        .audio-player {
-            width: 100%;
-            margin-bottom: 20px;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
-            color: #00ff00;
-            padding: 12px 24px;
-            cursor: pointer;
-            border-radius: 5px;
-            font-family: 'Courier New', monospace;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .btn:hover {
-            background: #00ff00;
-            color: #000;
-            box-shadow: 0 0 15px #00ff00;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
-        }
-
-        .status {
-            text-align: center;
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-            padding: 10px;
-            border-radius: 5px;
-            background: #0a0a0a;
-            border: 1px solid #00ff00;
-        }
-
-        .visualizer {
-            display: flex;
-            justify-content: center;
-            align-items: flex-end;
-            height: 100px;
-            gap: 3px;
-            margin: 20px 0;
-            padding: 20px;
-            background: #0a0a0a;
-            border-radius: 10px;
-            border: 1px solid #00ff00;
-        }
-
-        .bar {
-            width: 8px;
-            background: linear-gradient(to top, #00ff00, #00aa00);
-            border-radius: 2px;
-            transition: height 0.1s ease;
-            box-shadow: 0 0 5px #00ff00;
-        }
-
-        .radio-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: #0a0a0a;
-            border-radius: 5px;
-            border: 1px solid #00ff00;
-        }
-
-        .channel {
-            font-size: 1.2rem;
-            font-weight: bold;
-        }
-
-        .squelch {
-            font-size: 0.9rem;
-            opacity: 0.8;
-        }
-
-        .stations-section {
-            background: #1a1a1a;
-            border: 2px solid #00ff00;
-            border-radius: 10px;
-            padding: 30px;
-        }
-
-        .stations-title {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            text-align: center;
-            text-shadow: 0 0 5px #00ff00;
-        }
-
         .stations-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
 
         .station-card {
-            background: #0a0a0a;
-            border: 1px solid #00ff00;
-            border-radius: 8px;
-            padding: 20px;
-            cursor: pointer;
+            background: #1a1a1a;
+            border: 2px solid #00ff00;
+            border-radius: 10px;
+            padding: 25px;
             transition: all 0.3s ease;
-            position: relative;
+            text-decoration: none;
+            color: #00ff00;
+            display: block;
         }
 
         .station-card:hover {
             border-color: #00aa00;
-            box-shadow: 0 0 15px #00ff00;
+            box-shadow: 0 0 20px #00ff00;
             transform: translateY(-2px);
         }
 
-        .station-card.active {
-            border-color: #00aa00;
-            background: #1a1a1a;
-            box-shadow: 0 0 20px #00ff00;
-        }
-
         .station-name {
-            font-size: 1.2rem;
+            font-size: 1.4rem;
             font-weight: bold;
             margin-bottom: 10px;
             color: #00ff00;
         }
 
         .station-info {
-            font-size: 0.9rem;
+            font-size: 1rem;
             margin-bottom: 8px;
-            opacity: 0.8;
+            opacity: 0.9;
         }
 
-        .station-status {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 15px;
+        .station-description {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 15px;
         }
 
-        .listeners {
-            font-size: 0.8rem;
-            color: #00aa00;
-        }
-
-        .activity {
-            font-size: 0.8rem;
-            padding: 4px 8px;
-            border-radius: 3px;
-            background: #1a1a1a;
-            border: 1px solid #00ff00;
-        }
-
-        .activity.active {
+        .listen-btn {
             background: #00ff00;
             color: #000;
-        }
-
-        .refresh-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: #1a1a1a;
-            border: 1px solid #00ff00;
-            color: #00ff00;
-            padding: 8px 12px;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 1rem;
+            font-weight: bold;
             cursor: pointer;
-            border-radius: 5px;
-            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            display: inline-block;
         }
 
-        .refresh-btn:hover {
-            background: #00ff00;
-            color: #000;
-        }
-
-        .broadcastify-player {
-            margin: 15px 0;
-            border-radius: 5px;
-            overflow: hidden;
-            border: 1px solid #00ff00;
-        }
-
-        .broadcastify-player iframe {
-            background: #0a0a0a;
+        .listen-btn:hover {
+            background: #00aa00;
+            box-shadow: 0 0 15px #00ff00;
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 10px;
+                padding: 15px;
             }
             
             .title {
@@ -292,32 +140,9 @@
                 text-align: center;
             }
             
-            .controls {
-                flex-direction: column;
-                align-items: center;
+            .station-card {
+                padding: 20px;
             }
-            
-            .btn {
-                width: 200px;
-            }
-            
-            .stations-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .radio-info {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-
-        .loading {
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
         }
     </style>
 </head>
@@ -335,7 +160,7 @@
             </div>
             <div class="info-item">
                 <span class="info-label">Location:</span>
-                <span id="current-location">Loading...</span>
+                <span id="current-location">Washington State</span>
             </div>
             <div class="info-item">
                 <span class="info-label">Date:</span>
@@ -343,179 +168,44 @@
             </div>
         </div>
 
-        <div class="player-section">
-            <h2 class="player-title">Emergency Scanner Feeds</h2>
-            <p style="text-align: center; margin-bottom: 20px; opacity: 0.8;">
-                Click on any station card below to listen to live emergency scanner feeds
-            </p>
-        </div>
+        <div class="stations-grid">
+            <a href="https://www.broadcastify.com/listen/feed/184" target="_blank" class="station-card">
+                <div class="station-name">King County Sheriff, Fire, EMS</div>
+                <div class="station-info">King County, WA</div>
+                <div class="station-info">Law Enforcement, Fire, EMS</div>
+                <div class="station-description">Live scanner feed for King County Sheriff, Fire, and Emergency Medical Services</div>
+                <button class="listen-btn">Listen Live →</button>
+            </a>
 
-        <div class="stations-section">
-            <h2 class="stations-title">Emergency Scanner Feeds</h2>
-            <button class="refresh-btn" id="refresh-btn">Refresh Data</button>
-            <div class="stations-grid" id="stations-grid">
-                <!-- Station cards will be generated by JavaScript -->
-            </div>
+            <a href="https://www.broadcastify.com/listen/feed/13544" target="_blank" class="station-card">
+                <div class="station-name">Kirkland Police & Fire (NORCOM)</div>
+                <div class="station-info">Kirkland, WA</div>
+                <div class="station-info">Law Enforcement, Fire</div>
+                <div class="station-description">Live scanner feed for Kirkland Police and Fire via NORCOM dispatch</div>
+                <button class="listen-btn">Listen Live →</button>
+            </a>
+
+            <a href="https://www.broadcastify.com/listen/feed/202" target="_blank" class="station-card">
+                <div class="station-name">Yakima City & County Police, Fire, EMS</div>
+                <div class="station-info">Yakima, WA</div>
+                <div class="station-info">Law Enforcement, Fire, EMS</div>
+                <div class="station-description">Live scanner feed for Yakima City and County Police, Fire, and Emergency Medical Services</div>
+                <button class="listen-btn">Listen Live →</button>
+            </a>
         </div>
     </div>
 
     <script>
-        // Station data - Real working Broadcastify streams only
-        const stations = [
-            {
-                id: 'king-county',
-                name: 'King County Sheriff, Fire, EMS',
-                location: 'King County, WA',
-                url: 'https://ice6.securenetsystems.net/KINGWA',
-                broadcastifyId: '184',
-                category: 'Law/Fire/EMS',
-                frequency: 'Multiple',
-                description: 'King County Sheriff, Fire, and EMS (via Broadcastify)'
-            },
-            {
-                id: 'kirkland-norcom',
-                name: 'Kirkland Police & Fire (NORCOM)',
-                location: 'Kirkland, WA',
-                url: 'https://ice6.securenetsystems.net/NORCOM',
-                broadcastifyId: '13544',
-                category: 'Law/Fire/EMS',
-                frequency: 'Multiple',
-                description: 'Kirkland Police and Fire (NORCOM dispatch, via Broadcastify)'
-            },
-            {
-                id: 'yakima',
-                name: 'Yakima City & County Police, Fire, EMS',
-                location: 'Yakima, WA',
-                url: 'https://ice6.securenetsystems.net/YAKIMA',
-                broadcastifyId: '202',
-                category: 'Law/Fire/EMS',
-                frequency: 'Multiple',
-                description: 'Yakima City and County Police, Fire, and EMS (via Broadcastify)'
-            }
-        ];
-
-        // DOM elements
-        const stationsGrid = document.getElementById('stations-grid');
-        const refreshBtn = document.getElementById('refresh-btn');
-        const currentTime = document.getElementById('current-time');
-        const currentLocation = document.getElementById('current-location');
-        const currentDate = document.getElementById('current-date');
-
-        // Initialize app
-        function init() {
-            generateStationCards();
-            updateDateTime();
-            getLocation();
-            setupEventListeners();
-            startClock();
-        }
-
-
-
-        // Generate station cards with embedded Broadcastify players
-        function generateStationCards() {
-            stationsGrid.innerHTML = '';
-            
-            stations.forEach(station => {
-                const card = document.createElement('div');
-                card.className = 'station-card';
-                card.dataset.stationId = station.id;
-                
-                card.innerHTML = `
-                    <div class="station-name">${station.name}</div>
-                    <div class="station-info">${station.location}</div>
-                    <div class="station-info">${station.category}</div>
-                    <div class="station-info">${station.frequency}</div>
-                    <div class="station-info">${station.description}</div>
-                    <div class="broadcastify-player">
-                        <iframe 
-                            src="https://www.broadcastify.com/embed/feed/${station.broadcastifyId}" 
-                            width="100%" 
-                            height="120" 
-                            frameborder="0" 
-                            scrolling="no">
-                        </iframe>
-                    </div>
-                    <div class="station-status">
-                        <span class="listeners">Listeners: <span class="listener-count">--</span></span>
-                        <span class="activity">Status: <span class="activity-status">--</span></span>
-                    </div>
-                `;
-                
-                stationsGrid.appendChild(card);
-            });
-        }
-
-
-
-        // Setup event listeners
-        function setupEventListeners() {
-            refreshBtn.addEventListener('click', updateStationData);
-        }
-
-
-
-        // Update station data
-        function updateStationData() {
-            const cards = document.querySelectorAll('.station-card');
-            
-            cards.forEach((card, index) => {
-                const listenerCount = card.querySelector('.listener-count');
-                const activityStatus = card.querySelector('.activity-status');
-                
-                // Simulate listener count (in real app, this would fetch from API)
-                const listeners = Math.floor(Math.random() * 50) + 1;
-                listenerCount.textContent = listeners;
-                
-                // Simulate activity status
-                const activities = ['Active', 'Quiet', 'Busy', 'Emergency'];
-                const activity = activities[Math.floor(Math.random() * activities.length)];
-                activityStatus.textContent = activity;
-                
-                const activityEl = card.querySelector('.activity');
-                if (activity === 'Active' || activity === 'Busy' || activity === 'Emergency') {
-                    activityEl.classList.add('active');
-                } else {
-                    activityEl.classList.remove('active');
-                }
-            });
-        }
-
-        // Clock and date functions
+        // Update time and date
         function updateDateTime() {
             const now = new Date();
-            currentTime.textContent = now.toLocaleTimeString();
-            currentDate.textContent = now.toLocaleDateString();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString();
+            document.getElementById('current-date').textContent = now.toLocaleDateString();
         }
 
-        function startClock() {
-            setInterval(updateDateTime, 1000);
-        }
-
-        // Get location
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    position => {
-                        const { latitude, longitude } = position.coords;
-                        // In a real app, you'd reverse geocode these coordinates
-                        currentLocation.textContent = 'Washington State';
-                    },
-                    error => {
-                        currentLocation.textContent = 'Washington State';
-                        console.log('Location error:', error);
-                    }
-                );
-            } else {
-                currentLocation.textContent = 'Washington State';
-            }
-        }
-
-        // Initialize the app
-        init();
-        
-        // Update station data every 30 seconds
-        setInterval(updateStationData, 30000);
+        // Initialize
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
     </script>
 </body>
 </html> 
